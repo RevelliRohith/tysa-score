@@ -309,10 +309,31 @@ def scoring_chief_judge(request):
     Implements 24_Chief_Judge_Review.png:
     Submission completeness across judges (D1-D4, Time, Evaluator),
     component breakdown, invalid items, and provisional score release.
+    For Admin & CD, provides multi-event selector bar to review any active event.
     """
+    championship = get_active_championship(request)
+    event_configs = championship.event_configurations.filter(is_enabled=True) if championship else []
+    
+    selected_event_id = request.GET.get('event_id')
+    current_event = event_configs.filter(id=selected_event_id).first() if selected_event_id else event_configs.first()
+
+    categories = current_event.age_categories.all() if current_event else []
+    selected_cat_id = request.GET.get('cat_id')
+    current_cat = categories.filter(id=selected_cat_id).first() if selected_cat_id else categories.first()
+
+    gender = request.GET.get('gender', 'M')
+    round_type = request.GET.get('round_type', 'PRELIMINARY')
+
     performances = Performance.objects.filter(
         batch__status__in=['ACTIVE', 'SUBMITTED', 'COMPLETED']
     ).select_related('event_entry__registration__athlete')
+
+    if current_event:
+        performances = performances.filter(event_entry__event_config=current_event)
+    if current_cat:
+        performances = performances.filter(event_entry__age_category=current_cat)
+    if gender:
+        performances = performances.filter(event_entry__gender=gender)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -337,8 +358,15 @@ def scoring_chief_judge(request):
             perf.chief_approved_at = datetime.datetime.now()
             perf.save()
             messages.success(request, f"Provisional score released for Chest {perf.chest_number}! Broadcast to Live Public Screen.")
-            return redirect('scoring_chief_judge')
+            return redirect(f"/scoring/chief-judge/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
 
     return render(request, 'scoring/chief_judge.html', {
         'performances': performances,
+        'championship': championship,
+        'event_configs': event_configs,
+        'current_event': current_event,
+        'categories': categories,
+        'current_cat': current_cat,
+        'gender': gender,
+        'round_type': round_type,
     })

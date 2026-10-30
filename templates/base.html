@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TYSA Score — Telangana Yogasana Championship Management System{% endblock %}</title>
-    <!-- Tailwind CSS CDN for instant, complete utility styling matching references -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -22,8 +22,8 @@
                             900: '#0C4A6E',
                         },
                         tysa: {
-                            teal: '#0D9488',
-                            navy: '#0F172A',
+                            teal: '#00838f',
+                            navy: '#1a365d',
                             surface: '#F8FAFC',
                             card: '#FFFFFF',
                             border: '#E2E8F0',
@@ -33,195 +33,83 @@
             }
         }
     </script>
-    <!-- HTMX for reactive drawers, modal partials and live updates -->
+    <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Sleek scrollbar for sidebar */
+        #adminSidebarNav::-webkit-scrollbar {
+            width: 4px;
+        }
+        #adminSidebarNav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #adminSidebarNav::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        #adminSidebarNav::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
-    
-    <!-- Top Navigation Bar -->
+<body class="bg-[#f8fafc] text-slate-800 antialiased min-h-screen {% if is_admin and not hide_navbar %}flex font-sans overflow-x-hidden{% else %}flex flex-col font-sans{% endif %}">
+
+{% if is_admin and not hide_navbar %}
+    <!-- Admin Grouped Left Navigation Sidebar matching Reference UI -->
+    {% include "includes/admin_sidebar.html" %}
+
+    <div class="flex-1 flex flex-col min-w-0 min-h-screen">
+        <!-- Admin Top Navigation Bar -->
+        {% include "includes/admin_header.html" %}
+{% else %}
+    <!-- Non-Admin Top Navigation Bar -->
     {% if not hide_navbar %}
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <a href="{% if is_admin %}{% url 'admin_dashboard' %}{% elif is_cd %}{% url 'cd_dashboard' %}{% elif is_stage %}{% url 'stage_manager' %}{% elif is_district %}{% url 'district_approvals' %}{% elif is_venue %}{% url 'venue_verification' %}{% elif is_jury %}{% url 'jury_view' %}{% elif is_judge %}{% url 'judge_portal' %}{% else %}{% url 'login' %}{% endif %}" class="flex items-center space-x-3 group">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-teal-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
-                        🕉️
-                    </div>
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-extrabold text-slate-900 tracking-tight text-lg group-hover:text-brand-600 transition">TYSA SCORE</span>
-                            <span class="px-2 py-0.5 text-[11px] font-semibold bg-brand-50 text-brand-700 rounded-full border border-brand-200">v2.4 COP</span>
-                        </div>
-                        <p class="text-[11px] text-slate-500 font-medium leading-none">Telangana Yogasana Association</p>
-                    </div>
-                </a>
-                
-                {% if not is_judge_only and active_championship %}
-                <div class="hidden md:flex items-center pl-6 border-l border-slate-200 ml-4 space-x-2 relative">
-                    <span class="text-xs text-slate-400 font-medium">Event:</span>
-                    {% if all_championships|length > 1 or is_admin %}
-                    <button type="button" onclick="document.getElementById('baseChampDropdown').classList.toggle('hidden')" 
-                        class="flex items-center space-x-1.5 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition">
-                        <span class="max-w-[200px] truncate">{{ active_championship.name }}</span>
-                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
-                    </button>
-                    {% else %}
-                    <span class="text-xs font-bold text-slate-800 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 max-w-[200px] truncate">
-                        {{ active_championship.name }}
-                    </span>
-                    {% endif %}
-                    
-                    {% if active_championship.status == 'IN_PROGRESS' %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                        ● LIVE STAGE
-                    </span>
-                    {% else %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-                        {{ active_championship.get_status_display }}
-                    </span>
-                    {% endif %}
+        {% include "includes/non_admin_header.html" %}
+    {% endif %}
+{% endif %}
 
-                    {% if all_championships|length > 1 or is_admin %}
-                    <!-- Dropdown -->
-                    <div id="baseChampDropdown" class="hidden absolute top-10 left-16 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2 divide-y divide-slate-100">
-                        <div class="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                            Authorized Championships
-                        </div>
-                        <div class="max-h-60 overflow-y-auto py-1">
-                            {% for c in all_championships %}
-                            <a href="{% url 'championship_switch' champ_id=c.id %}" 
-                                class="flex items-center justify-between px-4 py-2.5 text-xs hover:bg-slate-50 transition {% if active_championship.id == c.id %}bg-teal-50/50 font-bold text-teal-800{% else %}text-slate-700{% endif %}">
-                                <div class="flex items-center space-x-2 truncate">
-                                    <span class="w-1.5 h-1.5 rounded-full {% if active_championship.id == c.id %}bg-teal-600{% else %}bg-slate-300{% endif %}"></span>
-                                    <span class="truncate">{{ c.name }}</span>
-                                </div>
-                                <span class="text-[10px] font-mono text-slate-400 ml-2 shrink-0">{{ c.year }}</span>
-                            </a>
-                            {% empty %}
-                            <div class="px-4 py-3 text-xs text-slate-400 text-center">No authorized championships</div>
-                            {% endfor %}
-                        </div>
-                        {% if is_admin %}
-                        <div class="p-2 space-y-1 bg-slate-50/50">
-                            <a href="{% url 'championship_create' %}" class="flex items-center space-x-2 px-3 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50 rounded-xl transition">
-                                <i data-lucide="plus-circle" class="w-4 h-4 text-teal-600"></i>
-                                <span>➕ Create New Championship</span>
-                            </a>
-                            <a href="{% url 'championship_list' %}" class="flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-                                <i data-lucide="layers" class="w-4 h-4 text-slate-500"></i>
-                                <span>View All Championships</span>
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Header Right Menu -->
-            <div class="flex items-center space-x-3">
-                {% if not is_judge_only %}
-                <a href="{% url 'public_live_display' %}" target="_blank" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition">
-                    <i data-lucide="tv" class="w-4 h-4 mr-1.5"></i> Live Display
-                </a>
-                
-                <a href="{% url 'second_screen' %}" target="_blank" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition">
-                    <i data-lucide="monitor" class="w-4 h-4 mr-1.5"></i> 2nd Screen
-                </a>
-                {% endif %}
-
-                {% if user.is_authenticated %}
-                <div class="flex items-center pl-3 border-l border-slate-200 space-x-2">
-                    <div class="text-right hidden sm:block">
-                        <div class="text-xs font-bold text-slate-900">{{ user.full_name|default:user.email }}</div>
-                        <div class="text-[11px] text-teal-700 font-semibold">
-                            {% if is_admin %}System Admin (All Modules)
-                            {% elif is_cd %}Competition Director
-                            {% elif is_stage %}Stage Manager / Announcer
-                            {% elif is_district %}District User ({{ user_district }})
-                            {% elif is_venue %}Venue Desk
-                            {% elif is_jury %}Jury Member (Read-Only)
-                            {% elif is_judge %}Official Judge
-                            {% else %}Official Staff{% endif %}
-                        </div>
-                    </div>
-                    <a href="{% url 'logout' %}" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Sign Out">
-                        <i data-lucide="log-out" class="w-4 h-4"></i>
-                    </a>
-                </div>
-                {% else %}
-                <a href="{% url 'login' %}" class="inline-flex items-center px-4 py-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition">
-                    Sign In
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </header>
-
-    <!-- Scoped Role Secondary Sub-Navbar -->
-    {% if user.is_authenticated and nav_items %}
-    <div class="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-2">
-        <div class="max-w-7xl mx-auto flex items-center justify-between text-xs font-bold text-slate-600 overflow-x-auto gap-4">
-            <div class="flex items-center space-x-1 shrink-0">
-                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold mr-2">Workspace:</span>
-                {% for item in nav_items %}
-                <a href="{{ item.url }}" class="px-2.5 py-1 rounded-lg transition inline-flex items-center gap-1.5 {% if item.is_active or request.resolver_match.url_name == item.url_name %}text-teal-800 bg-teal-50 border border-teal-200 font-extrabold shadow-xs{% else %}hover:bg-slate-100 text-slate-600{% endif %}">
-                    <i data-lucide="{{ item.icon }}" class="w-3.5 h-3.5"></i>
-                    <span>{{ item.label }}</span>
-                </a>
-                {% endfor %}
-            </div>
-            {% if active_championship and not is_judge_only %}
-            <div class="text-[11px] text-slate-400 font-medium shrink-0">
-                Scope: <strong>{{ active_championship.name }}</strong>
-            </div>
-            {% endif %}
-        </div>
+<!-- Messages / Alerts -->
+{% if messages %}
+<div class="{% if is_admin and not hide_navbar %}px-6 lg:px-8 pt-4 w-full{% else %}max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full{% endif %}">
+    {% for message in messages %}
+    <div class="p-3 mb-3 text-xs font-semibold rounded-xl border flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border-rose-200{% elif message.tags == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %}">
+        <span>{{ message }}</span>
+        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600">&times;</button>
     </div>
-    {% endif %}
-    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
 
-    <!-- Messages / Alerts -->
-    {% if messages %}
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
-        {% for message in messages %}
-        <div class="p-3 mb-3 text-sm rounded-xl border flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border-rose-200{% elif message.tags == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %}">
-            <div class="flex items-center space-x-2">
-                <span>{{ message }}</span>
-            </div>
-            <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600">&times;</button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
+<!-- Main Content Area -->
+<main class="{% if is_admin and not hide_navbar %}flex-1 bg-[#f8fafc] p-6 lg:p-8 min-w-0 overflow-y-auto{% else %}flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6{% endif %}">
+    {% block content %}{% endblock %}
+</main>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
+{% if is_admin and not hide_navbar %}
+    </div><!-- End of flex-1 flex flex-col min-w-0 min-h-screen -->
+{% else %}
+    <!-- Non-admin footer -->
     <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
             <div>
                 © 2026 Telangana Yogasana Association (TYSA). Official Championship Platform.
             </div>
             <div class="flex items-center space-x-4 mt-2 sm:mt-0 font-medium">
-                {% if is_admin %}
-                <a href="{% url 'admin_dashboard' %}" class="hover:text-brand-600">Dashboard</a>
-                <a href="{% url 'users_and_permissions' %}" class="hover:text-brand-600">Permissions</a>
-                {% elif is_judge_only %}
+                {% if is_judge_only %}
                 <a href="{% url 'judge_portal' %}" class="hover:text-brand-600">Judge Portal</a>
                 {% endif %}
                 <a href="{% url 'scoreboard_view' %}" class="hover:text-brand-600">Scoreboard</a>
             </div>
         </div>
     </footer>
+{% endif %}
 
     <script>
         lucide.createIcons();

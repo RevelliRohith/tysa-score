@@ -99,7 +99,7 @@
                             </p>
                         </div>
                         <input type="checkbox" name="event_types" value="ARTISTIC_PAIR" id="artisticPairCheckbox"
-                            onchange="document.getElementById('pairDetailsSection').classList.toggle('hidden', !this.checked)"
+                            onchange="togglePairSection()"
                             class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-0.5">
                     </div>
                 </label>
@@ -113,7 +113,8 @@
                                 Pair performance with rhythm and music.
                             </p>
                         </div>
-                        <input type="checkbox" name="event_types" value="RHYTHMIC_PAIR"
+                        <input type="checkbox" name="event_types" value="RHYTHMIC_PAIR" id="rhythmicPairCheckbox"
+                            onchange="togglePairSection()"
                             class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-0.5">
                     </div>
                 </label>
@@ -122,64 +123,37 @@
 
         <!-- Derived Category Section matching 06_Event_and_Pair_Selection.png -->
         <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
-            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Category (Derived)</h3>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Category (Derived Automatically from Age)</h3>
             <div class="grid grid-cols-2 gap-4">
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span class="text-[11px] font-semibold text-slate-400 block">Category</span>
-                    <span class="text-xs font-black text-slate-900">Junior</span>
+                    <span class="text-[11px] font-semibold text-slate-400 block">Age Category</span>
+                    <span class="text-xs font-black text-slate-900">{{ matched_category.name|default:"Sub-Junior" }} ({{ derived_age }} yrs)</span>
                 </div>
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span class="text-[11px] font-semibold text-slate-400 block">Gender</span>
-                    <span class="text-xs font-black text-slate-900">Boys</span>
+                    <span class="text-[11px] font-semibold text-slate-400 block">Division</span>
+                    <span class="text-xs font-black text-slate-900">{{ athlete.get_gender_display|default:"Male" }} Division</span>
                 </div>
             </div>
         </div>
 
-        <!-- Pair Details Section matching 06_Event_and_Pair_Selection.png -->
-        <div id="pairDetailsSection" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <!-- Pair Details Section (Hidden by default; only shown if a Pair event is checked) -->
+        <div id="pairDetailsSection" class="hidden bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
             <div class="pb-3 border-b border-slate-100">
-                <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Pair Details (for Artistic Pair)</h3>
-                <p class="text-xs text-slate-500 font-medium mt-0.5">Search and select a partner for the Artistic Pair event.</p>
+                <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Pair Details (for Pair Events)</h3>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Enter partner's permanent athlete ID (both must be same gender division and district).</p>
             </div>
 
             <!-- Search Partner Input -->
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Search Partner by Athlete ID</label>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Partner Permanent Athlete ID (Optional)</label>
                 <div class="flex items-center space-x-2">
                     <div class="relative flex-1">
                         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-                        <input type="text" name="partner_id" value="TYSA-ATH-00102" placeholder="e.g. TYSA-ATH-00102"
+                        <input type="text" name="partner_id" placeholder="e.g. TYSA-ATH-00102"
                             class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono font-semibold text-slate-800 outline-none focus:bg-white focus:border-teal-500">
                     </div>
-                    <button type="button" class="px-4 py-2 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition">
-                        Verify Partner
-                    </button>
                 </div>
-            </div>
-
-            <!-- Pair Eligibility Confirmed Banner -->
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-start space-x-2.5 text-xs text-emerald-900">
-                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
-                <div>
-                    <span class="font-extrabold text-emerald-800">Pair Eligibility Confirmed:</span>
-                    <span class="text-emerald-700">Both athletes are in the same eligible category and gender, and representing the same district.</span>
-                </div>
-            </div>
-
-            <!-- Selected Partner Card -->
-            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
-                        PR
-                    </div>
-                    <div>
-                        <div class="text-xs font-black text-slate-900">Priya Rao</div>
-                        <div class="text-[11px] text-slate-500">TYSA-ATH-00102 • Junior • Boys • Hyderabad</div>
-                    </div>
-                </div>
-                <button type="button" class="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline">
-                    Change
-                </button>
+                <p class="text-[10px] text-slate-400 mt-1">If partner has not registered yet, you can leave this blank and CD/Desk will pair you.</p>
             </div>
         </div>
 
@@ -202,5 +176,19 @@
         <span>Design preview - Sample data</span>
     </div>
 
+    <script>
+        function togglePairSection() {
+            const pair1 = document.getElementById('artisticPairCheckbox')?.checked;
+            const pair2 = document.getElementById('rhythmicPairCheckbox')?.checked;
+            const sec = document.getElementById('pairDetailsSection');
+            if (sec) {
+                if (pair1 || pair2) {
+                    sec.classList.remove('hidden');
+                } else {
+                    sec.classList.add('hidden');
+                }
+            }
+        }
+    </script>
 </div>
 {% endblock %}

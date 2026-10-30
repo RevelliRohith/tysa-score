@@ -183,61 +183,79 @@
                 </div>
                 <p class="text-[11px] text-slate-500">This is your official event ID card for the selected championship.</p>
 
-                <!-- Printable Physical Card Canvas matching 08_Athlete_Status_and_ID_Card.png -->
-                <div class="bg-gradient-to-br from-teal-900 via-slate-900 to-teal-950 text-white p-6 rounded-2xl shadow-lg border border-teal-700/40 relative overflow-hidden space-y-4">
+                <!-- Universal Physical ID Card Canvas -->
+                <div class="bg-gradient-to-br from-teal-950 via-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-xl border border-teal-500/40 relative overflow-hidden space-y-3.5 print:border-2 print:border-slate-800 print:text-black">
                     <!-- Background Watermark -->
                     <div class="absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-teal-500/10 blur-2xl pointer-events-none"></div>
 
-                    <!-- Card Header -->
-                    <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <!-- Card Header: Association Details (No championship name per prompt requirements) -->
+                    <div class="flex items-center justify-between border-b border-white/15 pb-2.5">
                         <div class="flex items-center space-x-2">
-                            <span class="text-lg">🕉️</span>
+                            <span class="text-xl">🕉️</span>
                             <div>
-                                <div class="text-[10px] font-black uppercase tracking-wider text-teal-400">Telangana Yogasana</div>
-                                <div class="text-xs font-black tracking-tight">State Championship 2026</div>
+                                <div class="text-[11px] font-black uppercase tracking-wider text-teal-300">Telangana Yogasana Sports Association</div>
+                                <div class="text-[8px] font-bold tracking-tight text-slate-300">Affiliated to NYSF & Recognized by MYAS (Govt. of India)</div>
                             </div>
                         </div>
-                        <span class="px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-teal-500/20 text-teal-300 rounded border border-teal-500/30">
-                            COMPETITOR
+                        <span class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 rounded border border-teal-500/30">
+                            ATHLETE
                         </span>
                     </div>
 
                     <!-- Athlete Photo & Core Details -->
-                    <div class="flex items-start space-x-4">
-                        <div class="w-20 h-24 rounded-xl bg-slate-800 border-2 border-teal-400/50 flex items-center justify-center text-3xl font-bold overflow-hidden shrink-0 shadow-md">
-                            🧘
+                    <div class="flex items-start space-x-3.5">
+                        <div class="w-20 h-24 rounded-xl bg-slate-800 border-2 border-teal-400/50 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+                            {% if athlete.photo %}
+                                <img src="{{ athlete.photo.url }}" alt="{{ athlete.full_name }}" class="w-full h-full object-cover">
+                            {% else %}
+                                <span class="text-3xl">🧘</span>
+                            {% endif %}
                         </div>
-                        <div class="space-y-1 text-xs">
-                            <h4 class="text-base font-black text-white leading-tight">Arun Kumar</h4>
-                            <div class="text-[11px] text-teal-300 font-mono font-semibold">{{ athlete.public_athlete_id|default:"TYSA-ATH-00101" }}</div>
-                            <div class="text-[11px] text-slate-300">District: <strong>Mancherial</strong></div>
-                            <div class="text-[11px] text-slate-300">Category: <strong>Junior (Boys)</strong></div>
+                        <div class="space-y-1 text-xs flex-1 min-w-0">
+                            <h4 class="text-base font-black text-white leading-tight truncate">{{ athlete.full_name }}</h4>
+                            <div class="text-[11px] text-teal-300 font-mono font-bold">{{ athlete.public_athlete_id }}</div>
+                            <div class="text-[11px] text-slate-300">District: <strong class="text-white">{{ athlete.district }}</strong></div>
+                            <div class="text-[10px] text-slate-300">DOB: {{ athlete.dob|date:"d M Y" }} • Gender: {{ athlete.get_gender_display }}</div>
+                            <div class="text-[10px] text-slate-300 truncate">Guardian: {{ athlete.guardian_name }}</div>
                         </div>
                     </div>
 
-                    <!-- Chest Number Highlight & QR Code -->
-                    <div class="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
+                    <!-- Permanent ID & Verification QR -->
+                    <div class="bg-white/10 border border-white/15 rounded-xl p-2.5 flex items-center justify-between">
                         <div>
-                            <span class="text-[9px] font-bold uppercase tracking-wider text-teal-300 block">Chest Number</span>
-                            <span class="text-3xl font-black font-mono tracking-tight text-white">101</span>
+                            <span class="text-[8.5px] font-bold uppercase tracking-wider text-teal-300 block">Permanent Identity Pass</span>
+                            <span class="text-xs font-mono font-bold text-white">{{ athlete.public_athlete_id }}</span>
+                            <div class="text-[9px] text-slate-300 mt-0.5">Valid for all State Championships</div>
                         </div>
-                        <div class="w-14 h-14 bg-white rounded-lg p-1 flex items-center justify-center">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=TYSA-ATH-00101" alt="QR" class="w-full h-full">
+                        <div class="w-12 h-12 bg-white rounded-lg p-0.5 flex items-center justify-center shrink-0">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ athlete.public_athlete_id }}" alt="QR" class="w-full h-full">
                         </div>
                     </div>
 
-                    <!-- Approval Badge -->
-                    <div class="flex items-center justify-between text-[10px] text-teal-300 pt-1 border-t border-white/10">
-                        <span>Status: <strong class="text-white">District Approved</strong></span>
-                        <span>Secured via SHA-256</span>
+                    <!-- Card Footer: Association & Authorized Signature -->
+                    <div class="flex items-center justify-between text-[9px] text-teal-300 pt-1.5 border-t border-white/15">
+                        <div class="text-left">
+                            <span class="block text-slate-400">Security Verification</span>
+                            <strong class="text-white font-mono">TYSA-STATE-SECURED</strong>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-serif italic text-white text-[11px] font-bold">R. Varma</div>
+                            <span class="text-slate-400 text-[8px] uppercase tracking-wider">General Secretary, TYSA</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Download Card Button -->
-                <button type="button" onclick="window.print()" class="w-full py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center justify-center space-x-2">
-                    <i data-lucide="printer" class="w-4 h-4"></i>
-                    <span>Download / Print Athlete ID Card</span>
-                </button>
+                <div class="flex items-center space-x-2 pt-1">
+                    <button type="button" onclick="window.print()" class="flex-1 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center justify-center space-x-2">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Print ID Card</span>
+                    </button>
+                    <a href="{% url 'athlete_id_cards_batch_print' %}" class="px-3 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1" title="Batch District Printing">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span>Batch</span>
+                    </a>
+                </div>
             </div>
         </div>
 

@@ -6,6 +6,9 @@ from django.db.models import Q
 from .models import ChampionshipRegistration, EventEntry, RegistrationStatus
 from championships.models import Championship, DistrictQuota
 from championships.services import ChampionshipService
+from django.utils import timezone
+from config.districts import TELANGANA_DISTRICTS
+from athletes.models import AthleteDocument
 from accounts.models import RoleChoices, ScopedRole
 from accounts.permissions import get_active_championship, role_required, get_user_roles_for_request
 
@@ -15,6 +18,7 @@ def district_approvals(request):
     Implements 12_District_Athlete_Approval.png:
     District queue, quota tracker, document inspection, approve/request correction/reject.
     Enforces district scope: District users only see and manage their own assigned district.
+    Supports Event and Age Category filtering, and Batch Selection & Approval ("Submit All").
     """
     championship = get_active_championship(request)
     user_roles = get_user_roles_for_request(request, championship)
@@ -22,27 +26,52 @@ def district_approvals(request):
 
     # Resolve assigned district
     user_scoped = ScopedRole.objects.filter(user=request.user, role=RoleChoices.DISTRICT_USER).first()
-    assigned_district = user_scoped.district if user_scoped else ''
+    assigned_district = user_scoped.district if user_scoped else getattr(request.user, 'district', '')
 
     if is_admin:
-        selected_district = request.GET.get('district', '')
+        selected_district = request.GET.get('district', '').strip()
+        districts = DistrictQuota.objects.filter(championship=championship) if championship else DistrictQuota.objects.none()
     else:
         # Strict enforcement: district user can ONLY view their assigned district
         selected_district = assigned_district
+        districts = DistrictQuota.objects.filter(championship=championship, district_name__iexact=assigned_district) if championship else DistrictQuota.objects.none()
 
-    districts = DistrictQuota.objects.filter(championship=championship) if championship else DistrictQuota.objects.none()
-    
-    registrations = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete') if championship else ChampionshipRegistration.objects.none()
+    selected_event = request.GET.get('event', '').strip()
+    selected_cat = request.GET.get('cat', '').strip()
+
+    registrations = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete').prefetch_related('event_entries__event_config', 'event_entries__age_category') if championship else ChampionshipRegistration.objects.none()
     if selected_district:
-        registrations = registrations.filter(athlete__district=selected_district)
+        registrations = registrations.filter(athlete__district__iexact=selected_district)
+    elif not is_admin and assigned_district:
+        registrations = registrations.filter(athlete__district__iexact=assigned_district)
     
+    if selected_event:
+        registrations = registrations.filter(event_entries__event_config__event_type=selected_event).distinct()
+    if selected_cat:
+        registrations = registrations.filter(event_entries__age_category_id=selected_cat).distinct()
+
     quota_info = None
     if selected_district and championship:
-        quota_info = DistrictQuota.objects.filter(championship=championship, district_name=selected_district).first()
+        quota_info = DistrictQuota.objects.filter(championship=championship, district_name__iexact=selected_district).first()
 
     if request.method == 'POST':
-        reg_id = request.POST.get('reg_id')
+        action = request.POST.get('action')
         decision = request.POST.get('decision')
+        
+        # Batch approval / Submit All
+        if action == 'batch_approve' or decision == 'submit_all':
+            selected_ids = request.POST.getlist('selected_reg_ids')
+            approved_count = 0
+            for r_id in selected_ids:
+                reg_obj = ChampionshipRegistration.objects.filter(id=r_id, championship=championship).first()
+                if reg_obj and (is_admin or reg_obj.athlete.district == assigned_district):
+                    success = ChampionshipService.approve_district_registration(reg_obj.id, request.user)
+                    if success:
+                        approved_count += 1
+            messages.success(request, f"Successfully approved {approved_count} candidate(s) for district quota!")
+            return redirect(f"/district/approvals/?district={selected_district}&event={selected_event}&cat={selected_cat}")
+
+        reg_id = request.POST.get('reg_id')
         notes = request.POST.get('notes', '')
         reg = get_object_or_404(ChampionshipRegistration, id=reg_id, championship=championship)
 
@@ -67,7 +96,10 @@ def district_approvals(request):
             reg.save()
             messages.info(request, f"Registration {reg.registration_number} rejected: {notes}")
         
-        return redirect(f"/district/approvals/?district={selected_district}")
+        return redirect(f"/district/approvals/?district={selected_district}&event={selected_event}&cat={selected_cat}")
+
+    from championships.models import AgeCategory, EventType
+    age_categories = AgeCategory.objects.all().order_by('display_order')
 
     return render(request, 'registrations/district_approvals.html', {
         'championship': championship,
@@ -77,67 +109,156 @@ def district_approvals(request):
         'is_admin': is_admin,
         'registrations': registrations,
         'quota_info': quota_info,
+        'selected_event': selected_event,
+        'selected_cat': selected_cat,
+        'event_types': EventType.choices,
+        'age_categories': age_categories,
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.VENUE_DESK)
 def venue_verification(request):
     """
     Implements 13_Venue_Verification.png:
-    Search by name OR district OR mobile individually or combined.
-    Shows matching records before selecting athlete.
-    Verify identity, attendance, required documents, and issue clearance.
+    - Mode 1: Individual Search by name OR district OR mobile, full comprehensive athlete data upon selection.
+    - Mode 2: District Bulk Verification: select whole district, select all candidates, and complete one-click verification and venue clearance.
     """
     championship = get_active_championship(request)
+    mode = request.GET.get('mode', 'individual')
     query = request.GET.get('q', '').strip()
     district_filter = request.GET.get('district', '').strip()
+    bulk_district = request.GET.get('bulk_district', '').strip() or TELANGANA_DISTRICTS[0]
     
     matches = []
     selected_registration = None
-    
-    districts = [
-        'Hyderabad', 'Rangareddy', 'Medchal-Malkajgiri', 'Warangal', 
-        'Karimnagar', 'Nizamabad', 'Khammam', 'Nalgonda', 'Mahabubnagar', 'Adilabad'
-    ]
+    athlete_age = None
+    bulk_registrations = []
 
-    if (query or district_filter) and championship:
-        qs = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete')
-        if query:
-            qs = qs.filter(
-                Q(athlete__first_name__icontains=query) |
-                Q(athlete__last_name__icontains=query) |
-                Q(athlete__mobile__icontains=query) |
-                Q(athlete__public_athlete_id__icontains=query) |
-                Q(event_entries__chest_number__iexact=query)
-            ).distinct()
-        if district_filter:
-            qs = qs.filter(athlete__district=district_filter)
-        matches = list(qs[:25])
+    if championship:
+        if mode == 'bulk_district':
+            bulk_registrations = ChampionshipRegistration.objects.filter(
+                championship=championship,
+                athlete__district__iexact=bulk_district
+            ).select_related('athlete').prefetch_related('event_entries__event_config', 'athlete__documents').order_by('id')
+        else:
+            qs = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete')
+            if query:
+                qs = qs.filter(
+                    Q(athlete__first_name__icontains=query) |
+                    Q(athlete__last_name__icontains=query) |
+                    Q(athlete__mobile__icontains=query) |
+                    Q(athlete__public_athlete_id__icontains=query) |
+                    Q(event_entries__chest_number__iexact=query)
+                ).distinct()
+            if district_filter:
+                qs = qs.filter(athlete__district=district_filter)
+            
+            matches = list(qs.order_by('-id')[:35])
 
     reg_id = request.GET.get('select_id')
-    if reg_id and championship:
-        selected_registration = ChampionshipRegistration.objects.filter(id=reg_id, championship=championship).select_related('athlete').first()
+    if not reg_id and matches:
+        reg_id = matches[0].id
+
+    if reg_id and championship and mode != 'bulk_district':
+        selected_registration = ChampionshipRegistration.objects.filter(
+            id=reg_id, championship=championship
+        ).select_related('athlete', 'approved_by', 'venue_cleared_by').prefetch_related(
+            'athlete__documents',
+            'event_entries__event_config',
+            'event_entries__age_category',
+            'event_entries__partner_athlete',
+            'event_entries__sequence_items__declared_asana'
+        ).first()
+
+        if selected_registration and selected_registration.athlete and selected_registration.athlete.dob:
+            cutoff = championship.age_cutoff_date or datetime.date(2026, 12, 31)
+            dob = selected_registration.athlete.dob
+            athlete_age = cutoff.year - dob.year - ((cutoff.month, cutoff.day) < (dob.month, dob.day))
 
     if request.method == 'POST':
         action = request.POST.get('action')
+        
+        # Whole District Bulk Verification
+        if action == 'bulk_verify_district':
+            selected_ids = request.POST.getlist('selected_reg_ids')
+            if not selected_ids:
+                messages.warning(request, "No athletes were selected for bulk clearance.")
+                return redirect(f"/venue/verification/?mode=bulk_district&bulk_district={bulk_district}")
+
+            updated_count = ChampionshipRegistration.objects.filter(
+                id__in=selected_ids,
+                championship=championship
+            ).update(
+                status=RegistrationStatus.VENUE_CLEARED,
+                venue_cleared=True,
+                venue_cleared_by=request.user,
+                venue_cleared_at=timezone.now()
+            )
+
+            # Auto-verify documents for cleared athletes
+            AthleteDocument.objects.filter(
+                athlete__registrations__id__in=selected_ids
+            ).update(
+                is_verified=True,
+                verified_by=request.user,
+                verified_at=timezone.now()
+            )
+
+            messages.success(request, f"Successfully verified and cleared {updated_count} athletes from {bulk_district} at Venue Desk!")
+            return redirect(f"/venue/verification/?mode=bulk_district&bulk_district={bulk_district}")
+
         target_id = request.POST.get('registration_id')
         reg = get_object_or_404(ChampionshipRegistration, id=target_id, championship=championship)
 
         if action == 'clear_venue':
-            notes = request.POST.get('venue_notes', '')
+            notes = request.POST.get('venue_notes', '').strip()
             reg.status = RegistrationStatus.VENUE_CLEARED
             reg.venue_cleared = True
             reg.venue_cleared_by = request.user
-            reg.venue_cleared_at = datetime.datetime.now()
-            reg.venue_notes = notes
+            reg.venue_cleared_at = timezone.now()
+            if notes:
+                reg.venue_notes = notes
             reg.save()
-            messages.success(request, f"Athlete {reg.athlete.full_name} cleared at venue desk! Status marked VENUE CLEARED.")
-            return redirect(f"/venue/verification/?select_id={reg.id}")
+            messages.success(request, f"Athlete {reg.athlete.full_name} ({reg.athlete.public_athlete_id}) officially cleared at Venue Desk!")
+            return redirect(f"/venue/verification/?select_id={reg.id}&mode={mode}")
+
+        elif action == 'revoke_clearance':
+            reg.status = RegistrationStatus.DISTRICT_APPROVED
+            reg.venue_cleared = False
+            reg.venue_cleared_by = None
+            reg.venue_cleared_at = None
+            reg.save()
+            messages.info(request, f"Venue clearance revoked for {reg.athlete.full_name}.")
+            return redirect(f"/venue/verification/?select_id={reg.id}&mode={mode}")
+
+        elif action == 'verify_document':
+            doc_id = request.POST.get('doc_id')
+            doc = get_object_or_404(AthleteDocument, id=doc_id, athlete=reg.athlete)
+            doc.is_verified = True
+            doc.verified_at = timezone.now()
+            doc.verified_by = request.user
+            doc.save()
+            messages.success(request, f"Document '{doc.get_document_type_display()}' verified successfully.")
+            return redirect(f"/venue/verification/?select_id={reg.id}&mode={mode}")
+
+        elif action == 'log_exception':
+            notes = request.POST.get('exception_notes', '').strip()
+            if notes:
+                existing = reg.venue_notes or ""
+                timestamp_str = timezone.now().strftime("%d-%m-%Y %H:%M")
+                reg.venue_notes = f"{existing}\n[{timestamp_str}] EXCEPTION: {notes}".strip()
+                reg.save(update_fields=['venue_notes'])
+                messages.warning(request, f"Exception logged for {reg.athlete.full_name}: {notes}")
+            return redirect(f"/venue/verification/?select_id={reg.id}&mode={mode}")
 
     return render(request, 'registrations/venue_verification.html', {
         'championship': championship,
+        'mode': mode,
         'query': query,
         'district_filter': district_filter,
-        'districts': districts,
+        'bulk_district': bulk_district,
+        'districts': TELANGANA_DISTRICTS,
         'matches': matches,
         'selected_registration': selected_registration,
+        'athlete_age': athlete_age,
+        'bulk_registrations': bulk_registrations,
     })

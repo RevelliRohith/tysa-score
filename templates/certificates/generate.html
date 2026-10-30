@@ -138,11 +138,12 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-[11px] font-bold text-slate-700">District</label>
-                        <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
-                            <option value="" selected>All</option>
-                            <option value="Hyderabad">Hyderabad</option>
-                            <option value="Mancherial">Mancherial</option>
+                        <label class="block text-[11px] font-bold text-slate-700">Filter District</label>
+                        <select onchange="window.location.href='?district=' + encodeURIComponent(this.value)" class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-bold text-slate-800 focus:border-[#0d5c58]">
+                            <option value="">All Telangana Districts</option>
+                            {% for d in districts %}
+                            <option value="{{ d }}" {% if selected_district == d %}selected{% endif %}>{{ d }}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -315,21 +316,31 @@
                 <!-- 4 Action Cards Grid -->
                 <div class="grid grid-cols-2 gap-2 text-center text-xs">
                     <!-- PDF -->
-                    <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
-                        <i data-lucide="file-text" class="w-5 h-5 text-rose-500 mx-auto"></i>
-                        <div class="font-bold text-slate-900 text-[11px]">Certificates PDF</div>
-                    </button>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="download_pdf">
+                        <input type="hidden" name="filter_district" value="{{ selected_district }}">
+                        <button type="submit" class="w-full p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
+                            <i data-lucide="file-text" class="w-5 h-5 text-rose-500 mx-auto"></i>
+                            <div class="font-bold text-slate-900 text-[11px]">Certificates PDF</div>
+                        </button>
+                    </form>
 
                     <!-- CSV -->
-                    <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
-                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600 mx-auto"></i>
-                        <div class="font-bold text-slate-900 text-[11px]">Register CSV</div>
-                    </button>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="download_csv">
+                        <input type="hidden" name="filter_district" value="{{ selected_district }}">
+                        <button type="submit" class="w-full p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600 mx-auto"></i>
+                            <div class="font-bold text-slate-900 text-[11px]">Register CSV</div>
+                        </button>
+                    </form>
 
                     <!-- Excel -->
                     <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
                         <i data-lucide="table" class="w-5 h-5 text-emerald-700 mx-auto"></i>
-                        <div class="font-bold text-slate-900 text-[11px]">Register Excel (.xlsx)</div>
+                        <div class="font-bold text-slate-900 text-[11px]">Register Excel</div>
                     </button>
 
                     <!-- Print -->

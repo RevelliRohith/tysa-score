@@ -53,12 +53,22 @@ def cd_corrections(request):
             return redirect(get_user_landing_url(request))
 
     chest_query = request.GET.get('chest', '').strip()
+    search_q = request.GET.get('q', '').strip() or chest_query
     selected_perf = None
-    if chest_query:
+    if search_q:
         selected_perf = Performance.objects.filter(
-            event_entry__registration__championship=championship,
-            event_entry__chest_number=chest_query
-        ).select_related('event_entry__registration__athlete').first()
+            event_entry__registration__championship=championship
+        ).filter(
+            Q(event_entry__chest_number__iexact=search_q) |
+            Q(event_entry__registration__athlete__first_name__icontains=search_q) |
+            Q(event_entry__registration__athlete__last_name__icontains=search_q) |
+            Q(event_entry__district__icontains=search_q)
+        ).select_related('event_entry__registration__athlete', 'event_entry__event_config', 'event_entry__age_category').first()
+
+    if not selected_perf:
+        selected_perf = Performance.objects.filter(
+            event_entry__registration__championship=championship
+        ).select_related('event_entry__registration__athlete', 'event_entry__event_config', 'event_entry__age_category').first()
 
     grants = CDCorrectionGrant.objects.filter(
         performance__event_entry__registration__championship=championship,
@@ -141,7 +151,8 @@ def cd_corrections(request):
 
     return render(request, 'corrections/cd_corrections.html', {
         'championship': championship,
-        'chest_query': chest_query,
+        'chest_query': search_q or chest_query,
+        'search_q': search_q,
         'selected_perf': selected_perf,
         'active_grants': grants,
         'can_unlock': can_unlock,

@@ -35,6 +35,7 @@ urlpatterns = [
     path('dashboard/', accounts_views.admin_dashboard, name='admin_dashboard'),
     path('cd/dashboard/', comp_views.cd_dashboard, name='cd_dashboard'),
     path('accounts/users/', accounts_views.users_and_permissions, name='users_and_permissions'),
+    path('accounts/users-and-permissions/', accounts_views.users_and_permissions, name='users_and_permissions_dash'),
     path('registers/', accounts_views.registers_view, name='registers_view'),
 
     # Championships (Multi-Championship Architecture)
@@ -42,23 +43,28 @@ urlpatterns = [
     path('championships/create/', champ_views.championship_create, name='championship_create'),
     path('championships/switch/<int:champ_id>/', champ_views.championship_switch, name='championship_switch'),
     path('championships/<int:champ_id>/setup/', champ_views.championship_setup, name='championship_setup'),
+    path('championships/<int:champ_id>/branding/', champ_views.championship_branding, name='championship_branding'),
 
     # Catalogue
     path('catalogue/', cat_views.catalogue_view, name='catalogue_view'),
 
     # Athlete Registration Flow (5 Steps) & ID Card
+    path('athletes/entries/', athlete_views.athlete_entries_list, name='athlete_entries_list'),
     path('register/athlete/step-1/', athlete_views.athlete_register_step1, name='athlete_register_step1'),
     path('register/athlete/step-2/', athlete_views.athlete_register_step2, name='athlete_register_step2'),
     path('register/athlete/step-3/', athlete_views.athlete_register_step3, name='athlete_register_step3'),
     path('register/athlete/step-4/', athlete_views.athlete_register_step4, name='athlete_register_step4'),
     path('register/athlete/step-5/', athlete_views.athlete_register_step5, name='athlete_register_step5'),
     path('athletes/id-card/<str:athlete_id>/', athlete_views.athlete_id_card, name='athlete_id_card'),
+    path('athletes/id-cards/batch/', athlete_views.athlete_id_cards_batch_print, name='athlete_id_cards_batch_print'),
     path('register/athlete/returning/', athlete_views.athlete_returning, name='athlete_returning'),
 
     # Universal Judges
     path('judges/apply/', judge_views.universal_judge_register, name='universal_judge_register'),
     path('judges/portal/', judge_views.judge_portal, name='judge_portal'),
     path('judges/<int:judge_id>/', judge_views.judge_profile, name='judge_profile'),
+    path('judges/<int:judge_id>/id-card/', judge_views.judge_id_card, name='judge_id_card'),
+    path('judges/id-cards/batch/', judge_views.judge_id_cards_batch_print, name='judge_id_cards_batch_print'),
     path('judges/approval-queue/', judge_views.judge_approval_queue, name='judge_approval_queue'),
 
     # District & Venue

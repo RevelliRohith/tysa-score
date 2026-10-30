@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
 from django.db.models import Q
+from config.districts import TELANGANA_DISTRICTS
 from .models import UniversalJudge, CertificationLevel, ApprovalStatus
 from accounts.models import ScopedRole, RoleChoices
 from accounts.permissions import admin_required, get_user_roles_for_request, get_active_championship
@@ -227,12 +229,20 @@ def judge_profile(request, judge_id):
 @admin_required
 def judge_approval_queue(request):
     """
-    Admin approval queue for universal judges:
-    Admin reviews pending applications and approves or rejects.
-    Pending judges cannot access scoring desks.
+    Implements 09_Universal_Judge_Registration.png, approval, and qualifications:
+    Admin management for Universal Judges with 3 distinct dedicated views:
+    - 'universal': Complete statewide directory of all Universal Judges.
+    - 'applications': Dedicated approval queue with Approve / Reject actions.
+    - 'qualifications': Certification details, authorities, license numbers, and profile inspection.
     """
-    pending_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.PENDING)
-    approved_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.APPROVED)
+    tab = request.GET.get('tab', 'universal')
+    if tab not in ['universal', 'applications', 'qualifications']:
+        tab = 'universal'
+
+    all_judges = UniversalJudge.objects.select_related('user', 'approved_by').all().order_by('-id')
+    pending_judges = all_judges.filter(approval_status=ApprovalStatus.PENDING)
+    approved_judges = all_judges.filter(approval_status=ApprovalStatus.APPROVED)
+    rejected_judges = all_judges.filter(approval_status=ApprovalStatus.REJECTED)
 
     if request.method == 'POST':
         judge_id = request.POST.get('judge_id')
@@ -243,14 +253,76 @@ def judge_approval_queue(request):
             judge.approval_status = ApprovalStatus.APPROVED
             judge.approved_by = request.user
             judge.save()
-            messages.success(request, f"Judge {judge.user.full_name or judge.user.email} officially approved.")
+            messages.success(request, f"Universal Judge {judge.user.full_name or judge.user.email} officially approved and accredited.")
         elif decision == 'reject':
             judge.approval_status = ApprovalStatus.REJECTED
             judge.save()
-            messages.info(request, f"Judge {judge.user.full_name or judge.user.email} application rejected.")
-        return redirect('judge_approval_queue')
+            messages.info(request, f"Judge application for {judge.user.full_name or judge.user.email} marked rejected.")
+        return redirect(f"/judges/approval-queue/?tab={tab}")
 
     return render(request, 'judges/approval_queue.html', {
+        'tab': tab,
+        'all_judges': all_judges,
         'pending_judges': pending_judges,
         'approved_judges': approved_judges,
+        'rejected_judges': rejected_judges,
+    })
+
+def judge_id_card(request, judge_id):
+    """
+    Universal Judge Accreditation ID Card:
+    Championship-independent official pass.
+    Includes association details, judge credentials, QR code, and General Secretary signature.
+    """
+    judge = get_object_or_404(UniversalJudge, id=judge_id)
+    return render(request, 'judges/id_card.html', {
+        'judge': judge,
+    })
+
+@admin_required
+def judge_id_cards_batch_print(request):
+    """
+    Universal Judge ID Cards - District & Batch Printing:
+    Filters judges by district, certification level, and print status.
+    Provides batch printable card sheet and 'Mark Selected as Printed' action.
+    """
+    selected_district = request.GET.get('district', '').strip()
+    selected_cert = request.GET.get('cert', '').strip()
+    print_status = request.GET.get('status', 'all').strip()
+
+    judges_qs = UniversalJudge.objects.filter(approval_status=ApprovalStatus.APPROVED).select_related('user').order_by('district', 'user__full_name')
+    if selected_district:
+        judges_qs = judges_qs.filter(district=selected_district)
+    if selected_cert:
+        judges_qs = judges_qs.filter(certification_level=selected_cert)
+    if print_status == 'pending':
+        judges_qs = judges_qs.filter(is_id_card_printed=False)
+    elif print_status == 'printed':
+        judges_qs = judges_qs.filter(is_id_card_printed=True)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        selected_ids = request.POST.getlist('selected_judge_ids')
+        if action == 'mark_printed':
+            updated = UniversalJudge.objects.filter(id__in=selected_ids).update(
+                is_id_card_printed=True,
+                id_card_printed_at=timezone.now()
+            )
+            messages.success(request, f"Marked {updated} Judge ID cards as printed.")
+        elif action == 'mark_unprinted':
+            updated = UniversalJudge.objects.filter(id__in=selected_ids).update(
+                is_id_card_printed=False,
+                id_card_printed_at=None
+            )
+            messages.info(request, f"Reset print status for {updated} judges.")
+        return redirect(f"/judges/id-cards/batch/?district={selected_district}&cert={selected_cert}&status={print_status}")
+
+    return render(request, 'judges/id_cards_batch.html', {
+        'judges': judges_qs,
+        'districts': TELANGANA_DISTRICTS,
+        'cert_choices': CertificationLevel.choices,
+        'selected_district': selected_district,
+        'selected_cert': selected_cert,
+        'print_status': print_status,
+        'total_count': judges_qs.count(),
     })

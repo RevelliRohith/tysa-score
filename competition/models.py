@@ -75,6 +75,7 @@ class JudgePanel(models.Model):
     artistry_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='artistry_panels')
     artistry_judge_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='artistry_panels_2')
     stage_manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_panels')
+    jury_member = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='jury_panels', help_text="Optional Jury member appointed by CD from judges list")
     
     age_category = models.ForeignKey('championships.AgeCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='panels')
     gender = models.CharField(max_length=10, blank=True, choices=[('M', 'Male'), ('F', 'Female')])

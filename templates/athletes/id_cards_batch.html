@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Universal Athlete ID Cards Batch Printing — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto space-y-6">
+
+    <!-- Header & Filter Bar (Hidden on print) -->
+    <div class="print:hidden space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+                    <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition">Dashboard</a>
+                    <span>/</span>
+                    <a href="{% url 'athlete_entries_list' %}" class="hover:text-teal-700 transition">Athletes & Entries</a>
+                    <span>/</span>
+                    <span class="text-slate-800 font-bold">Universal ID Cards Batch Print</span>
+                </div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Athlete Identity Cards — Batch Printing</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">
+                    Universal state passes for registered athletes. Filter by district, batch print on A4 sheet, and mark as printed.
+                </p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>Print Selected Cards</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Controls Form -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+            <form method="GET" class="flex flex-wrap items-center gap-3">
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Filter District</label>
+                    <select name="district" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none">
+                        <option value="">All Telangana Districts</option>
+                        {% for d in districts %}
+                        <option value="{{ d }}" {% if d == selected_district %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Print Status</label>
+                    <select name="status" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none">
+                        <option value="all" {% if print_status == 'all' %}selected{% endif %}>All Athletes</option>
+                        <option value="pending" {% if print_status == 'pending' %}selected{% endif %}>Pending Printing Only</option>
+                        <option value="printed" {% if print_status == 'printed' %}selected{% endif %}>Already Printed</option>
+                    </select>
+                </div>
+
+                <div class="pt-4">
+                    <a href="{% url 'athlete_id_cards_batch_print' %}" class="text-xs text-slate-500 hover:text-slate-800 underline">Reset</a>
+                </div>
+            </form>
+
+            <!-- Batch Action Form -->
+            <form method="POST" id="batchActionForm" class="flex items-center space-x-3">
+                {% csrf_token %}
+                <div class="text-xs text-slate-500 font-medium">
+                    <span id="selectedCount" class="font-bold text-teal-700">0</span> of {{ total_count }} selected
+                </div>
+                <button type="submit" name="action" value="mark_printed" class="px-3.5 py-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="check-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    <span>Mark Selected as Printed</span>
+                </button>
+                <button type="submit" name="action" value="mark_unprinted" class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Reset Status
+                </button>
+            </form>
+        </div>
+
+        <!-- Select All Bar -->
+        <div class="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="w-4 h-4 text-teal-600 rounded">
+                <span>Select all athletes on this page</span>
+            </label>
+            <span class="text-slate-400 font-normal">Ready for 4-up or 8-up A4 printing</span>
+        </div>
+    </div>
+
+    <!-- Cards Grid (Print Optimized) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 print:grid-cols-2 print:gap-4 print:m-0" id="cardsGrid">
+        {% for athlete in athletes %}
+        <div class="card-item bg-white rounded-2xl border border-slate-300 p-4 shadow-xs relative overflow-hidden print:border-2 print:border-slate-800 print:shadow-none print:break-inside-avoid">
+            
+            <!-- Selection Checkbox (Hidden on print) -->
+            <div class="print:hidden absolute top-3 right-3 z-10 flex items-center space-x-1.5">
+                {% if athlete.is_id_card_printed %}
+                    <span class="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        ✓ Printed
+                    </span>
+                {% else %}
+                    <span class="text-[9px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        Pending
+                    </span>
+                {% endif %}
+                <input type="checkbox" name="selected_athlete_ids" value="{{ athlete.id }}" form="batchActionForm" class="athlete-checkbox w-4 h-4 text-teal-600 rounded" onchange="updateSelectedCount()">
+            </div>
+
+            <!-- Card Header: Association Details (No championship name) -->
+            <div class="border-b-2 border-slate-900 pb-2 mb-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-slate-900 leading-tight">
+                            Telangana Yogasana Sports Association
+                        </div>
+                        <div class="text-[7.5px] font-bold uppercase tracking-tight text-slate-500">
+                            Affiliated to NYSF • Recognized by MYAS (Govt. of India)
+                        </div>
+                    </div>
+                    <span class="text-[8px] font-black px-1.5 py-0.5 rounded bg-teal-800 text-white uppercase tracking-wider">
+                        ATHLETE
+                    </span>
+                </div>
+            </div>
+
+            <!-- Card Body: Photo & Details -->
+            <div class="flex items-start space-x-3 mb-3">
+                <div class="w-20 h-24 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0">
+                    {% if athlete.photo %}
+                        <img src="{{ athlete.photo.url }}" alt="{{ athlete.full_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <span class="text-3xl text-slate-400">🧘</span>
+                    {% endif %}
+                </div>
+                <div class="min-w-0 flex-1 space-y-1 text-xs">
+                    <h3 class="font-black text-slate-950 text-sm leading-tight truncate">{{ athlete.full_name }}</h3>
+                    <div class="font-mono font-bold text-teal-800 text-[11px]">{{ athlete.public_athlete_id }}</div>
+                    <div class="text-[11px] text-slate-700">District: <strong class="text-slate-950">{{ athlete.district }}</strong></div>
+                    <div class="text-[10px] text-slate-600">DOB: {{ athlete.dob|date:"d M Y" }} • {{ athlete.get_gender_display }}</div>
+                    <div class="text-[10px] text-slate-500 truncate">Guardian: {{ athlete.guardian_name }}</div>
+                </div>
+            </div>
+
+            <!-- Card Pass Box & QR -->
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex items-center justify-between mb-2.5">
+                <div>
+                    <span class="text-[7.5px] font-extrabold uppercase text-slate-400 block tracking-wider">Permanent Athlete ID</span>
+                    <span class="font-mono text-xs font-black text-slate-900">{{ athlete.public_athlete_id }}</span>
+                    <span class="block text-[8px] text-slate-500">Valid across all championships</span>
+                </div>
+                <div class="w-11 h-11 bg-white p-0.5 border border-slate-300 rounded shrink-0 flex items-center justify-center">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data={{ athlete.public_athlete_id }}" alt="QR" class="w-full h-full">
+                </div>
+            </div>
+
+            <!-- Card Footer: Official Signatures -->
+            <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-[8px] text-slate-600">
+                <div>
+                    <span class="text-slate-400 block">Verification:</span>
+                    <span class="font-mono font-bold text-slate-800">TYSA-STATE-SECURED</span>
+                </div>
+                <div class="text-right">
+                    <span class="font-serif italic font-bold text-slate-900 block text-[10px]">R. Varma</span>
+                    <span class="uppercase tracking-wider text-slate-500 font-bold">General Secretary, TYSA</span>
+                </div>
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="col-span-3 py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+            <i data-lucide="id-card" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+            <p class="font-bold text-slate-700">No athletes found matching the selected district or print status.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<style>
+@media print {
+    body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    nav, header, sidebar, .print\:hidden {
+        display: none !important;
+    }
+    .card-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border: 2px solid #0f172a !important;
+        margin-bottom: 12px !important;
+    }
+}
+</style>
+
+<script>
+function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('.athlete-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.athlete-checkbox:checked').length;
+    document.getElementById('selectedCount').innerText = checked;
+}
+</script>
+{% endblock %}

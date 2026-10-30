@@ -1,154 +1,149 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Users and Permissions — TYSA Score{% endblock %}
+{% block title %}Users & Permissions — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8">
+<div class="max-w-[1400px] mx-auto">
 
-    <!-- Top Header -->
-    <div class="max-w-7xl mx-auto mb-6">
-        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
-            <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition flex items-center space-x-1">
-                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-                <span>Dashboard</span>
-            </a>
-            <span>/</span>
-            <span class="text-slate-800 font-bold">Users and Permissions</span>
+    <!-- Page Header -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Users & Permissions</h1>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Manage operational staff and universal scoped assignments.</p>
         </div>
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Users and Permissions</h1>
-                <p class="text-xs text-slate-500 font-medium mt-0.5">Manage staff accounts and assign roles for this championship.</p>
-            </div>
-            <div class="flex items-center space-x-3">
-                <button type="button" onclick="document.getElementById('assignRoleDrawer').classList.toggle('hidden')" 
-                    class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
-                    <i data-lucide="user-plus" class="w-4 h-4"></i>
-                    <span>Assign Role</span>
-                </button>
-            </div>
+        <div class="flex items-center space-x-2">
+            <button type="button" onclick="openAssignDrawer()" 
+                class="px-4 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Assign management role</span>
+            </button>
         </div>
     </div>
 
-    <!-- 3 Tabs Navigation matching 04_Users_and_Permissions.png -->
-    <div class="max-w-7xl mx-auto mb-6 border-b border-slate-200">
+    <!-- 3 Tabs Navigation -->
+    <div class="mb-6 border-b border-slate-200">
         <div class="flex space-x-8 text-xs font-bold">
-            <button class="pb-3 text-teal-700 border-b-2 border-teal-600 flex items-center space-x-2">
+            <a href="?tab=staff" class="pb-3 flex items-center space-x-2 border-b-2 transition {% if tab == 'staff' %}text-teal-700 border-teal-600{% else %}text-slate-500 border-transparent hover:text-slate-800{% endif %}">
                 <i data-lucide="users" class="w-4 h-4"></i>
-                <span>Staff accounts</span>
-            </button>
-            <button class="pb-3 text-slate-500 hover:text-slate-800 transition flex items-center space-x-2">
+                <span>Management staff ({{ users.count }})</span>
+            </a>
+            <a href="?tab=assignments" class="pb-3 flex items-center space-x-2 border-b-2 transition {% if tab == 'assignments' %}text-teal-700 border-teal-600{% else %}text-slate-500 border-transparent hover:text-slate-800{% endif %}">
                 <i data-lucide="shield" class="w-4 h-4"></i>
-                <span>Role assignments</span>
-            </button>
-            <button class="pb-3 text-slate-500 hover:text-slate-800 transition flex items-center space-x-2">
-                <i data-lucide="grid" class="w-4 h-4"></i>
-                <span>Module access</span>
-            </button>
+                <span>Role assignments ({{ all_scoped_roles.count }})</span>
+            </a>
+            <a href="?tab=history" class="pb-3 flex items-center space-x-2 border-b-2 transition {% if tab == 'history' %}text-teal-700 border-teal-600{% else %}text-slate-500 border-transparent hover:text-slate-800{% endif %}">
+                <i data-lucide="history" class="w-4 h-4"></i>
+                <span>Access history & Audit</span>
+            </a>
         </div>
     </div>
 
-    <!-- Main Layout with Grid (Content 8 Cols, Drawer 4 Cols) -->
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Main Grid: Content Area & Drawer -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-        <!-- Left Column: Table & Module Access Matrix (8 or 12 Cols) -->
-        <div class="lg:col-span-8 space-y-6">
+        <!-- Left Main Area (8 Cols) -->
+        <div class="lg:col-span-8 space-y-5">
 
-            <!-- Info Callout Box matching clarification -->
-            <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 flex items-start space-x-3 text-xs text-blue-900">
-                <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0 mt-0.5"></i>
-                <div class="space-y-0.5 leading-relaxed">
-                    <p>
-                        This module manages <strong>Operational & Management Staff</strong> (System Admin, CD, District User, Venue Desk, Stage Manager, Jury).
-                    </p>
-                    <p class="text-blue-700 text-[11px]">
-                        <strong>Judges</strong> are registered & approved via the <a href="{% url 'judge_approval_queue' %}" class="underline font-bold hover:text-blue-950">Universal Judge Approval Queue</a>, and assigned to seats exclusively by the Competition Director in <a href="{% url 'panel_assignments' %}" class="underline font-bold hover:text-blue-950">Judge Panel Assignment</a>.
-                    </p>
-                </div>
+            <!-- Blue Notice Banner -->
+            <div class="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3.5 flex items-center space-x-3 text-xs text-[#0369a1]">
+                <i data-lucide="info" class="w-4 h-4 text-[#0284c7] shrink-0"></i>
+                <span class="font-medium">
+                    Judge duties are assigned by the Competition Director in <a href="{% url 'panel_assignments' %}" class="underline font-bold hover:text-[#0c4a6e]">Judge Panel Assignment</a>. Universal district users retain lifetime access across all state meets.
+                </span>
             </div>
 
-            <!-- Search, Filter & Add User Action Bar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+            {% if tab == 'staff' %}
+            <!-- TAB 1: MANAGEMENT STAFF -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs">
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-                    <input type="text" id="userSearchInput" placeholder="Search by name or email" 
+                    <input type="text" id="staffFilterInput" onkeyup="filterStaffTable()" placeholder="Search staff by name or email" 
                         class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-teal-500 focus:bg-white transition">
                 </div>
                 <div class="flex items-center space-x-2">
-                    <select class="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 outline-none">
-                        <option>All roles</option>
-                        {% for r_code, r_name in roles %}
-                        <option value="{{ r_code }}">{{ r_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="button" onclick="document.getElementById('assignRoleDrawer').classList.remove('hidden')" 
-                        class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1 shrink-0">
+                    <button type="button" onclick="openAssignDrawer()" 
+                        class="px-3.5 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                        <span>Add user</span>
+                        <span>Add staff</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Users Table matching 04_Users_and_Permissions.png -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left border-collapse" id="staffTable">
                         <thead>
-                            <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/50 border-b border-slate-200">
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-4">Email</th>
-                                <th class="py-3 px-4">Role</th>
-                                <th class="py-3 px-4">Scope</th>
-                                <th class="py-3 px-3 text-center">Status</th>
+                            <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/70 border-b border-slate-200">
+                                <th class="py-3 px-4">Staff</th>
+                                <th class="py-3 px-4">Management role</th>
+                                <th class="py-3 px-4">Championship / scope</th>
+                                <th class="py-3 px-4 text-center">Status</th>
                                 <th class="py-3 px-4 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 text-xs">
+                        <tbody class="divide-y divide-slate-100 text-xs font-medium">
                             {% for u in users %}
-                            <tr class="hover:bg-slate-50/60 transition">
-                                <td class="py-3 px-4 font-bold text-slate-900">
-                                    {{ u.full_name|default:u.email }}
+                            <tr class="hover:bg-slate-50/70 transition staff-row">
+                                <td class="py-3.5 px-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-slate-100 text-[#00838f] font-bold text-xs flex items-center justify-center border border-slate-200 shrink-0">
+                                            {{ u.full_name|default:u.email|slice:":2"|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-slate-900 staff-name">{{ u.full_name|default:u.email }}</div>
+                                            <div class="text-[10px] text-slate-400 font-mono staff-email">{{ u.email }}</div>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="py-3 px-4 text-slate-500 font-mono text-[11px]">
-                                    {{ u.email }}
-                                </td>
-                                <td class="py-3 px-4">
+                                <td class="py-3.5 px-4">
                                     {% for r in u.scoped_roles.all %}
-                                    <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-md bg-teal-50 text-teal-800 border border-teal-200 mr-1 mb-0.5">
+                                    <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-teal-50 text-teal-800 border border-teal-200 mr-1 mb-0.5">
                                         {{ r.get_role_display }}
                                     </span>
                                     {% empty %}
-                                    <span class="text-slate-400 italic text-[11px]">No active role</span>
+                                        {% if u.is_superuser %}
+                                        <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                            System Superadmin
+                                        </span>
+                                        {% else %}
+                                        <span class="text-slate-400 italic text-xs">No active role</span>
+                                        {% endif %}
                                     {% endfor %}
                                 </td>
-                                <td class="py-3 px-4 text-slate-600 text-[11px]">
+                                <td class="py-3.5 px-4 text-slate-600 text-xs">
                                     {% for r in u.scoped_roles.all %}
-                                        {% if r.district %}
-                                            <div>District: <strong>{{ r.district }}</strong></div>
+                                        {% if r.role == 'DISTRICT_USER' and r.district %}
+                                            <span class="text-teal-700 font-bold">Universal District:</span> <strong>{{ r.district }}</strong>
+                                        {% elif r.district %}
+                                            <span>{{ r.championship.name|default:"State Championship" }}, <strong>{{ r.district }}</strong></span>
                                         {% elif r.championship %}
-                                            <div>Championship: <strong>{{ r.championship.name|truncatechars:25 }}</strong></div>
+                                            <span>{{ r.championship.name }}</span>
                                         {% else %}
-                                            <div class="text-teal-700 font-semibold">Global (All Championships)</div>
+                                            <span class="text-[#00838f] font-bold">Global System Admin</span>
                                         {% endif %}
                                     {% empty %}
                                         <span class="text-slate-400">—</span>
                                     {% endfor %}
                                 </td>
-                                <td class="py-3 px-3 text-center">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        Active
+                                <td class="py-3.5 px-4 text-center">
+                                    <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <span>Active</span>
                                     </span>
                                 </td>
-                                <td class="py-3 px-4 text-right">
-                                    <div class="inline-flex items-center space-x-1">
-                                        <button class="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition" title="Edit Role">
-                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                        <button class="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition" title="Remove Role">
-                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                    </div>
+                                <td class="py-3.5 px-4 text-right">
+                                    <button onclick="editStaffRole('{{ u.id }}', '{{ u.full_name|escapejs }}', '{{ u.email|escapejs }}')" 
+                                        class="px-3 py-1 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-2xs transition inline-flex items-center space-x-1.5">
+                                        <i data-lucide="edit-2" class="w-3 h-3 text-slate-400"></i>
+                                        <span>Assign / Edit</span>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
+                                    No management staff registered yet.
                                 </td>
                             </tr>
                             {% endfor %}
@@ -157,100 +152,191 @@
                 </div>
             </div>
 
-            <!-- System Admin Module Access Overview Matrix matching 04_Users_and_Permissions.png -->
-            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            {% elif tab == 'assignments' %}
+            <!-- TAB 2: ROLE ASSIGNMENTS -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">System Admin — Full Module Access Matrix</h3>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Unrestricted authority across all official championship components.</p>
+                        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Active Scoped Role Grants</h3>
+                        <p class="text-xs text-slate-500 font-medium">All active operational roles and scopes currently registered in the database.</p>
                     </div>
-                    <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-teal-100 text-teal-800 rounded-lg">
-                        10 / 10 Modules Granted
-                    </span>
+                    <button type="button" onclick="openAssignDrawer()" 
+                        class="px-3 py-1.5 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>New Role Assignment</span>
+                    </button>
                 </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-[11px]">
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Universal Registration</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Championships & COP</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">District / Venue</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Draw / Master Roll</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Panels / Stages</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">All Judging Desks</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Chief / Jury / CD</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Results Publication</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Certificates & Reports</div>
-                    </div>
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
-                        <div class="text-teal-600 font-black text-sm mb-1">✓</div>
-                        <div class="font-bold text-slate-800">Settings & Audit</div>
-                    </div>
-                </div>
-
-                <!-- Admin Actions Audited Callout -->
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center space-x-2.5 text-xs text-slate-600 mt-2">
-                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
-                    <span>Admin actions are fully audited. Approved result correction workflow retains complete immutable history.</span>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/70 border-b border-slate-200">
+                                <th class="py-3 px-4">Staff Member</th>
+                                <th class="py-3 px-4">Role</th>
+                                <th class="py-3 px-4">Championship Scope</th>
+                                <th class="py-3 px-4">District / Stage</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs font-medium">
+                            {% for role_obj in all_scoped_roles %}
+                            <tr class="hover:bg-slate-50/70 transition">
+                                <td class="py-3.5 px-4">
+                                    <div class="font-bold text-slate-900">{{ role_obj.user.full_name|default:role_obj.user.email }}</div>
+                                    <div class="text-[10px] text-slate-400 font-mono">{{ role_obj.user.email }}</div>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-teal-50 text-teal-800 border border-teal-200">
+                                        {{ role_obj.get_role_display }}
+                                    </span>
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-700">
+                                    {% if role_obj.role == 'DISTRICT_USER' %}
+                                        <span class="text-emerald-700 font-bold">Universal (All Meets)</span>
+                                    {% elif role_obj.championship %}
+                                        <span>{{ role_obj.championship.name }}</span>
+                                    {% else %}
+                                        <span class="text-slate-500 font-bold">Global System Admin</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-700">
+                                    {{ role_obj.district|default:"All Districts / N/A" }}
+                                </td>
+                                <td class="py-3.5 px-4 text-right">
+                                    <form method="POST" class="inline" onsubmit="return confirm('Revoke {{ role_obj.get_role_display }} from {{ role_obj.user.email }}?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="revoke_role">
+                                        <input type="hidden" name="role_id" value="{{ role_obj.id }}">
+                                        <button type="submit" class="px-2.5 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition inline-flex items-center space-x-1">
+                                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                            <span>Revoke</span>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
+                                    No role assignments recorded yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
+            {% elif tab == 'history' %}
+            <!-- TAB 3: ACCESS HISTORY & AUDIT LOG -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                <div class="p-4 border-b border-slate-100">
+                    <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Security & Role Access History</h3>
+                    <p class="text-xs text-slate-500 font-medium">Immutable audit trail of staff creation, role grants, modifications, and revocations.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/70 border-b border-slate-200">
+                                <th class="py-3 px-4">Timestamp</th>
+                                <th class="py-3 px-4">Authorized By</th>
+                                <th class="py-3 px-4">Action</th>
+                                <th class="py-3 px-4">Audit Details</th>
+                                <th class="py-3 px-4">IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs font-medium">
+                            {% for log in audit_logs %}
+                            <tr class="hover:bg-slate-50/70 transition">
+                                <td class="py-3 px-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">
+                                    {{ log.timestamp|date:"Y-m-d H:i:s" }}
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="font-bold text-slate-900">{{ log.user.full_name|default:log.user.email|default:"System" }}</div>
+                                    <div class="text-[10px] text-slate-400 font-mono">{{ log.user.email }}</div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-block px-2 py-0.5 text-[10px] font-black uppercase rounded 
+                                        {% if 'ASSIGN' in log.action %}bg-teal-50 text-teal-800 border border-teal-200
+                                        {% elif 'REVOKE' in log.action %}bg-rose-50 text-rose-800 border border-rose-200
+                                        {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                        {{ log.action }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-slate-700 text-xs">
+                                    {% if log.details %}
+                                        <div class="space-y-0.5">
+                                            {% if log.details.email %}<div>User: <strong>{{ log.details.email }}</strong></div>{% endif %}
+                                            {% if log.details.role %}<div>Role: <span class="font-semibold text-teal-700">{{ log.details.role }}</span></div>{% endif %}
+                                            {% if log.details.district %}<div>District: {{ log.details.district }}</div>{% endif %}
+                                            {% if log.details.championship %}<div>Scope: {{ log.details.championship }}</div>{% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-slate-400 font-mono">{{ log.resource_type }} #{{ log.resource_id }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">
+                                    {{ log.ip_address|default:"127.0.0.1" }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
+                                    No access history logs recorded yet. Assignments will appear here automatically.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
 
-        <!-- Right Column: Assign Role Drawer / Side Panel (4 Cols matching 04_Users_and_Permissions.png) -->
-        <div id="assignRoleDrawer" class="lg:col-span-4 space-y-6">
-            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 sticky top-20">
+        <!-- Right Side: Assign Management Role Drawer (4 Cols) -->
+        <div id="assignRoleDrawer" class="lg:col-span-4 space-y-4">
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5 sticky top-24">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Assign role</h3>
-                    <button type="button" onclick="document.getElementById('assignRoleDrawer').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 transition">
+                    <div>
+                        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight" id="drawerHeading">Assign management role</h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Authorize staff with operational permissions.</p>
+                    </div>
+                    <button type="button" onclick="closeAssignDrawer()" class="text-slate-400 hover:text-slate-700 transition">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </div>
 
-                <form method="POST" class="space-y-4">
+                <form method="POST" class="space-y-4" id="roleAssignForm">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_user">
+                    <input type="hidden" name="staff_user_id" id="drawerStaffUserId" value="">
 
+                    <!-- Select Existing Staff User OR Create New -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">User Full Name *</label>
-                        <input type="text" name="full_name" required placeholder="e.g. Smt. Kavitha Devi"
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Select Existing Staff (Optional)</label>
+                        <select id="existingStaffSelect" onchange="onExistingStaffSelected(this)" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:border-teal-500 outline-none font-medium text-slate-800 shadow-2xs">
+                            <option value="">— Or enter new staff details below —</option>
+                            {% for su in all_staff_users %}
+                            <option value="{{ su.id }}" data-name="{{ su.full_name }}" data-email="{{ su.email }}">{{ su.full_name|default:su.email }} ({{ su.email }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">User Email Address *</label>
-                        <input type="email" name="email" required placeholder="name@tysa.org"
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Staff member full name</label>
+                        <input type="text" name="full_name" id="drawerFullName" required placeholder="Enter staff name"
+                            class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-teal-500 outline-none shadow-2xs">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Role *</label>
-                        <select name="role" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-800">
-                            <option value="">Select a role ▾</option>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Staff email address</label>
+                        <input type="email" name="email" id="drawerEmail" required placeholder="name@tysa.org"
+                            class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-teal-500 outline-none shadow-2xs">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Role <span class="text-rose-500">*</span></label>
+                        <select name="role" id="drawerRole" required class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-teal-500 outline-none font-semibold text-slate-800 shadow-2xs">
+                            <option value="">Select role ▾</option>
                             {% for r_code, r_name in roles %}
                             <option value="{{ r_code }}">{{ r_name }}</option>
                             {% endfor %}
@@ -258,48 +344,41 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Championship *</label>
-                        <select name="championship_id" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-800">
-                            <option value="{{ championship.id }}">{{ championship.name|default:"3rd Telangana State Championship 2026" }}</option>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Championship Scope</label>
+                        <select name="championship_id" id="drawerChampionship" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-teal-500 outline-none font-semibold text-slate-800 shadow-2xs">
+                            <option value="{{ championship.id }}">{{ championship.name|default:"Telangana State Championship 2026" }}</option>
                             {% for c in all_championships %}
                                 {% if c.id != championship.id %}
                                 <option value="{{ c.id }}">{{ c.name }} ({{ c.year }})</option>
                                 {% endif %}
                             {% endfor %}
                         </select>
+                        <p class="text-[10px] text-slate-400 mt-1">Note: District Users automatically receive universal access across all championships.</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">District (optional)</label>
-                        <select name="district" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none">
-                            <option value="">Select a district ▾</option>
-                            <option value="Hyderabad">Hyderabad</option>
-                            <option value="Rangareddy">Rangareddy</option>
-                            <option value="Medchal-Malkajgiri">Medchal-Malkajgiri</option>
-                            <option value="Warangal">Warangal</option>
-                            <option value="Karimnagar">Karimnagar</option>
-                            <option value="Nizamabad">Nizamabad</option>
-                            <option value="Khammam">Khammam</option>
-                            <option value="Nalgonda">Nalgonda</option>
-                            <option value="Mahabubnagar">Mahabubnagar</option>
-                            <option value="Adilabad">Adilabad</option>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">District (for District Users)</label>
+                        <select name="district" id="drawerDistrict" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-teal-500 outline-none shadow-2xs">
+                            <option value="">Select district (if District User) ▾</option>
+                            {% for d in districts %}
+                            <option value="{{ d }}">{{ d }}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
-                    <!-- Role Scope Info Callout -->
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-500 leading-relaxed space-y-1">
-                        <div class="font-bold text-slate-700">Operational Role Scope</div>
-                        <p>Non-admin staff are scoped to the selected championship, district or stage. They only access modules authorized for their role.</p>
-                        <p class="text-teal-700 font-medium pt-1">Note: Judge scoring duties are not assigned here; they are assigned by the Competition Director in Judge Panel Assignment.</p>
+                    <!-- Role Scope Info Notice -->
+                    <div class="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3 text-[11px] text-[#0369a1] leading-relaxed flex items-start space-x-2">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-[#0284c7] shrink-0 mt-0.5"></i>
+                        <span>Operational staff are scoped strictly to their championship and district. Judge assignments remain managed in Judge Panel Assignment.</span>
                     </div>
 
-                    <div class="flex items-center space-x-2 pt-2">
-                        <button type="button" onclick="document.getElementById('assignRoleDrawer').classList.add('hidden')" 
-                            class="flex-1 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition">
+                    <div class="flex items-center space-x-3 pt-2">
+                        <button type="button" onclick="closeAssignDrawer()" 
+                            class="flex-1 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl border border-slate-200 shadow-2xs transition">
                             Cancel
                         </button>
                         <button type="submit" 
-                            class="flex-1 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition">
+                            class="flex-1 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition">
                             Save assignment
                         </button>
                     </div>
@@ -309,12 +388,54 @@
 
     </div>
 
-    <!-- Sub-footer -->
-    <div class="max-w-7xl mx-auto mt-10 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
-        <span>Version 1.00</span>
-        <span class="mx-2">•</span>
-        <span>TYSA Score | Telangana State Yogasana Championship Management</span>
-    </div>
-
 </div>
+
+<script>
+function filterStaffTable() {
+    const input = document.getElementById('staffFilterInput').value.toLowerCase();
+    const rows = document.querySelectorAll('.staff-row');
+    rows.forEach(r => {
+        const name = r.querySelector('.staff-name').textContent.toLowerCase();
+        const email = r.querySelector('.staff-email').textContent.toLowerCase();
+        if (name.includes(input) || email.includes(input)) {
+            r.style.display = '';
+        } else {
+            r.style.display = 'none';
+        }
+    });
+}
+
+function openAssignDrawer() {
+    document.getElementById('assignRoleDrawer').classList.remove('hidden');
+    document.getElementById('drawerHeading').innerText = 'Assign management role';
+    document.getElementById('drawerStaffUserId').value = '';
+    document.getElementById('existingStaffSelect').value = '';
+    document.getElementById('drawerFullName').value = '';
+    document.getElementById('drawerEmail').value = '';
+}
+
+function closeAssignDrawer() {
+    document.getElementById('assignRoleDrawer').classList.add('hidden');
+}
+
+function onExistingStaffSelected(select) {
+    const opt = select.options[select.selectedIndex];
+    if (opt.value) {
+        document.getElementById('drawerStaffUserId').value = opt.value;
+        document.getElementById('drawerFullName').value = opt.getAttribute('data-name');
+        document.getElementById('drawerEmail').value = opt.getAttribute('data-email');
+    } else {
+        document.getElementById('drawerStaffUserId').value = '';
+    }
+}
+
+function editStaffRole(userId, fullName, email) {
+    openAssignDrawer();
+    document.getElementById('drawerHeading').innerText = 'Update Role for ' + fullName;
+    document.getElementById('drawerStaffUserId').value = userId;
+    document.getElementById('drawerFullName').value = fullName;
+    document.getElementById('drawerEmail').value = email;
+    document.getElementById('existingStaffSelect').value = userId;
+}
+</script>
 {% endblock %}

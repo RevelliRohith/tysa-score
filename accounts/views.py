@@ -18,6 +18,8 @@ from registrations.models import ChampionshipRegistration, EventEntry
 from judges.models import UniversalJudge, ApprovalStatus
 from competition.models import JudgePanel, StageBatch
 from scoring.models import Performance
+from config.districts import TELANGANA_DISTRICTS
+from audit.models import AuditLog
 
 def login_view(request):
     """
@@ -177,16 +179,12 @@ def users_and_permissions(request):
         RoleChoices.CD,
         RoleChoices.DISTRICT_USER,
         RoleChoices.VENUE_DESK,
-        RoleChoices.STAGE_MANAGER,
-        RoleChoices.JURY,
     ]
     roles = [
         (RoleChoices.ADMIN, 'System Admin (Global)'),
         (RoleChoices.CD, 'Competition Director (CD)'),
-        (RoleChoices.DISTRICT_USER, 'District User (Scoped)'),
+        (RoleChoices.DISTRICT_USER, 'District User (Universal across Championships)'),
         (RoleChoices.VENUE_DESK, 'Venue Desk (Scoped)'),
-        (RoleChoices.STAGE_MANAGER, 'Stage Manager / Announcer'),
-        (RoleChoices.JURY, 'Jury (Read-only Review)'),
     ]
 
     # Only show management staff (or superusers). Do not list pure judges in management screen.
@@ -197,6 +195,7 @@ def users_and_permissions(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'add_user':
+            staff_user_id = request.POST.get('staff_user_id', '').strip()
             email = request.POST.get('email', '').strip()
             full_name = request.POST.get('full_name', '').strip()
             role = request.POST.get('role')
@@ -204,50 +203,94 @@ def users_and_permissions(request):
             champ_scope_id = request.POST.get('championship_id')
 
             if role not in MANAGEMENT_ROLE_KEYS:
-                messages.error(request, "Invalid role. Judge duties cannot be assigned from Users & Permissions.")
+                messages.error(request, "Invalid role. Judge duties, Jury and Stage Managers cannot be assigned from Users & Permissions.")
                 return redirect('users_and_permissions')
 
             target_champ = None
-            if role == RoleChoices.ADMIN:
+            if role in [RoleChoices.ADMIN, RoleChoices.DISTRICT_USER]:
                 target_champ = None
             elif champ_scope_id:
                 target_champ = Championship.objects.filter(id=champ_scope_id).first()
             else:
                 target_champ = championship
 
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={'full_name': full_name, 'is_staff': True}
-            )
-            if created:
-                user.set_password('tysa2026')
-                user.save()
+            if staff_user_id:
+                user = get_object_or_404(User, id=staff_user_id)
+            else:
+                if not email:
+                    messages.error(request, "Email address is required for new staff member.")
+                    return redirect('users_and_permissions')
+                user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={'full_name': full_name, 'is_staff': True}
+                )
+                if created:
+                    user.set_password('tysa2026')
+                    user.save()
+                elif full_name and not user.full_name:
+                    user.full_name = full_name
+                    user.save(update_fields=['full_name'])
 
-            ScopedRole.objects.get_or_create(
+            role_obj, _ = ScopedRole.objects.get_or_create(
                 user=user,
                 role=role,
                 championship=target_champ,
                 district=district
             )
-            messages.success(request, f"Operational staff user {email} assigned role {role}.")
-            return redirect('users_and_permissions')
+
+            # Audit logging
+            AuditLog.log(
+                action='ROLE_ASSIGNED',
+                resource_type='ScopedRole',
+                resource_id=role_obj.id,
+                details={
+                    'email': user.email,
+                    'role': role_obj.get_role_display(),
+                    'championship': target_champ.name if target_champ else 'Global/Universal',
+                    'district': district or 'All Districts'
+                },
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            messages.success(request, f"Operational staff user {user.email} assigned role {role_obj.get_role_display()}.")
+            return redirect('/accounts/users-and-permissions/?tab=assignments')
 
         elif action == 'revoke_role':
             role_id = request.POST.get('role_id')
             role_obj = get_object_or_404(ScopedRole, id=role_id)
             user_email = role_obj.user.email
             role_name = role_obj.get_role_display()
+            
+            AuditLog.log(
+                action='ROLE_REVOKED',
+                resource_type='ScopedRole',
+                resource_id=role_obj.id,
+                details={'email': user_email, 'role': role_name},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             role_obj.delete()
             messages.info(request, f"Role {role_name} revoked from {user_email}.")
-            return redirect('users_and_permissions')
+            return redirect('/accounts/users-and-permissions/?tab=assignments')
 
+    tab = request.GET.get('tab', 'staff')
+    all_scoped_roles = ScopedRole.objects.select_related('user', 'championship').all().order_by('-id')
+    audit_logs = AuditLog.objects.select_related('user').all().order_by('-timestamp')[:100]
+    all_staff_users = User.objects.all().order_by('full_name', 'email')
     all_championships = Championship.objects.all().order_by('-year')
 
     return render(request, 'accounts/users_and_permissions.html', {
         'users': users,
         'roles': roles,
+        'tab': tab,
+        'all_scoped_roles': all_scoped_roles,
+        'audit_logs': audit_logs,
+        'all_staff_users': all_staff_users,
         'championship': championship,
         'all_championships': all_championships,
+        'districts': TELANGANA_DISTRICTS,
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)

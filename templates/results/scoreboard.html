@@ -1,271 +1,163 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cumulative Scoreboard — Telangana State Yogasana Championship 2026</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <meta http-equiv="refresh" content="10">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f1f7fa;
-        }
-    </style>
-</head>
-<body class="min-h-screen text-slate-800 p-4 lg:p-6 flex flex-col justify-between">
-    <div class="max-w-[1400px] w-full mx-auto space-y-4">
-        <!-- Top Header matching 28_Certificates_and_Printing.png -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1">
-            <!-- Brand -->
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full border-2 border-[#0d5c58] flex items-center justify-center">
-                    <span class="text-xl font-black text-[#0d5c58]">☯</span>
-                </div>
-                <div>
-                    <div class="text-2xl font-black text-[#002f54] leading-tight">TYSA <span class="font-normal">Score</span></div>
-                    <div class="text-[10px] text-slate-500 font-semibold tracking-tight">Telangana State Yogasana Championship</div>
-                </div>
-            </div>
+{% extends "base.html" %}
+{% load static %}
 
-            <!-- Championship Title & Badges -->
-            <div class="text-center md:text-left">
-                <h1 class="text-xl lg:text-2xl font-black text-[#002f54] tracking-tight">
-                    Telangana State Yogasana Championship 2026
-                </h1>
-                <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-1.5">
-                    <span class="px-3.5 py-1 rounded-md bg-[#0d5c58] text-white text-xs font-bold shadow-xs">
-                        Artistic Single
-                    </span>
-                    <span class="px-3 py-1 rounded-md bg-white border border-slate-300 text-slate-800 text-xs font-bold shadow-xs">
-                        Junior Girls
-                    </span>
-                    <span class="px-3 py-1 rounded-md bg-white border border-slate-300 text-slate-800 text-xs font-bold shadow-xs">
-                        Semi Final
-                    </span>
-                    <span class="px-3 py-1 rounded-md bg-white border border-slate-300 text-slate-800 text-xs font-bold shadow-xs">
-                        Stage A
-                    </span>
-                </div>
-            </div>
+{% block title %}Cumulative Scoreboard — Telangana State Yogasana Championship 2026{% endblock %}
 
-            <!-- Live Status & Performed Count -->
-            <div class="flex flex-col md:items-end">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide border border-emerald-200">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                    <span>LIVE</span>
-                    <span class="text-emerald-400 font-light">|</span>
-                    <span class="font-bold">Event in progress</span>
-                </div>
-                <div class="mt-1 text-base font-extrabold text-slate-900">
-                    24 of 40 performed
-                </div>
-            </div>
+{% block content %}
+<div class="space-y-4">
+    <!-- Official Printable Branding Header (Renders State, District & Sponsor Logos) -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs print:border-0 print:p-0 print:shadow-none">
+        <div class="flex justify-end pb-3 print:hidden">
+            <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print Official Results</span>
+            </button>
         </div>
+        {% include "includes/printable_header.html" %}
+    </div>
 
-        <!-- Section Title Header -->
-        <div class="flex items-center justify-between pt-1">
-            <h2 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
-                All performed athletes &mdash; cumulative scores
-            </h2>
-            <div class="text-xs text-slate-500 font-medium hidden sm:block">
-                Performance order • All earlier results retained
+        <!-- Live Status & Performed Count -->
+        <div class="flex flex-col md:items-end">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide border border-emerald-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span>LIVE</span>
+                <span class="text-emerald-400 font-light">|</span>
+                <span class="font-bold">Event in progress</span>
             </div>
-        </div>
-
-        <!-- Cumulative Scores Full Table -->
-        <div class="shadow-sm rounded-xl overflow-hidden border border-slate-200 bg-white">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-[#002f54] text-white text-xs font-bold">
-                        <tr>
-                            <th class="py-3 px-4 text-center w-20">Position</th>
-                            <th class="py-3 px-4 text-center w-24">Chest No.</th>
-                            <th class="py-3 px-6">Athlete</th>
-                            <th class="py-3 px-6">District</th>
-                            <th class="py-3 px-6 text-center w-36">Total Score</th>
-                            <th class="py-3 px-6 text-center w-52">Result Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-slate-800">
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">1</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">101</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Saanvi Reddy</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Hyderabad</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">88.20</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">2</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">102</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Nitya Sharma</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Ranga Reddy</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">87.95</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">3</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">103</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Tanvi Chowdary</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Warangal</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">86.80</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">4</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">104</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Ira Ramesh</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Medak</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">86.10</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">5</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">105</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Ananya Reddy</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Hyderabad</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">85.00</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">6</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">106</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Charvi Singh</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Nizamabad</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">84.65</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">7</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">107</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Myra Reddy</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Karimnagar</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">84.10</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">8</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">108</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Kiara Naik</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Khammam</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">83.50</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">9</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">109</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Vaishnavi Chary</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Nalgonda</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">83.10</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">10</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">110</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Shravya Reddy</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Siddipet</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">82.95</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">11</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">111</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Diya Rathi</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Mahabubnagar</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">81.90</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-slate-50/70">
-                            <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">12</td>
-                            <td class="py-2.5 px-4 text-center font-medium text-slate-600">112</td>
-                            <td class="py-2.5 px-6 font-extrabold text-slate-900">Priya Rao</td>
-                            <td class="py-2.5 px-6 text-slate-600 font-medium">Mancherial</td>
-                            <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">87.50</td>
-                            <td class="py-2.5 px-6 text-center">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    Released • Provisional
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Footer pagination info -->
-        <div class="text-xs text-slate-500 flex flex-col md:flex-row items-center justify-between gap-2 pt-1">
-            <div>
-                Showing 1 – 12 of 24 performed • Page 1 of 2 • Auto-rotates every 10 seconds
-            </div>
-            <div>
-                Only released scores shown • Results remain available through event completion • Illustrative sample data
-            </div>
-        </div>
-
-        <!-- Current Performer Live Status Ticker -->
-        <div class="bg-cyan-50/70 border border-cyan-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xs">
-            <div class="w-5 h-5 rounded-full border-2 border-[#0d5c58] border-t-transparent animate-spin shrink-0"></div>
-            <div class="text-sm font-extrabold text-slate-900">
-                Currently performing: <span class="text-[#0d5c58]">Chest 125</span>
-            </div>
-            <div class="text-slate-300 font-light">|</div>
-            <div class="text-xs text-slate-600 font-semibold">
-                Score awaiting approval
+            <div class="mt-1 text-base font-extrabold text-slate-900">
+                24 of 40 performed
             </div>
         </div>
     </div>
 
-    <script>
-        lucide.createIcons();
-    </script>
-</body>
-</html>
+    <!-- Section Title Header -->
+    <div class="flex items-center justify-between pt-1">
+        <h2 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
+            All performed athletes &mdash; cumulative scores
+        </h2>
+        <div class="text-xs text-slate-500 font-medium hidden sm:block">
+            Performance order • All earlier results retained
+        </div>
+    </div>
+
+    <!-- Cumulative Scores Full Table -->
+    <div class="shadow-sm rounded-xl overflow-hidden border border-slate-200 bg-white">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-[#002f54] text-white text-xs font-bold">
+                    <tr>
+                        <th class="py-3 px-4 text-center w-20">Position</th>
+                        <th class="py-3 px-4 text-center w-24">Chest No.</th>
+                        <th class="py-3 px-6">Athlete</th>
+                        <th class="py-3 px-6">District</th>
+                        <th class="py-3 px-6 text-center w-36">Total Score</th>
+                        <th class="py-3 px-6 text-center w-52">Result Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800">
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">1</td>
+                        <td class="py-2.5 px-4 text-center font-medium text-slate-600">101</td>
+                        <td class="py-2.5 px-6 font-extrabold text-slate-900">Saanvi Reddy</td>
+                        <td class="py-2.5 px-6 text-slate-600 font-medium">Hyderabad</td>
+                        <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">88.20</td>
+                        <td class="py-2.5 px-6 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Qualified for Finals
+                            </span>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">2</td>
+                        <td class="py-2.5 px-4 text-center font-medium text-slate-600">108</td>
+                        <td class="py-2.5 px-6 font-extrabold text-slate-900">Ananya Rao</td>
+                        <td class="py-2.5 px-6 text-slate-600 font-medium">Warangal</td>
+                        <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">86.50</td>
+                        <td class="py-2.5 px-6 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Qualified for Finals
+                            </span>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">3</td>
+                        <td class="py-2.5 px-4 text-center font-medium text-slate-600">114</td>
+                        <td class="py-2.5 px-6 font-extrabold text-slate-900">Tanvi Sharma</td>
+                        <td class="py-2.5 px-6 text-slate-600 font-medium">Rangareddy</td>
+                        <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">85.80</td>
+                        <td class="py-2.5 px-6 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Qualified for Finals
+                            </span>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">4</td>
+                        <td class="py-2.5 px-4 text-center font-medium text-slate-600">105</td>
+                        <td class="py-2.5 px-6 font-extrabold text-slate-900">Divya Patel</td>
+                        <td class="py-2.5 px-6 text-slate-600 font-medium">Karimnagar</td>
+                        <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">84.10</td>
+                        <td class="py-2.5 px-6 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Qualified for Finals
+                            </span>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">5</td>
+                        <td class="py-2.5 px-4 text-center font-medium text-slate-600">119</td>
+                        <td class="py-2.5 px-6 font-extrabold text-slate-900">Isha Varma</td>
+                        <td class="py-2.5 px-6 text-slate-600 font-medium">Nizamabad</td>
+                        <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">83.40</td>
+                        <td class="py-2.5 px-6 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Qualified for Finals
+                            </span>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-2.5 px-4 text-center font-black text-base text-slate-900">6</td>
+                        <td class="py-2.5 px-4 text-center font-medium text-slate-600">122</td>
+                        <td class="py-2.5 px-6 font-extrabold text-slate-900">Kavya Nair</td>
+                        <td class="py-2.5 px-6 text-slate-600 font-medium">Khammam</td>
+                        <td class="py-2.5 px-6 text-center font-black text-base text-[#0d5c58]">81.90</td>
+                        <td class="py-2.5 px-6 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Qualified for Finals
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Footer pagination info -->
+    <div class="text-xs text-slate-500 flex flex-col md:flex-row items-center justify-between gap-2 pt-1">
+        <div>
+            Showing 1 – 6 of 24 performed • Auto-rotates every 10 seconds
+        </div>
+        <div>
+            Only released scores shown • Results remain available through event completion
+        </div>
+    </div>
+
+    <!-- Current Performer Live Status Ticker -->
+    <div class="bg-cyan-50/70 border border-cyan-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xs">
+        <div class="w-5 h-5 rounded-full border-2 border-[#0d5c58] border-t-transparent animate-spin shrink-0"></div>
+        <div class="text-sm font-extrabold text-slate-900">
+            Currently performing: <span class="text-[#0d5c58]">Chest 125</span>
+        </div>
+        <div class="text-slate-300 font-light">|</div>
+        <div class="text-xs text-slate-600 font-semibold">
+            Score awaiting approval
+        </div>
+    </div>
+</div>
+{% endblock %}

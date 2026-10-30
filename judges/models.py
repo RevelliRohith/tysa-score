@@ -26,11 +26,20 @@ class UniversalJudge(models.Model):
     admin_notes = models.TextField(blank=True)
     
     certificate_file = models.FileField(upload_to='judges/certificates/', blank=True, null=True)
+    
+    # Universal Judge ID Card batch printing & issuance tracking
+    is_id_card_printed = models.BooleanField(default=False, verbose_name="ID Card Printed")
+    id_card_printed_at = models.DateTimeField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.user.full_name or self.user.email} - {self.get_certification_level_display()} [{self.approval_status}]"
+
+    @property
+    def judge_code(self):
+        return f"TYSA-JDG-{self.id:04d}"
 
     @property
     def is_approved(self):

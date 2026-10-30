@@ -1,174 +1,266 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}District Draw and Master Roll — TYSA Score{% endblock %}
+{% block title %}CD District Draw & Master Roll — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6 py-2">
-    <!-- Top Metadata Card -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">District draw and master roll</h1>
-            <p class="text-sm text-slate-500 mt-1">District performance order.</p>
-        </div>
+<div class="max-w-[1400px] mx-auto space-y-6 py-2">
 
-        <!-- Horizontal parameter strip -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 text-xs">
-            <div>
-                <span class="text-slate-400 font-medium block">Event</span>
-                <span class="text-sm font-bold text-slate-900">{{ current_event.get_event_type_display|default:"Traditional" }}</span>
+    <!-- Top Action Bar (Hidden on print) -->
+    <div class="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+                <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition">Dashboard</a>
+                <span>/</span>
+                <span class="text-slate-500">Competition Management</span>
+                <span>/</span>
+                <span class="text-slate-800 font-bold">District Draw & Master Roll</span>
             </div>
-            <div>
-                <span class="text-slate-400 font-medium block">Category</span>
-                <span class="text-sm font-bold text-slate-900">{{ current_cat.name|default:"Junior Boys" }}</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">CD District Draw & Master Roll Generation</h1>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">
+                Assign lottery draw numbers (1–33) to Telangana districts and generate the sorted official Master Roll.
+            </p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <!-- View Mode Toggle -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                <a href="?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}&view_mode=without_sig" 
+                    class="px-3 py-1.5 rounded-lg transition {% if view_mode != 'with_sig' %}bg-white text-teal-800 shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    Without Signature
+                </a>
+                <a href="?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}&view_mode=with_sig" 
+                    class="px-3 py-1.5 rounded-lg transition {% if view_mode == 'with_sig' %}bg-white text-teal-800 shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    With Signature
+                </a>
             </div>
-            <div>
-                <span class="text-slate-400 font-medium block">Round</span>
-                <span class="text-sm font-bold text-slate-900">Semi Final</span>
-            </div>
-            <div>
-                <span class="text-slate-400 font-medium block">Championship</span>
-                <span class="text-sm font-bold text-slate-900">{{ active_championship.name|default:"Telangana State Yogasana Championship 2026" }}</span>
-            </div>
+
+            <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print Master Roll</span>
+            </button>
         </div>
     </div>
 
-    <!-- 2 Column Layout: Left = District Draw, Right = Master Roll Preview -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Left: District Draw (Lottery Order) -->
-        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+    <!-- Filter Bar for Event, Category, Gender, Round (Hidden on print) -->
+    <div class="print:hidden bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+        <form method="GET" class="flex flex-wrap items-center gap-3">
+            <input type="hidden" name="view_mode" value="{{ view_mode }}">
             <div>
-                <h2 class="text-base font-bold text-slate-900">District draw (lottery order)</h2>
-                <p class="text-xs text-slate-500 mt-0.5">Ordered list of districts for this event and round.</p>
+                <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Event</label>
+                <select name="event_id" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                    {% for cfg in event_configs %}
+                    <option value="{{ cfg.id }}" {% if cfg.id == current_event.id %}selected{% endif %}>{{ cfg.get_event_type_display }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-            <!-- District lottery cards -->
-            <div class="space-y-3 pt-2">
-                <div class="border border-slate-200 rounded-xl p-3.5 flex items-center space-x-4 bg-white hover:border-slate-300 transition">
-                    <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                        1
-                    </div>
-                    <span class="text-sm font-bold text-slate-800">Mancherial</span>
-                </div>
-
-                <div class="border border-slate-200 rounded-xl p-3.5 flex items-center space-x-4 bg-white hover:border-slate-300 transition">
-                    <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                        2
-                    </div>
-                    <span class="text-sm font-bold text-slate-800">Hyderabad</span>
-                </div>
-
-                <div class="border border-slate-200 rounded-xl p-3.5 flex items-center space-x-4 bg-white hover:border-slate-300 transition">
-                    <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                        3
-                    </div>
-                    <span class="text-sm font-bold text-slate-800">Medak</span>
-                </div>
+            <div>
+                <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Age Category</label>
+                <select name="cat_id" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if cat.id == current_cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-            <form method="POST" class="pt-4">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="run_draw">
-                <button type="submit" class="w-full py-3 px-4 bg-teal-800 hover:bg-teal-900 text-white rounded-lg font-medium text-sm flex items-center justify-center space-x-2 shadow-xs transition">
-                    <i data-lucide="shuffle" class="w-4 h-4"></i>
-                    <span>Confirm draw</span>
-                </button>
-            </form>
+            <div>
+                <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Gender Division</label>
+                <select name="gender" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                    <option value="M" {% if gender == 'M' %}selected{% endif %}>Male / Boys</option>
+                    <option value="F" {% if gender == 'F' %}selected{% endif %}>Female / Girls</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Round</label>
+                <select name="round_type" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                    <option value="PRELIMINARY" {% if round_type == 'PRELIMINARY' %}selected{% endif %}>Preliminary</option>
+                    <option value="SEMI_FINAL" {% if round_type == 'SEMI_FINAL' %}selected{% endif %}>Semi-Final</option>
+                    <option value="FINAL" {% if round_type == 'FINAL' %}selected{% endif %}>Final</option>
+                </select>
+            </div>
+        </form>
+
+        <div class="flex items-center space-x-2">
+            {% if master_roll and master_roll.is_locked %}
+                <span class="px-3 py-1 text-xs font-bold text-emerald-800 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center space-x-1">
+                    <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                    <span>Master Roll Locked</span>
+                </span>
+            {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="lock_roll">
+                    <button type="submit" class="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl transition flex items-center space-x-1">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Lock Declarations</span>
+                    </button>
+                </form>
+            {% endif %}
         </div>
+    </div>
 
-        <!-- Right: Master Roll Preview -->
-        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-            <div class="flex items-center justify-between">
+    <!-- 2 Column Layout: Left = 33 Telangana Districts Lottery Order (Hidden on Print) | Right = Printable Master Roll -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: All 33 Districts Lottery Draw Input (Hidden on Print) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4 print:hidden">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                    <h2 class="text-base font-bold text-slate-900">Master roll preview</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Preview of performance order based on the district draw.</p>
+                    <h2 class="text-sm font-extrabold text-slate-900 tracking-tight uppercase">Telangana Districts Lottery Draw</h2>
+                    <p class="text-[11px] text-slate-500 font-medium">All 33 Telangana districts. Enter lottery draw numbers 1–33.</p>
                 </div>
                 <form method="POST" class="inline">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="run_draw">
-                    <button type="submit" class="px-3.5 py-1.5 border border-teal-800 text-teal-800 hover:bg-teal-50 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
-                        <span>Generate preview</span>
+                    <button type="submit" class="px-3 py-1 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition" title="Auto-assign random draw numbers">
+                        Auto Lottery
                     </button>
                 </form>
             </div>
 
-            <!-- Table -->
-            <div class="overflow-hidden border border-slate-200 rounded-xl">
-                <table class="w-full text-left text-sm">
+            <!-- Form for 33 District Numbering -->
+            <form method="POST" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_numbering">
+                
+                <div class="max-h-[480px] overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-100">
+                    {% for d in draw_districts %}
+                    <div class="pt-1.5 flex items-center justify-between gap-3">
+                        <div class="flex items-center space-x-2.5 min-w-0">
+                            <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-600 font-mono font-bold text-[11px] flex items-center justify-center shrink-0">
+                                {{ forloop.counter }}
+                            </span>
+                            <span class="text-xs font-bold text-slate-900 truncate">{{ d.name }}</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5 shrink-0">
+                            <span class="text-[10px] text-slate-400 font-semibold">Draw #</span>
+                            <input type="number" name="number_{{ d.name }}" value="{{ d.number }}" min="1" max="99"
+                                class="w-14 px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-teal-500">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="pt-3 border-t border-slate-100">
+                    <button type="submit" class="w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-xs transition">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Apply Numbering & Generate Master Roll</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right: Official Minimal Master Roll (Visible and Print-Ready) -->
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4 print:border-0 print:p-0 print:shadow-none print:w-full print:col-span-12">
+            
+            <!-- Minimal Official Header with Logos -->
+            {% include "includes/printable_header.html" %}
+
+            <!-- Category & Round Subheader -->
+            <div class="flex items-center justify-between border-y-2 border-slate-800 py-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <div>
+                    <span>Event: <strong>{{ current_event.get_event_type_display|default:"Traditional Yogasana" }}</strong></span>
+                    <span class="mx-2">•</span>
+                    <span>Category: <strong>{{ current_cat.name|default:"Junior Boys" }} ({{ gender }})</strong></span>
+                </div>
+                <div>
+                    <span>Round: <strong>{{ round_type }}</strong></span>
+                    <span class="mx-2">•</span>
+                    <span>Total Competitors: <strong>{{ roll_entries|length }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Master Roll Table: Minimal, Neat Borders, Clean Alignment -->
+            <div class="overflow-x-auto pt-2">
+                <table class="w-full text-left border-collapse border border-slate-900 text-xs font-medium">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50/60 text-slate-600 text-xs font-semibold">
-                            <th class="py-3 px-4">Turn</th>
-                            <th class="py-3 px-4">Cycle</th>
-                            <th class="py-3 px-4">District</th>
-                            <th class="py-3 px-4 text-right">Chest</th>
+                        <tr class="bg-slate-100 border-b-2 border-slate-900 text-[11px] font-black uppercase tracking-wider text-slate-900">
+                            <th class="py-2.5 px-3 border-r border-slate-900 text-center w-14">Order</th>
+                            <th class="py-2.5 px-3 border-r border-slate-900 text-center w-24">Chest No</th>
+                            <th class="py-2.5 px-4 border-r border-slate-900">Athlete Name</th>
+                            <th class="py-2.5 px-4 border-r border-slate-900">District</th>
+                            <th class="py-2.5 px-3 border-r border-slate-900 text-center w-28">Mobile</th>
+                            {% if view_mode == 'with_sig' %}
+                            <th class="py-2.5 px-4 text-center w-36">Athlete Signature</th>
+                            {% endif %}
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 text-slate-800 font-normal">
-                        {% if roll_entries %}
-                            {% for e in roll_entries %}
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 font-semibold">{{ forloop.counter }}</td>
-                                <td class="py-3 px-4 text-slate-600">{{ e.cycle|default:1 }}</td>
-                                <td class="py-3 px-4 font-medium">{{ e.district }}</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold">{{ e.chest_number }}</td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <!-- 1:1 Match with Reference Screenshot 14 -->
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 font-semibold">1</td>
-                                <td class="py-3 px-4 text-slate-600">1</td>
-                                <td class="py-3 px-4 font-medium">Mancherial</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold">101</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 font-semibold">2</td>
-                                <td class="py-3 px-4 text-slate-600">1</td>
-                                <td class="py-3 px-4 font-medium">Hyderabad</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold">301</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 font-semibold">3</td>
-                                <td class="py-3 px-4 text-slate-600">1</td>
-                                <td class="py-3 px-4 font-medium">Medak</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold">205</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 font-semibold">4</td>
-                                <td class="py-3 px-4 text-slate-600">2</td>
-                                <td class="py-3 px-4 font-medium">Mancherial</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold">104</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 font-semibold">5</td>
-                                <td class="py-3 px-4 text-slate-600">2</td>
-                                <td class="py-3 px-4 font-medium">Hyderabad</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold">303</td>
-                            </tr>
-                        {% endif %}
+                    <tbody class="divide-y divide-slate-300">
+                        {% for entry in roll_entries %}
+                        <tr class="hover:bg-slate-50/70 transition">
+                            <td class="py-2.5 px-3 border-r border-slate-300 text-center font-bold text-slate-900">
+                                {{ entry.performance_order }}
+                            </td>
+                            <td class="py-2.5 px-3 border-r border-slate-300 text-center font-mono font-black text-teal-900 text-sm">
+                                {{ entry.event_entry.chest_number|default:entry.performance_order|stringformat:"03d" }}
+                            </td>
+                            <td class="py-2.5 px-4 border-r border-slate-300 font-bold text-slate-950">
+                                {{ entry.event_entry.registration.athlete.full_name }}
+                            </td>
+                            <td class="py-2.5 px-4 border-r border-slate-300 text-slate-800 font-semibold">
+                                {{ entry.event_entry.district }}
+                            </td>
+                            <td class="py-2.5 px-3 border-r border-slate-300 text-center font-mono text-slate-600 text-[11px]">
+                                {{ entry.event_entry.registration.athlete.mobile|default:"—" }}
+                            </td>
+                            {% if view_mode == 'with_sig' %}
+                            <td class="py-2.5 px-4 text-center text-slate-400">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-4"></div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if view_mode == 'with_sig' %}6{% else %}5{% endif %}" class="py-12 text-center text-slate-400">
+                                <i data-lucide="list-ordered" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+                                <p class="font-bold text-slate-700">No master roll entries generated yet for this event and round.</p>
+                                <p class="text-[11px] mt-0.5">Click "Apply Numbering & Generate Master Roll" or "Auto Lottery" to generate order.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <!-- Bottom Action Row -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3">
-                <div class="flex-1 bg-sky-50 border border-sky-100 rounded-lg p-2.5 flex items-center space-x-2 text-xs text-sky-900">
-                    <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0"></i>
-                    <span>Ordinary registrations and declaration edits lock on finalisation.</span>
+            <!-- Signatures Section at bottom of printable Master Roll -->
+            <div class="pt-8 flex items-center justify-between text-xs text-slate-900 font-bold">
+                <div class="text-center">
+                    <div class="w-36 border-b border-slate-900 mb-1"></div>
+                    <span class="text-[10px] uppercase text-slate-600">Stage Manager</span>
                 </div>
-
-                <form method="POST" class="inline shrink-0">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="lock_roll">
-                    <button type="submit" class="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-medium flex items-center space-x-2 shadow-xs transition">
-                        <i data-lucide="file-check" class="w-4 h-4"></i>
-                        <span>Finalise master roll</span>
-                    </button>
-                </form>
+                <div class="text-center">
+                    <div class="w-36 border-b border-slate-900 mb-1"></div>
+                    <span class="text-[10px] uppercase text-slate-600">Chief Judge</span>
+                </div>
+                <div class="text-center">
+                    <div class="w-36 border-b border-slate-900 mb-1"></div>
+                    <span class="text-[10px] uppercase text-slate-600">Competition Director (CD)</span>
+                </div>
             </div>
+
         </div>
+
     </div>
-    <div class="text-right text-[11px] text-slate-400 mt-3">Design preview · Sample data</div>
+
 </div>
+
+<style>
+@media print {
+    body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    nav, header, sidebar, .print\:hidden {
+        display: none !important;
+    }
+    table {
+        border: 2px solid #0f172a !important;
+    }
+    th, td {
+        border-color: #334155 !important;
+    }
+}
+</style>
 {% endblock %}

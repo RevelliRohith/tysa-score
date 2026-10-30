@@ -31,6 +31,10 @@ def get_authorized_championships(user):
     if is_system_admin(user):
         return Championship.objects.all().order_by('-year', '-start_date')
 
+    # Universal District Users have access across all championships for their district
+    if ScopedRole.objects.filter(user=user, role=RoleChoices.DISTRICT_USER, championship__isnull=True).exists():
+        return Championship.objects.all().order_by('-year', '-start_date')
+
     # Find championships where user has an explicit ScopedRole
     scoped_champ_ids = set(
         ScopedRole.objects.filter(user=user, championship__isnull=False)
@@ -107,8 +111,10 @@ def get_user_roles_for_request(request, championship=None):
         return set()
 
     roles = set()
-    # Explicit ScopedRole for this championship only
-    scoped_roles = ScopedRole.objects.filter(user=user, championship=champ).values_list('role', flat=True)
+    # Explicit ScopedRole for this championship (or universal district user across all championships)
+    scoped_roles = ScopedRole.objects.filter(user=user).filter(
+        Q(championship=champ) | Q(championship__isnull=True)
+    ).values_list('role', flat=True)
     roles.update(scoped_roles)
 
     # Active Panel assignments for this championship (must be is_active=True)
@@ -125,6 +131,8 @@ def get_user_roles_for_request(request, championship=None):
         roles.add(RoleChoices.ARTISTRY_JUDGE)
     if panels.filter(stage_manager=user).exists():
         roles.add(RoleChoices.STAGE_MANAGER)
+    if panels.filter(jury_member=user).exists():
+        roles.add(RoleChoices.JURY)
 
     # Active PanelSeatAssignment check (handles seat assignment only users)
     from competition.models import PanelSeatAssignment

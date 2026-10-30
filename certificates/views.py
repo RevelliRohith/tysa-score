@@ -22,6 +22,7 @@ from scoring.models import Performance, PerformanceStatus
 from scoring.services import calculate_event_division_standings, TiePolicy
 from accounts.models import Coach, Volunteer, Guest
 from accounts.permissions import get_active_championship
+from config.districts import TELANGANA_DISTRICTS
 
 PAGE_WIDTH = 792.0
 PAGE_HEIGHT = 612.0
@@ -242,7 +243,10 @@ def certificate_generate(request):
         return HttpResponseForbidden("Access restricted: Only Championship Director or Admin can generate certificates.")
 
     templates = CertificateTemplate.objects.filter(is_published=True)
+    selected_district = request.GET.get('district', '').strip() or request.POST.get('filter_district', '').strip()
     issued_list = IssuedCertificate.objects.filter(championship=championship)
+    if selected_district:
+        issued_list = issued_list.filter(district__iexact=selected_district)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -392,7 +396,10 @@ def certificate_generate(request):
 
         elif action == 'download_pdf':
             buffer = io.BytesIO()
-            certs = IssuedCertificate.objects.filter(championship=championship).order_by('certificate_number')
+            certs = IssuedCertificate.objects.filter(championship=championship)
+            if selected_district:
+                certs = certs.filter(district__iexact=selected_district)
+            certs = certs.order_by('certificate_number')
             
             # Combine individual generated PDF pages
             from pypdf import PdfWriter, PdfReader
@@ -407,12 +414,15 @@ def certificate_generate(request):
             writer.write(buffer)
             buffer.seek(0)
             response = HttpResponse(buffer, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}.pdf"'
+            dist_label = f"_{selected_district}" if selected_district else ""
+            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}{dist_label}.pdf"'
             return response
 
         elif action == 'download_zip':
             zip_buffer = io.BytesIO()
             certs = IssuedCertificate.objects.filter(championship=championship)
+            if selected_district:
+                certs = certs.filter(district__iexact=selected_district)
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for cert in certs:
                     pdf_bytes = generate_certificate_pdf(cert)
@@ -421,15 +431,20 @@ def certificate_generate(request):
 
             zip_buffer.seek(0)
             response = HttpResponse(zip_buffer, content_type='application/zip')
-            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}_ZIP.zip"'
+            dist_label = f"_{selected_district}" if selected_district else ""
+            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}{dist_label}_ZIP.zip"'
             return response
 
         elif action == 'download_csv':
             response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}_Register.csv"'
+            dist_label = f"_{selected_district}" if selected_district else ""
+            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}{dist_label}_Register.csv"'
             writer = csv.writer(response)
             writer.writerow(['Certificate No', 'Recipient Name', 'Type', 'Public Athlete ID', 'District', 'Event', 'Rank', 'Issue Date'])
-            for cert in IssuedCertificate.objects.filter(championship=championship):
+            certs = IssuedCertificate.objects.filter(championship=championship)
+            if selected_district:
+                certs = certs.filter(district__iexact=selected_district)
+            for cert in certs:
                 writer.writerow([
                     cert.certificate_number,
                     cert.recipient_name,
@@ -448,7 +463,10 @@ def certificate_generate(request):
             ws = wb.active
             ws.title = "Certificates Register"
             ws.append(['Certificate No', 'Recipient Name', 'Type', 'Public Athlete ID', 'District', 'Event', 'Rank', 'Issue Date'])
-            for cert in IssuedCertificate.objects.filter(championship=championship):
+            certs = IssuedCertificate.objects.filter(championship=championship)
+            if selected_district:
+                certs = certs.filter(district__iexact=selected_district)
+            for cert in certs:
                 ws.append([
                     cert.certificate_number,
                     cert.recipient_name,
@@ -463,13 +481,16 @@ def certificate_generate(request):
             wb.save(out_buf)
             out_buf.seek(0)
             response = HttpResponse(out_buf, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}_Register.xlsx"'
+            dist_label = f"_{selected_district}" if selected_district else ""
+            response['Content-Disposition'] = f'attachment; filename="TYSA_Certificates_{championship.code if championship else 2026}{dist_label}_Register.xlsx"'
             return response
 
     return render(request, 'certificates/generate.html', {
         'championship': championship,
         'templates': templates,
         'issued_list': issued_list,
+        'districts': TELANGANA_DISTRICTS,
+        'selected_district': selected_district,
     })
 
 

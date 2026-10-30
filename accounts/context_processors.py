@@ -44,7 +44,8 @@ def user_roles(request):
 
     user_district = ''
     if is_district and champ:
-        dist_role = ScopedRole.objects.filter(user=user, championship=champ, role=RoleChoices.DISTRICT_USER).first()
+        from django.db.models import Q
+        dist_role = ScopedRole.objects.filter(user=user, role=RoleChoices.DISTRICT_USER).filter(Q(championship=champ) | Q(championship__isnull=True)).first()
         if dist_role and dist_role.district:
             user_district = dist_role.district
 

@@ -47,7 +47,14 @@ def scoreboard_view(request):
         status__in=[PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED]
     ).select_related('event_entry__registration__athlete').order_by('-final_score', '-provisional_score')
 
+    state_logo = championship.branding_logos.filter(logo_type='STATE').first() if championship else None
+    district_logo = championship.branding_logos.filter(logo_type='DISTRICT').first() if championship else None
+    other_logos = championship.branding_logos.exclude(logo_type__in=['STATE', 'DISTRICT']) if championship else None
+
     return render(request, 'results/scoreboard.html', {
         'championship': championship,
         'results': released_qs,
+        'state_logo': state_logo,
+        'district_logo': district_logo,
+        'other_logos': other_logos,
     })

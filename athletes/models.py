@@ -31,6 +31,10 @@ class Athlete(models.Model):
     academy = models.CharField(max_length=200, blank=True, verbose_name="Academy / Yoga Centre")
     photo = models.ImageField(upload_to='athletes/photos/', blank=True, null=True)
     
+    # Universal ID card batch printing & issuance tracking
+    is_id_card_printed = models.BooleanField(default=False, verbose_name="ID Card Printed")
+    id_card_printed_at = models.DateTimeField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

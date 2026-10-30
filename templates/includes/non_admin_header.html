@@ -1,0 +1,97 @@
+{% load static %}
+<header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <a href="{% if is_cd %}{% url 'cd_dashboard' %}{% elif is_stage %}{% url 'stage_manager' %}{% elif is_district %}{% url 'district_approvals' %}{% elif is_venue %}{% url 'venue_verification' %}{% elif is_jury %}{% url 'jury_view' %}{% elif is_judge %}{% url 'judge_portal' %}{% else %}{% url 'login' %}{% endif %}" class="flex items-center space-x-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-teal-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                    🕉️
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold text-slate-900 tracking-tight text-lg group-hover:text-brand-600 transition">TYSA SCORE</span>
+                        <span class="px-2 py-0.5 text-[11px] font-semibold bg-brand-50 text-brand-700 rounded-full border border-brand-200">v2.4 COP</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 font-medium leading-none">Telangana Yogasana Association</p>
+                </div>
+            </a>
+            
+            {% if not is_judge_only and active_championship %}
+            <div class="hidden md:flex items-center pl-6 border-l border-slate-200 ml-4 space-x-2 relative">
+                <span class="text-xs text-slate-400 font-medium">Event:</span>
+                <span class="text-xs font-bold text-slate-800 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 max-w-[200px] truncate">
+                    {{ active_championship.name }}
+                </span>
+                
+                {% if active_championship.status == 'IN_PROGRESS' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                    ● LIVE STAGE
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                    {{ active_championship.get_status_display }}
+                </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Header Right Menu -->
+        <div class="flex items-center space-x-3">
+            {% if not is_judge_only %}
+            <a href="{% url 'public_live_display' %}" target="_blank" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition">
+                <i data-lucide="tv" class="w-4 h-4 mr-1.5"></i> Live Display
+            </a>
+            
+            <a href="{% url 'second_screen' %}" target="_blank" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition">
+                <i data-lucide="monitor" class="w-4 h-4 mr-1.5"></i> 2nd Screen
+            </a>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <div class="flex items-center pl-3 border-l border-slate-200 space-x-2">
+                <div class="text-right hidden sm:block">
+                    <div class="text-xs font-bold text-slate-900">{{ user.full_name|default:user.email }}</div>
+                    <div class="text-[11px] text-teal-700 font-semibold">
+                        {% if is_cd %}Competition Director
+                        {% elif is_stage %}Stage Manager / Announcer
+                        {% elif is_district %}District User ({{ user_district }})
+                        {% elif is_venue %}Venue Desk
+                        {% elif is_jury %}Jury Member (Read-Only)
+                        {% elif is_judge %}Official Judge
+                        {% else %}Official Staff{% endif %}
+                    </div>
+                </div>
+                <a href="{% url 'logout' %}" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Sign Out">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </a>
+            </div>
+            {% else %}
+            <a href="{% url 'login' %}" class="inline-flex items-center px-4 py-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition">
+                Sign In
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<!-- Scoped Role Secondary Sub-Navbar -->
+{% if user.is_authenticated and nav_items %}
+<div class="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-2">
+    <div class="max-w-7xl mx-auto flex items-center justify-between text-xs font-bold text-slate-600 overflow-x-auto gap-4">
+        <div class="flex items-center space-x-1 shrink-0">
+            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold mr-2">Workspace:</span>
+            {% for item in nav_items %}
+            <a href="{{ item.url }}" class="px-2.5 py-1 rounded-lg transition inline-flex items-center gap-1.5 {% if item.is_active or request.resolver_match.url_name == item.url_name %}text-teal-800 bg-teal-50 border border-teal-200 font-extrabold shadow-xs{% else %}hover:bg-slate-100 text-slate-600{% endif %}">
+                <i data-lucide="{{ item.icon }}" class="w-3.5 h-3.5"></i>
+                <span>{{ item.label }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% if active_championship and not is_judge_only %}
+        <div class="text-[11px] text-slate-400 font-medium shrink-0">
+            Scope: <strong>{{ active_championship.name }}</strong>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

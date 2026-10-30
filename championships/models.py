@@ -66,6 +66,11 @@ class EventConfiguration(models.Model):
     # Independent age categories for this specific event
     age_categories = models.ManyToManyField(AgeCategory, related_name='event_configs')
     
+    # Competition rounds enabled for this event
+    has_preliminary = models.BooleanField(default=True, verbose_name="Preliminary Round")
+    has_semi_final = models.BooleanField(default=True, verbose_name="Semi-Final Round")
+    has_final = models.BooleanField(default=True, verbose_name="Final Round")
+    
     total_asanas = models.PositiveIntegerField(default=7, help_text="7 for Traditional, 10 for Artistic/Rhythmic")
     max_batch_size = models.PositiveIntegerField(default=5, help_text="Simultaneous athletes on stage: 1-5 prelims, 1-3 finals for Traditional")
     
@@ -85,6 +90,36 @@ class EventConfiguration(models.Model):
     @property
     def is_pair(self):
         return self.event_type in (EventType.ARTISTIC_PAIR, EventType.RHYTHMIC_PAIR)
+
+    @property
+    def enabled_rounds_display(self):
+        r = []
+        if self.has_preliminary: r.append("Preliminary")
+        if self.has_semi_final: r.append("Semi-Final")
+        if self.has_final: r.append("Final")
+        return ", ".join(r) if r else "None"
+
+class BrandingLogoType(models.TextChoices):
+    STATE_ASSOCIATION = 'STATE', 'State Association Logo'
+    ORGANIZING_DISTRICT = 'DISTRICT', 'Organizing District Logo'
+    FEDERATION = 'FEDERATION', 'National / Federation Logo'
+    SPONSOR = 'SPONSOR', 'Sponsor / Partner Logo'
+    OTHER = 'OTHER', 'Other Partner / Supporting Logo'
+
+class ChampionshipLogo(models.Model):
+    championship = models.ForeignKey(Championship, on_delete=models.CASCADE, related_name='branding_logos')
+    logo_type = models.CharField(max_length=20, choices=BrandingLogoType.choices, default=BrandingLogoType.SPONSOR)
+    title = models.CharField(max_length=150, help_text="e.g. Telangana Yogasana, Mancherial Dist Yogasana, Sponsor Name")
+    image = models.ImageField(upload_to='championships/branding_logos/')
+    display_order = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    show_on_prints = models.BooleanField(default=True, help_text="Render on printable master rolls, results, and ID cards")
+
+    class Meta:
+        ordering = ['display_order', 'id']
+
+    def __str__(self):
+        return f"{self.get_logo_type_display()}: {self.title} ({self.championship.code})"
 
 class DistrictQuota(models.Model):
     championship = models.ForeignKey(Championship, on_delete=models.CASCADE, related_name='district_quotas')
