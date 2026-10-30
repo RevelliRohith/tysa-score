@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Q
 from .models import ChampionshipRegistration, EventEntry, RegistrationStatus
 from championships.models import Championship, DistrictQuota
+from championships.services import ChampionshipService
 
 @login_required
 def district_approvals(request):
@@ -34,19 +35,14 @@ def district_approvals(request):
         reg = get_object_or_404(ChampionshipRegistration, id=reg_id, championship=championship)
 
         if decision == 'approve':
-            # Check quota
-            dq = DistrictQuota.objects.filter(championship=championship, district_name=reg.athlete.district).first()
-            if dq and dq.quota_used >= dq.quota_limit:
-                messages.error(request, f"Cannot approve: District quota limit ({dq.quota_limit}) reached for {reg.athlete.district}!")
+            success = ChampionshipService.approve_district_registration(reg.id, request.user)
+            if not success:
+                messages.error(request, f"Cannot approve: District quota limit reached for {reg.athlete.district}!")
             else:
-                reg.status = RegistrationStatus.DISTRICT_APPROVED
-                reg.approved_by = request.user
-                reg.approved_at = datetime.datetime.now()
-                reg.district_approval_notes = notes
-                reg.save()
-                if dq:
-                    dq.quota_used += 1
-                    dq.save()
+                if notes:
+                    reg.refresh_from_db()
+                    reg.district_approval_notes = notes
+                    reg.save(update_fields=['district_approval_notes'])
                 messages.success(request, f"Registration {reg.registration_number} for {reg.athlete.full_name} approved!")
         elif decision == 'reject':
             reg.status = RegistrationStatus.DISTRICT_REJECTED

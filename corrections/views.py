@@ -60,6 +60,25 @@ def cd_corrections(request):
             messages.success(request, f"Correction access granted to {sub.get_judge_role_display()} for Chest {perf.chest_number}. Reason recorded: {reason}")
             return redirect(f"/cd/corrections/?chest={perf.chest_number}")
 
+        elif action == 'resubmit_correction':
+            # Resubmits and locks the corrected submission, transitioning grant to RESUBMITTED
+            grant_id = request.POST.get('grant_id')
+            grant = get_object_or_404(CDCorrectionGrant, id=grant_id, status=GrantStatus.OPEN)
+            sub = grant.judge_submission
+            sub.is_locked = True
+            sub.is_draft = False
+            sub.is_submitted = True
+            sub.version += 1
+            sub.submitted_at = datetime.datetime.now()
+            sub.save()
+
+            grant.status = GrantStatus.RESUBMITTED
+            grant.resubmitted_at = datetime.datetime.now()
+            grant.save()
+
+            messages.success(request, f"Corrected submission v{sub.version} for {sub.get_judge_role_display()} relocked successfully.")
+            return redirect(f"/cd/corrections/?chest={grant.performance.chest_number}")
+
         elif action == 'revoke_grant':
             grant_id = request.POST.get('grant_id')
             grant = get_object_or_404(CDCorrectionGrant, id=grant_id)

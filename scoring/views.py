@@ -302,6 +302,16 @@ def scoring_chief_judge(request):
         perf = get_object_or_404(Performance, id=perf_id)
 
         if action == 'provisional_release':
+            # Server-side validation: Rule preset verification check
+            champ = perf.event_entry.registration.championship
+            if not champ.is_rules_preset_verified:
+                messages.error(
+                    request, 
+                    f"Official score publication blocked! Rules preset for '{champ.name}' ({champ.rules_edition}) "
+                    f"is unverified against official COP. Please verify and certify rules preset before releasing scores."
+                )
+                return redirect('scoring_chief_judge')
+
             perf.status = PerformanceStatus.PROVISIONAL_RELEASED
             perf.provisional_score = Decimal('16.450')
             perf.final_score = Decimal('16.450')

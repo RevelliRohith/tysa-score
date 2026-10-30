@@ -27,6 +27,12 @@
                 <span class="text-slate-400 font-bold uppercase block text-[10px]">Recipient Name</span>
                 <span class="font-black text-slate-900 text-base">{{ cert.recipient_name }}</span>
             </div>
+            {% if cert.public_athlete_id %}
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">Public Athlete ID</span>
+                <span class="font-mono font-bold text-slate-800">{{ cert.public_athlete_id }}</span>
+            </div>
+            {% endif %}
             <div>
                 <span class="text-slate-400 font-bold uppercase block text-[10px]">District of Representation</span>
                 <span class="font-bold text-slate-800">{{ cert.district }}</span>

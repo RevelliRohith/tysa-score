@@ -41,6 +41,10 @@ class Championship(models.Model):
     venue_address = models.TextField(blank=True)
     
     rules_edition = models.CharField(max_length=150, default="Yogasana Bharat COP & Circular 2024–2026")
+    is_rules_preset_verified = models.BooleanField(
+        default=False, 
+        help_text="Official score publication is blocked until rules preset is independently certified and verified against COP"
+    )
     status = models.CharField(max_length=20, choices=ChampionshipStatus.choices, default=ChampionshipStatus.DRAFT)
     logo = models.ImageField(upload_to='championships/logos/', blank=True, null=True)
     

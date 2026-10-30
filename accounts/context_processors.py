@@ -1,7 +1,7 @@
 from .models import RoleChoices
 
 def user_roles(request):
-    if not request.user.is_authenticated:
+    if not hasattr(request, 'user') or not request.user.is_authenticated:
         return {'user_roles': [], 'is_admin': False, 'is_cd': False}
     
     roles = list(request.user.scoped_roles.values_list('role', flat=True))

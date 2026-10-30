@@ -70,3 +70,18 @@ class IssuedCertificate(models.Model):
 
     def __str__(self):
         return f"{self.certificate_number} - {self.recipient_name} ({self.template.get_template_type_display()})"
+
+
+class CertificateSequence(models.Model):
+    """
+    Dedicated atomic sequence counter per championship and prefix for collision-free certificate numbers.
+    """
+    championship = models.ForeignKey('championships.Championship', on_delete=models.CASCADE, related_name='cert_sequences')
+    prefix = models.CharField(max_length=20)
+    last_number = models.PositiveIntegerField(default=1000)
+
+    class Meta:
+        unique_together = ('championship', 'prefix')
+
+    def __str__(self):
+        return f"{self.championship.code} - {self.prefix}: {self.last_number}"

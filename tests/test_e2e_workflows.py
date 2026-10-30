@@ -9,6 +9,7 @@ from registrations.models import ChampionshipRegistration, EventEntry, Registrat
 from competition.models import MasterRoll, MasterRollEntry, StageBatch, JudgePanel
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem
 from corrections.models import CDCorrectionGrant, GrantStatus
+from championships.services import ChampionshipService
 from reports.models import DistrictTrophySetting
 from certificates.models import CertificateTemplate, IssuedCertificate, TemplateType
 from catalogue.models import Asana
@@ -87,15 +88,15 @@ class TestCompleteE2EWorkflows:
             chest_number="T-101"
         )
 
-        # Step 2: District Approval & Quota checking
+        # Step 2: District Approval & Quota checking via authorized view
         client.force_login(self.district_user)
-        # Approval increments quota
-        self.quota_hyd.quota_used += 1
-        self.quota_hyd.save()
-        reg.status = RegistrationStatus.DISTRICT_APPROVED
-        reg.approved_by = self.district_user
-        reg.save()
-
+        resp = client.post('/district/approvals/?district=Hyderabad', {
+            'reg_id': reg.id,
+            'decision': 'approve'
+        })
+        assert resp.status_code == 302
+        reg.refresh_from_db()
+        self.quota_hyd.refresh_from_db()
         assert reg.status == RegistrationStatus.DISTRICT_APPROVED
         assert self.quota_hyd.quota_used == 1
 
@@ -147,32 +148,35 @@ class TestCompleteE2EWorkflows:
         sub_d1 = JudgeSubmission.objects.create(performance=perf, judge=self.d1_judge, judge_role='D1_JUDGE', is_locked=True, is_submitted=True, raw_total=Decimal('15.50'))
         sub_d2 = JudgeSubmission.objects.create(performance=perf, judge=self.d2_judge, judge_role='D2_JUDGE', is_locked=True, is_submitted=True, raw_total=Decimal('15.80'))
 
-        # CD grants correction to D1 only
-        grant = CDCorrectionGrant.objects.create(
-            performance=perf,
-            judge_submission=sub_d1,
-            granted_by=self.cd,
-            reason="Posture adjustment requested on Asana #2",
-            status=GrantStatus.OPEN
+        # CD grants correction to D1 only using production service
+        grant = ChampionshipService.grant_cd_correction(
+            performance_id=perf.id,
+            submission_id=sub_d1.id,
+            cd_user=self.cd,
+            reason="Posture adjustment requested on Asana #2"
         )
-        sub_d1.is_locked = False
-        sub_d1.save()
+        sub_d1.refresh_from_db()
+        sub_d2.refresh_from_db()
 
         # Scoping verification: D1 is unlocked, D2 remains strictly locked!
         assert sub_d1.is_locked is False
         assert sub_d2.is_locked is True
         assert grant.is_active is True
 
-        # D1 resubmits sheet
-        sub_d1.raw_total = Decimal('16.00')
-        sub_d1.is_locked = True
-        sub_d1.save()
-        grant.status = GrantStatus.RESUBMITTED
-        grant.save()
+        # D1 resubmits sheet using production service
+        resubmitted_sub = ChampionshipService.resubmit_cd_correction(
+            grant_id=grant.id,
+            judge_user=self.d1_judge,
+            revised_total=Decimal('16.00')
+        )
+        sub_d1.refresh_from_db()
+        sub_d2.refresh_from_db()
+        grant.refresh_from_db()
 
         # Both sheets are now relocked
         assert sub_d1.is_locked is True
         assert sub_d2.is_locked is True
+        assert sub_d1.raw_total == Decimal('16.00')
         assert grant.status == GrantStatus.RESUBMITTED
 
     def test_workflow_jury_read_only_access(self):

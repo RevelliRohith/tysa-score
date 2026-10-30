@@ -1,8 +1,15 @@
 import os
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Initialize django-environ and read .env if present
+env = environ.Env()
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(str(env_file))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'tysa-score-insecure-dev-key-change-in-production-2026')
@@ -75,14 +82,40 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
-# Support PostgreSQL via DATABASE_URL if provided, else fallback to SQLite for local development.
+# Support Neon PostgreSQL via DATABASE_URL if provided, else fallback to SQLite for local development.
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
+    # Resilient DNS resolver fallback for Neon AWS endpoint CNAMEs on Windows
+    try:
+        import socket
+        _orig_getaddrinfo = socket.getaddrinfo
+        def _neon_resilient_getaddrinfo(host, port, *args, **kwargs):
+            try:
+                return _orig_getaddrinfo(host, port, *args, **kwargs)
+            except socket.gaierror:
+                if host and 'ep-' in str(host) and 'neon.tech' in str(host):
+                    return _orig_getaddrinfo('c-2.ap-southeast-1.aws.neon.tech', port, *args, **kwargs)
+                raise
+        socket.getaddrinfo = _neon_resilient_getaddrinfo
+    except Exception:
+        pass
     try:
         import dj_database_url
-        DATABASES = {
-            'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
+        db_config = dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', '0')),  # Neon connection pooler (PgBouncer) requires conn_max_age=0
+            conn_health_checks=True,
+        )
+        # Enforce SSL requirement and disable server-side cursors for pooled Neon connections
+        if 'OPTIONS' not in db_config:
+            db_config['OPTIONS'] = {}
+        db_config['OPTIONS']['sslmode'] = 'require'
+        db_config['DISABLE_SERVER_SIDE_CURSORS'] = True
+        db_config['TEST'] = {
+            'SERIALIZE': False,
         }
+        
+        DATABASES = {'default': db_config}
     except ImportError:
         DATABASES = {
             'default': {
@@ -171,6 +204,14 @@ CELERY_RESULT_SERIALIZER = 'json'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# Allowed CSRF Origins for local development & previews
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8027',
+    'http://localhost:8027',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
 
 # Production Security Flags
 if not DEBUG and os.environ.get('SECURE_SSL_ENABLED', 'False').lower() in ('true', '1', 'yes'):

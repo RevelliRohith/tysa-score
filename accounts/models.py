@@ -21,6 +21,14 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_active', True)
         return self.create_user(email, password, **extra_fields)
 
+    async def acreate_user(self, email, password=None, **extra_fields):
+        from asgiref.sync import sync_to_async
+        return await sync_to_async(self.create_user)(email, password=password, **extra_fields)
+
+    async def acreate_superuser(self, email, password=None, **extra_fields):
+        from asgiref.sync import sync_to_async
+        return await sync_to_async(self.create_superuser)(email, password=password, **extra_fields)
+
 class User(AbstractUser):
     username = None
     email = models.EmailField(_('email address'), unique=True)
