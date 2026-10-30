@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Venue Verification & Clearance Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #13</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Venue Verification & Accreditation Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Search athletes by name, mobile, district, or chest number. Check physical documents and clear for stage entry.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Search Bar matching 13_Venue_Verification.png -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2 relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search athlete name, mobile number, public ID, chest number..." 
+                    class="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none text-slate-900 font-semibold">
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <select name="district" class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold">
+                    <option value="">All Districts</option>
+                    {% for d in districts %}
+                    <option value="{{ d }}" {% if district_filter == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition shrink-0">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 2-Column Layout: Search Matches on Left (7 cols), Selected Verification on Right (5 cols) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Search Results (7 cols) -->
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="font-extrabold text-sm text-slate-900">Matching Athlete Records</h3>
+                <span class="text-xs text-slate-400">{{ matches|length }} found</span>
+            </div>
+
+            <div class="space-y-2">
+                {% for m in matches %}
+                <a href="?q={{ query }}&district={{ district_filter }}&select_id={{ m.id }}" 
+                    class="flex items-center justify-between p-3.5 rounded-xl border transition group {% if selected_registration and selected_registration.id == m.id %}bg-brand-50/60 border-brand-300 shadow-xs{% else %}bg-slate-50/50 border-slate-200 hover:bg-slate-50 hover:border-slate-300{% endif %}">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-extrabold text-xs text-slate-900 group-hover:text-brand-600 transition">{{ m.athlete.full_name }}</span>
+                            <span class="text-[10px] font-mono font-bold text-brand-700">{{ m.athlete.public_athlete_id }}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">
+                            {{ m.athlete.district }} • Mob: {{ m.athlete.mobile }}
+                        </div>
+                    </div>
+
+                    <div class="text-right">
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full 
+                            {% if m.status == 'VENUE_CLEARED' %}bg-emerald-100 text-emerald-800
+                            {% elif m.status == 'DISTRICT_APPROVED' %}bg-blue-100 text-blue-800
+                            {% else %}bg-amber-100 text-amber-800{% endif %}">
+                            {{ m.get_status_display }}
+                        </span>
+                        <span class="block text-[10px] text-brand-600 font-semibold mt-1">Select to Verify →</span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="py-12 text-center text-slate-400 text-xs">
+                    {% if query or district_filter %}
+                    No matching records found. Try searching by first name or mobile number.
+                    {% else %}
+                    Enter athlete name, mobile or public ID to search for check-in.
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Clearance Checklist (5 cols) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div class="pb-3 border-b border-slate-100">
+                <h3 class="font-extrabold text-sm text-slate-900">Venue Clearance Desk Checklist</h3>
+                <p class="text-[11px] text-slate-500">Physical attendance and document verification.</p>
+            </div>
+
+            {% if selected_registration %}
+            <div class="space-y-4 text-xs">
+                <!-- Athlete Snapshot -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <div class="font-black text-sm text-slate-900">{{ selected_registration.athlete.full_name }}</div>
+                    <div class="font-mono text-brand-700 font-bold">{{ selected_registration.athlete.public_athlete_id }}</div>
+                    <div class="text-slate-600">{{ selected_registration.athlete.district }} • DOB: {{ selected_registration.athlete.dob|date:"d M Y" }}</div>
+                </div>
+
+                <!-- Clearance Checklist -->
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <div class="flex items-center space-x-2 text-slate-700">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                        <span>District Association Clearance Approved</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-slate-700">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Physical Identity & DOB Proof Verified</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-slate-700">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Compulsory & Optional Sequences Registered</span>
+                    </div>
+                </div>
+
+                <!-- Chest Numbers Allocated -->
+                <div class="pt-2 border-t border-slate-100">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Allocated Chest Numbers</label>
+                    <div class="flex flex-wrap gap-2">
+                        {% for ent in selected_registration.event_entries.all %}
+                        <span class="px-3 py-1 rounded-lg bg-slate-900 text-white font-mono font-black text-xs">
+                            Chest #{{ ent.chest_number|default:"—" }} ({{ ent.event_config.get_event_type_display }})
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <form method="POST" class="pt-4 border-t border-slate-100 space-y-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="clear_venue">
+                    <input type="hidden" name="registration_id" value="{{ selected_registration.id }}">
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Desk Verification Remarks</label>
+                        <input type="text" name="venue_notes" placeholder="Physically verified, chest badge issued." 
+                            value="{{ selected_registration.venue_notes|default:'Identity physically verified, chest number issued.' }}"
+                            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none">
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center space-x-2">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        <span>Grant Venue Clearance & Admit to Stage</span>
+                    </button>
+                </form>
+            </div>
+            {% else %}
+            <div class="py-16 text-center text-slate-400 text-xs">
+                Select an athlete from the search matches on the left to review documents and grant venue clearance.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

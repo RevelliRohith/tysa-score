@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CD Correction & Finalisation Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #26</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Competition Director (CD) Correction & Finalisation Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Reopen 1 selected judge's entire sheet with recorded reason. All other judges/athletes remain locked.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Search Chest Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <form method="GET" class="flex items-center space-x-3">
+            <label class="text-xs font-bold text-slate-700 uppercase">Search Competitor Chest Number:</label>
+            <input type="text" name="chest" value="{{ chest_query }}" placeholder="e.g. 101, 102..." 
+                class="w-48 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-mono font-bold text-slate-900 focus:bg-white focus:border-brand-500">
+            <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                Inspect Performance
+            </button>
+        </form>
+    </div>
+
+    <!-- Active Grants Banner -->
+    {% if active_grants %}
+    <div class="bg-amber-50 rounded-2xl border border-amber-200 p-4 space-y-2">
+        <h3 class="text-xs font-bold text-amber-900 uppercase flex items-center">
+            <i data-lucide="unlock" class="w-4 h-4 mr-1.5 text-amber-600"></i>
+            Active Correction Access Granted (Reopened Desks)
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            {% for g in active_grants %}
+            <div class="bg-white p-3 rounded-xl border border-amber-200 flex items-center justify-between shadow-xs">
+                <div>
+                    <span class="font-bold text-slate-900">Grant #{{ g.id }}: {{ g.judge_submission.get_judge_role_display }}</span>
+                    <div class="text-[11px] text-slate-500">Chest #{{ g.performance.chest_number }} • Reason: {{ g.reason }}</div>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="revoke_grant">
+                    <input type="hidden" name="grant_id" value="{{ g.id }}">
+                    <button type="submit" class="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg">
+                        Revoke Access
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Selected Performance Inspection & Judge Grants -->
+    {% if selected_perf %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+        <!-- Performance Overview Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="px-3 py-1 rounded-md bg-slate-900 text-white font-mono font-black text-sm">
+                        Chest #{{ selected_perf.chest_number }}
+                    </span>
+                    <h2 class="text-lg font-black text-slate-900">{{ selected_perf.event_entry.display_names }}</h2>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">
+                    {{ selected_perf.event_entry.event_config.get_event_type_display }} • {{ selected_perf.event_entry.district }} • {{ selected_perf.round_type }}
+                </p>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <div class="text-right">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Finalized Score</span>
+                    <span class="font-mono text-xl font-black text-brand-700">
+                        {{ selected_perf.final_score|default:selected_perf.provisional_score|default:"16.450" }}
+                    </span>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="cd_finalise">
+                    <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
+                    <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        <span>Finalise & Lock Score</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Per-Judge Submissions Table matching Image 26 -->
+        <div>
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Panel Judges Submissions Breakdown</h3>
+            <div class="overflow-x-auto">
+                <table class="tysa-table">
+                    <thead>
+                        <tr>
+                            <th>Judge Role</th>
+                            <th>Judge Official</th>
+                            <th>Total Raw Marks</th>
+                            <th>Effective Total</th>
+                            <th>Sheet Lock State</th>
+                            <th class="text-right">CD Reopening Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sub in selected_perf.submissions.all %}
+                        <tr>
+                            <td class="font-bold text-xs text-slate-900">{{ sub.get_judge_role_display }}</td>
+                            <td class="text-xs text-slate-600">{{ sub.judge.full_name|default:sub.judge.email }}</td>
+                            <td class="font-mono text-xs font-bold text-slate-800">{{ sub.raw_total }}</td>
+                            <td class="font-mono text-xs font-black text-brand-700">{{ sub.effective_total }}</td>
+                            <td>
+                                {% if sub.is_locked %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                    Locked (v{{ sub.version }})
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 animate-pulse">
+                                    Reopened for Revision
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                {% if sub.is_locked %}
+                                <button type="button" onclick="openGrantModal('{{ selected_perf.id }}', '{{ sub.id }}', '{{ sub.get_judge_role_display }}')" 
+                                    class="px-3 py-1 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition">
+                                    Grant Correction Access
+                                </button>
+                                {% else %}
+                                <span class="text-xs text-amber-600 font-bold">Access Open</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">No judge submissions recorded for this performance yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Grant CD Correction Access -->
+<div id="grant-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-slate-900 text-base">Grant Correction Access</h3>
+            <button onclick="document.getElementById('grant-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <form method="POST" action="{% url 'cd_corrections' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="grant_correction">
+            <input type="hidden" name="performance_id" id="grant-perf-id">
+            <input type="hidden" name="submission_id" id="grant-sub-id">
+
+            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
+                <span class="font-bold">Scoped Access Rule:</span> Reopening will unlock this judge's entire sheet (all 7/10 items) for this specific performance only. All other judges remain locked.
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Reopening Judge Desk</label>
+                <input type="text" id="grant-role-display" readonly class="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-800">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Reason for Reopening *</label>
+                <textarea name="reason" required rows="3" placeholder="e.g. Inadvertent key entry on Pose 4 reported by judge, verified by CD." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('grant-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs">Grant Access</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openGrantModal(perfId, subId, roleDisplay) {
+        document.getElementById('grant-perf-id').value = perfId;
+        document.getElementById('grant-sub-id').value = subId;
+        document.getElementById('grant-role-display').value = roleDisplay;
+        document.getElementById('grant-modal').classList.remove('hidden');
+    }
+</script>
+{% endblock %}

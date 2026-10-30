@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Universal Judge Profile & Panel Assignments — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #10</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Judge Profile & Assigned Panels</h1>
+            <p class="text-xs text-slate-500 font-medium">Universal credential accreditation and scheduled competition assignments.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Judge Accreditation Card -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div class="flex items-center space-x-4">
+                <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xl border border-indigo-100">
+                    👨‍⚖️
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-slate-900">{{ judge.user.full_name }}</h2>
+                    <p class="text-xs text-slate-500 font-medium">{{ judge.user.email }} • Mobile: {{ judge.user.mobile }}</p>
+                </div>
+            </div>
+
+            <div>
+                {% if judge.is_approved %}
+                <span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center">
+                    <i data-lucide="shield-check" class="w-4 h-4 mr-1"></i> Approved Universal Judge
+                </span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-200">
+                    Pending Admin Approval
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+            <div>
+                <span class="text-slate-400 font-semibold block">Certification Level</span>
+                <span class="font-bold text-slate-800 text-xs">{{ judge.get_certification_level_display }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-semibold block">Certificate Number</span>
+                <span class="font-bold font-mono text-slate-800">{{ judge.certificate_number|default:"YB-CERT-2024" }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-semibold block">District Accreditation</span>
+                <span class="font-bold text-slate-800">{{ judge.district }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-semibold block">Officiating Experience</span>
+                <span class="font-bold text-slate-800">{{ judge.experience_years }} Years Active</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assigned Stage Panels Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="font-extrabold text-sm text-slate-900">Scheduled Panel Assignments</h3>
+                <p class="text-xs text-slate-500">Official stage panels allocated by the Competition Director (CD).</p>
+            </div>
+            <span class="text-xs font-bold text-slate-600">{{ assigned_panels.count }} Active Schedule(s)</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Championship & Stage</th>
+                        <th>Event & Round</th>
+                        <th>Designated Role</th>
+                        <th>Desk Status</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in assigned_panels %}
+                    <tr>
+                        <td class="font-bold text-slate-900">
+                            {{ p.stage_name }}
+                            <div class="text-[11px] text-slate-500 font-normal">{{ p.championship.name }}</div>
+                        </td>
+                        <td>
+                            <span class="font-semibold text-xs text-slate-800">{{ p.event_config.get_event_type_display }}</span>
+                            <div class="text-[10px] text-brand-600 font-bold uppercase">{{ p.round_type }}</div>
+                        </td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Assigned Panelist
+                            </span>
+                        </td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                                Stage Active
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <a href="{% url 'scoring_traditional_d' %}" class="px-3 py-1.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-xs transition">
+                                Open Scoring Desk →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-6 text-slate-400 text-xs">
+                            No active stage panels currently assigned to this judge. Check CD panel schedule.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

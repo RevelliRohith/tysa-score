@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Users & Scoped Permissions — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Staff, Officials & Role Scopes</h1>
+            <p class="text-xs text-slate-500 font-medium">
+                Manage administrative privileges, CD jurisdiction, district queues, and judging desk assignments.
+            </p>
+        </div>
+
+        <button onclick="document.getElementById('add-user-modal').classList.remove('hidden')" 
+            class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>Add Official / Role</span>
+        </button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center space-x-3">
+                <span class="text-xs font-bold text-slate-700">Total Officials: {{ users.count }}</span>
+            </div>
+            <div class="text-xs text-slate-400">
+                Server-side role enforcement active
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Official / Staff Name</th>
+                        <th>Email Address</th>
+                        <th>Assigned Scoped Roles</th>
+                        <th>Jurisdiction / District</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td class="font-bold text-slate-900">
+                            {{ u.full_name|default:u.email }}
+                        </td>
+                        <td class="text-slate-600 font-mono text-xs">{{ u.email }}</td>
+                        <td>
+                            <div class="flex flex-wrap gap-1">
+                                {% for r in u.scoped_roles.all %}
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    {{ r.get_role_display }}
+                                </span>
+                                {% empty %}
+                                <span class="text-xs text-slate-400 italic">No scoped roles</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            {% for r in u.scoped_roles.all %}
+                                {% if r.district %}
+                                <span class="text-xs font-semibold text-slate-700">{{ r.district }}</span>
+                                {% else %}
+                                <span class="text-xs text-slate-400">Global State</span>
+                                {% endif %}
+                            {% empty %}
+                            —
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                                Active Session
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <button class="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition">
+                                Edit Scope
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Drawer: Assign Scoped Role -->
+<div id="add-user-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-slate-900 text-base">Assign Official & Scoped Role</h3>
+            <button onclick="document.getElementById('add-user-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <form method="POST" action="{% url 'users_and_permissions' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_user">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Name</label>
+                <input type="text" name="full_name" required placeholder="Sri K. Ramakrishna" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
+                <input type="email" name="email" required placeholder="official@tysa.org" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Scoped Role</label>
+                <select name="role" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+                    {% for r_code, r_label in roles %}
+                    <option value="{{ r_code }}">{{ r_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">District Scope (Leave blank for State/Global)</label>
+                <input type="text" name="district" placeholder="e.g. Hyderabad, Rangareddy, Warangal" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('add-user-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs">Save Role</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

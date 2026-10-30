@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Traditional Time Judge — Batch Stopwatch Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #33</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Traditional Time Judge — Batch Stopwatch Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Independent simultaneous hold duration timers. Standard hold threshold: 5.0s minimum.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Independent Batch Timers matching 33_Traditional_Time_Judge.png -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for ent in entries %}
+        <div class="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-xs space-y-4 text-center">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span class="px-3 py-1 rounded-md bg-slate-900 text-white font-mono font-black text-sm">
+                    Chest #{{ ent.chest_number }}
+                </span>
+                <span class="text-xs font-bold text-slate-500">{{ ent.district }}</span>
+            </div>
+
+            <!-- Big Monotonic Timer Display -->
+            <div class="py-4 bg-slate-950 rounded-2xl border border-slate-800 text-emerald-400 font-mono font-black text-4xl shadow-inner tracking-wider" id="timer-display-{{ ent.id }}">
+                00:00.0
+            </div>
+
+            <!-- Start / Stop / Reset Controls -->
+            <div class="grid grid-cols-3 gap-2">
+                <button type="button" onclick="startTimer('{{ ent.id }}')" class="py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition">
+                    Start
+                </button>
+                <button type="button" onclick="pauseTimer('{{ ent.id }}')" class="py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-xs transition">
+                    Pause
+                </button>
+                <button type="button" onclick="resetTimer('{{ ent.id }}')" class="py-2 text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl transition">
+                    Reset
+                </button>
+            </div>
+
+            <!-- 7-Pose Hold Log -->
+            <div class="pt-3 border-t border-slate-100 text-left">
+                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">7-Asana Recorded Holds</h4>
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600 font-semibold">Pose 1 (Compulsory)</span>
+                        <span class="font-mono font-bold text-emerald-600">6.2s (Pass)</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600 font-semibold">Pose 2 (Compulsory)</span>
+                        <span class="font-mono font-bold text-emerald-600">5.8s (Pass)</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600 font-semibold">Pose 3 (Compulsory)</span>
+                        <span class="font-mono font-bold text-emerald-600">6.0s (Pass)</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400">Poses 4–7 Pending</span>
+                        <span class="text-slate-400 font-mono">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-16 text-center text-slate-400 text-xs">
+            No active batch on stage. Wait for Stage Manager to push competitors.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    const timers = {};
+    function startTimer(id) {
+        if (timers[id]?.interval) return;
+        const start = Date.now() - (timers[id]?.elapsed || 0);
+        timers[id] = {
+            interval: setInterval(() => {
+                const diff = Date.now() - start;
+                timers[id].elapsed = diff;
+                const secs = (diff / 1000).toFixed(1);
+                document.getElementById(`timer-display-${id}`).textContent = `00:${secs.padStart(4, '0')}`;
+            }, 100),
+            elapsed: timers[id]?.elapsed || 0
+        };
+    }
+    function pauseTimer(id) {
+        if (timers[id]?.interval) {
+            clearInterval(timers[id].interval);
+            timers[id].interval = null;
+        }
+    }
+    function resetTimer(id) {
+        pauseTimer(id);
+        timers[id] = { interval: null, elapsed: 0 };
+        document.getElementById(`timer-display-${id}`).textContent = "00:00.0";
+    }
+</script>
+{% endblock %}

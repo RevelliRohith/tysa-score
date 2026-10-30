@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Complete Championship Report — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #32</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Complete Championship Report Generator</h1>
+            <p class="text-xs text-slate-500 font-medium">Assemble official championship dossier, section compilation, and combined PDF document generation.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Section Selection & Export Card matching 32_Complete_Championship_Report.png -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+        <div class="pb-4 border-b border-slate-100">
+            <h2 class="font-extrabold text-base text-slate-900">Official Report Sections Checklist</h2>
+            <p class="text-xs text-slate-500">Select chapters to include in the generated championship souvenir and statutory report.</p>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="download_report_pdf">
+
+            <div class="space-y-3">
+                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                    <input type="checkbox" checked disabled class="rounded text-brand-600 mr-3 mt-0.5">
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Official Cover Page & Executive Summary</div>
+                        <div class="text-[11px] text-slate-500">Dates, venue, executive committee, participating districts.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Deduplicated Participation Statistics & Headcounts</div>
+                        <div class="text-[11px] text-slate-500">Unique athletes, event entries, district quotas, and capacity analysis.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Official Sporting Results & Event Standings</div>
+                        <div class="text-[11px] text-slate-500">Traditional, Artistic Single, Artistic Pair, Rhythmic Pair final scores.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Overall District Championship Trophies</div>
+                        <div class="text-[11px] text-slate-500">Gold/Silver/Bronze medals tally and General Championship trophy winner.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Ceremonies, Press Coverage & Media Clippings</div>
+                        <div class="text-[11px] text-slate-500">Opening/closing protocol transcripts, guest log, newspaper press reports.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs text-slate-500">Generated under official TYSA reporting standards</span>
+                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                    <span>Generate & Download Full PDF Report</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

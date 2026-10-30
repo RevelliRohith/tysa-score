@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Verify Certificate — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl border-2 border-emerald-500/50 p-8 shadow-2xl space-y-6 text-center">
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl mx-auto shadow-sm">
+            ✓
+        </div>
+
+        <div>
+            <span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase">
+                Officially Verified
+            </span>
+            <h1 class="text-xl font-black text-slate-900 tracking-tight mt-3">Authentic TYSA Certificate</h1>
+            <p class="text-xs text-slate-500">Telangana Yogasana Association Official Digital Verification</p>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2 text-left">
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">Certificate Number</span>
+                <span class="font-mono font-black text-slate-900 text-sm">{{ cert.certificate_number }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">Recipient Name</span>
+                <span class="font-black text-slate-900 text-base">{{ cert.recipient_name }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">District of Representation</span>
+                <span class="font-bold text-slate-800">{{ cert.district }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">Certificate Category</span>
+                <span class="font-bold text-brand-700">{{ cert.template.get_template_type_display }}</span>
+            </div>
+            {% if cert.rank_achieved %}
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">Merit Rank</span>
+                <span class="font-black text-amber-600">{{ cert.rank_achieved }}</span>
+            </div>
+            {% endif %}
+            <div>
+                <span class="text-slate-400 font-bold uppercase block text-[10px]">Issue Date</span>
+                <span class="font-mono text-slate-600">{{ cert.issued_at|date:"d M Y" }}</span>
+            </div>
+        </div>
+
+        <div class="text-[11px] text-slate-400">
+            This verification confirms that this certificate was officially issued by TYSA for the 3rd Telangana State Championship 2026.
+        </div>
+    </div>
+</div>
+{% endblock %}

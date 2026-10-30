@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Overall Championship Trophies — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #30</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Overall District Championship Trophies</h1>
+            <p class="text-xs text-slate-500 font-medium">Deterministic district medal tallies, points aggregation (Gold 5 / Silver 3 / Bronze 2), and General Championship trophy.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Trophy Points Policy Configuration -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <form method="POST" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_points">
+
+            <div class="flex items-center space-x-6 text-xs font-bold">
+                <span class="text-slate-700 uppercase">Medal Point Policy:</span>
+                <div class="flex items-center space-x-2">
+                    <span class="text-amber-500">🥇 Gold:</span>
+                    <input type="number" name="gold_points" value="{{ trophy_setting.gold_points }}" min="1" max="20" class="w-14 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-slate-400">🥈 Silver:</span>
+                    <input type="number" name="silver_points" value="{{ trophy_setting.silver_points }}" min="1" max="20" class="w-14 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-amber-700">🥉 Bronze:</span>
+                    <input type="number" name="bronze_points" value="{{ trophy_setting.bronze_points }}" min="1" max="20" class="w-14 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold">
+                </div>
+            </div>
+
+            <button type="submit" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                Update Points Policy
+            </button>
+        </form>
+    </div>
+
+    <!-- Trophy Standings Table matching 30_Overall_Championship_Trophies.png -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs space-y-3">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h3 class="font-extrabold text-sm text-slate-900">Official District Trophy Standings</h3>
+                <p class="text-[11px] text-slate-500">Pair events award 1 single medal to the district tally.</p>
+            </div>
+            <button class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition">
+                Approve & Finalise Trophy Standings
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Trophy Rank</th>
+                        <th>District Association</th>
+                        <th>Gold 🥇</th>
+                        <th>Silver 🥈</th>
+                        <th>Bronze 🥉</th>
+                        <th class="text-right">Total Championship Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tallies %}
+                    <tr>
+                        <td class="font-black text-sm {% if t.rank == 1 %}text-amber-500{% elif t.rank == 2 %}text-slate-400{% elif t.rank == 3 %}text-amber-700{% else %}text-slate-600{% endif %}">
+                            {% if t.rank == 1 %}🏆 1st Winner{% elif t.rank == 2 %}🥈 Runner Up{% elif t.rank == 3 %}🥉 3rd Place{% else %}#{{ t.rank }}{% endif %}
+                        </td>
+                        <td class="font-bold text-slate-900 text-sm">{{ t.district }}</td>
+                        <td class="font-mono text-xs font-bold text-amber-600">{{ t.gold }}</td>
+                        <td class="font-mono text-xs font-bold text-slate-500">{{ t.silver }}</td>
+                        <td class="font-mono text-xs font-bold text-amber-800">{{ t.bronze }}</td>
+                        <td class="text-right font-black font-mono text-lg text-brand-700">
+                            {{ t.points }} pts
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

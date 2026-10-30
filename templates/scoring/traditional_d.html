@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Traditional D Judge Scoring Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with 7 Asana Sequence Nav -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">
+                    {% if is_final %}Module #35 (Finals Max 3){% else %}Module #17 (Prelims Batch 1–5){% endif %}
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">D1 Official Desk</span>
+            </div>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Traditional Yogasana D Scoring Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Competitors identified strictly by chest number. Declared vs observed evaluation.</p>
+        </div>
+
+        <!-- 7 Sequence Navigation Pills -->
+        <div class="flex items-center space-x-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+            {% for seq_num in "1234567"|make_list %}
+            <a href="?seq={{ seq_num }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black transition {% if current_seq|stringformat:'s' == seq_num %}bg-brand-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-200{% endif %}">
+                {{ seq_num }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Multi-Athlete Cards on Stage (1-5 cards) matching 17_Traditional_D_Judge.png -->
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {% for ent_id, sub_data in submissions.items %}
+            <div class="tysa-card p-5 space-y-4 flex flex-col justify-between border-2 border-slate-200 hover:border-brand-300 transition shadow-sm">
+                <input type="hidden" name="submission_{{ sub_data.entry.id }}" value="{{ sub_data.submission.id }}">
+
+                <!-- Card Header: Chest Number ONLY -->
+                <div>
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <span class="px-3 py-1 rounded-xl bg-slate-900 text-white font-mono font-black text-lg shadow-sm">
+                            Chest #{{ sub_data.entry.chest_number }}
+                        </span>
+                        <span class="text-xs font-black text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg">
+                            Asana {{ current_seq }} of 7
+                        </span>
+                    </div>
+
+                    <!-- Asana Details & Pose Thumbnail -->
+                    <div class="my-3 flex items-center space-x-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="w-14 h-14 bg-white rounded-lg p-1 border border-slate-200 shrink-0 flex items-center justify-center">
+                            {% if sub_data.pose.image_url %}
+                            <img src="{{ sub_data.pose.image_url }}" alt="{{ sub_data.pose.declared_code }}" class="h-full object-contain">
+                            {% else %}
+                            <i data-lucide="image" class="w-5 h-5 text-slate-300"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="font-mono text-xs font-black text-brand-700">{{ sub_data.pose.declared_code|default:"FBS-A1" }}</div>
+                            <div class="font-bold text-xs text-slate-900 line-clamp-1">{{ sub_data.pose.declared_name|default:"Uttanasana" }}</div>
+                            <div class="text-[10px] text-slate-500">Declared BV: {{ sub_data.pose.declared_bv|default:"0.80" }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scoring Input Fields -->
+                <div class="space-y-3 pt-2 border-t border-slate-100">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Posture (Max 6.0)</label>
+                            <input type="number" step="0.1" min="0" max="6" name="posture_{{ sub_data.entry.id }}" 
+                                value="{{ sub_data.item.posture_score|stringformat:'.2f' }}" 
+                                class="scoring-input w-full py-2 bg-slate-50">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Stability (Max 2.0)</label>
+                            <input type="number" step="0.1" min="0" max="2" name="stability_{{ sub_data.entry.id }}" 
+                                value="{{ sub_data.item.stability_score|stringformat:'.2f' }}" 
+                                class="scoring-input w-full py-2 bg-slate-50">
+                        </div>
+                    </div>
+
+                    <!-- Read-only Timing Contribution -->
+                    <div class="flex items-center justify-between p-2.5 bg-slate-100 rounded-xl text-xs font-semibold text-slate-700">
+                        <span>Time Judge Contrib (Hold ≥ 5s):</span>
+                        <span class="font-bold text-brand-700 font-mono">+{{ sub_data.item.timing_contribution }} pts</span>
+                    </div>
+
+                    <!-- Item Total -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                        <span class="font-bold text-slate-500">Item Calculated Total:</span>
+                        <span class="font-mono font-black text-base text-slate-900">
+                            {{ sub_data.item.effective_item_score|stringformat:'.2f' }} / 10.00
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-16 text-center text-slate-400 text-xs">
+                No active competitors on stage. Wait for Stage Manager to push a batch.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Submission Actions Toolbar -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
+            <div class="text-xs text-slate-500">
+                Draft auto-persists to server • Status: <span class="font-bold text-emerald-600">Online & Synchronized</span>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button type="submit" name="action" value="save_draft" class="px-5 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Save Draft (Pose {{ current_seq }})
+                </button>
+                <button type="submit" name="action" value="submit_batch" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Submit & Lock Final Batch Routine</span>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+from django.contrib import admin
+from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
+from django.shortcuts import redirect
+
+import accounts.views as accounts_views
+import championships.views as champ_views
+import catalogue.views as cat_views
+import athletes.views as athlete_views
+import judges.views as judge_views
+import registrations.views as reg_views
+import competition.views as comp_views
+import scoring.views as scoring_views
+import corrections.views as corr_views
+import results.views as result_views
+import certificates.views as cert_views
+import reports.views as report_views
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', lambda request: redirect('admin_dashboard'), name='root'),
+    
+    # 01_Login & Dashboard
+    path('accounts/login/', accounts_views.login_view, name='login'),
+    path('accounts/logout/', accounts_views.logout_view, name='logout'),
+    path('dashboard/', accounts_views.admin_dashboard, name='admin_dashboard'),
+    path('accounts/users/', accounts_views.users_and_permissions, name='users_and_permissions'),
+    path('registers/', accounts_views.registers_view, name='registers_view'),
+
+    # Championships
+    path('championships/create/', champ_views.championship_create, name='championship_create'),
+    path('championships/<int:champ_id>/setup/', champ_views.championship_setup, name='championship_setup'),
+
+    # Catalogue
+    path('catalogue/', cat_views.catalogue_view, name='catalogue_view'),
+
+    # Athlete Registration Flow (5 Steps) & ID Card
+    path('register/athlete/step-1/', athlete_views.athlete_register_step1, name='athlete_register_step1'),
+    path('register/athlete/step-2/', athlete_views.athlete_register_step2, name='athlete_register_step2'),
+    path('register/athlete/step-3/', athlete_views.athlete_register_step3, name='athlete_register_step3'),
+    path('register/athlete/step-4/', athlete_views.athlete_register_step4, name='athlete_register_step4'),
+    path('register/athlete/step-5/', athlete_views.athlete_register_step5, name='athlete_register_step5'),
+    path('athletes/id-card/<str:athlete_id>/', athlete_views.athlete_id_card, name='athlete_id_card'),
+    path('register/athlete/returning/', athlete_views.athlete_returning, name='athlete_returning'),
+
+    # Universal Judges
+    path('judges/apply/', judge_views.universal_judge_register, name='universal_judge_register'),
+    path('judges/<int:judge_id>/', judge_views.judge_profile, name='judge_profile'),
+    path('judges/approval-queue/', judge_views.judge_approval_queue, name='judge_approval_queue'),
+
+    # District & Venue
+    path('district/approvals/', reg_views.district_approvals, name='district_approvals'),
+    path('venue/verification/', reg_views.venue_verification, name='venue_verification'),
+
+    # Competition Operations
+    path('competition/draw/', comp_views.district_draw, name='district_draw'),
+    path('competition/panels/', comp_views.panel_assignments, name='panel_assignments'),
+    path('competition/stage/', comp_views.stage_manager, name='stage_manager'),
+    path('display/second-screen/', comp_views.second_screen, name='second_screen'),
+
+    # Scoring Desks
+    path('scoring/traditional-d/', scoring_views.scoring_traditional_d, name='scoring_traditional_d'),
+    path('scoring/traditional-d-final/', scoring_views.scoring_traditional_d_final, name='scoring_traditional_d_final'),
+    path('scoring/artistic-single-d/', scoring_views.scoring_artistic_single_d, name='scoring_artistic_single_d'),
+    path('scoring/artistic-pair-d/', scoring_views.scoring_artistic_pair_d, name='scoring_artistic_pair_d'),
+    path('scoring/rhythmic-pair-d/', scoring_views.scoring_rhythmic_pair_d, name='scoring_rhythmic_pair_d'),
+    path('scoring/traditional-time/', scoring_views.scoring_traditional_time, name='scoring_traditional_time'),
+    path('scoring/music-time/', scoring_views.scoring_music_time, name='scoring_music_time'),
+    path('scoring/artistry/', scoring_views.scoring_artistry, name='scoring_artistry'),
+    path('scoring/evaluator/', scoring_views.scoring_evaluator, name='scoring_evaluator'),
+    path('scoring/chief-judge/', scoring_views.scoring_chief_judge, name='scoring_chief_judge'),
+
+    # CD Corrections & Jury
+    path('cd/corrections/', corr_views.cd_corrections, name='cd_corrections'),
+    path('jury/', corr_views.jury_view, name='jury_view'),
+
+    # Live Audience & Results
+    path('display/live/', result_views.public_live_display, name='public_live_display'),
+    path('results/scoreboard/', result_views.scoreboard_view, name='scoreboard_view'),
+
+    # Certificates
+    path('certificates/templates/', cert_views.certificate_templates, name='certificate_templates'),
+    path('certificates/templates/<int:template_id>/edit/', cert_views.certificate_template_edit, name='certificate_template_edit'),
+    path('certificates/generate/', cert_views.certificate_generate, name='certificate_generate'),
+    path('certificates/verify/<uuid:uuid>/', cert_views.certificate_verify_qr, name='certificate_verify_qr'),
+
+    # Reports
+    path('reports/statistics/', report_views.report_statistics, name='report_statistics'),
+    path('reports/trophies/', report_views.report_trophies, name='report_trophies'),
+    path('reports/ceremonies/', report_views.report_ceremonies, name='report_ceremonies'),
+    path('reports/championship/', report_views.report_complete, name='report_complete'),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

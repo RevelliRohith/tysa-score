@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sign In — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="min-h-[85vh] flex items-center justify-center p-4">
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl border border-slate-200">
+        <!-- Left Side: Yoga Illustration & Branding -->
+        <div class="bg-gradient-to-br from-slate-900 via-brand-900 to-slate-950 p-8 sm:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-12 -bottom-12 opacity-10 text-[200px] select-none pointer-events-none">
+                🧘
+            </div>
+            
+            <div>
+                <div class="flex items-center space-x-3 mb-8">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-500 to-teal-400 flex items-center justify-center text-white text-2xl shadow-lg">
+                        🕉️
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-2xl tracking-tight leading-tight">TYSA SCORE</h1>
+                        <p class="text-xs text-brand-300 font-semibold tracking-wider uppercase">Telangana Yogasana Association</p>
+                    </div>
+                </div>
+
+                <h2 class="text-xl font-bold text-white mb-3">Official Championship Platform</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-6">
+                    Telangana State Yogasana Sports Championship Management System — built in strict accordance with the official Yogasana Bharat Code of Points.
+                </p>
+
+                <div class="space-y-3 text-xs text-slate-200">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center text-[10px] font-bold">✓</span>
+                        <span>Multi-Judge Simultaneous Scoring (D1-D4, Time, Artistry)</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center text-[10px] font-bold">✓</span>
+                        <span>Real-Time Stage Push & Audience Second Screen</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center text-[10px] font-bold">✓</span>
+                        <span>CD Controlled Correction & Audited Sheet Revision</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center text-[10px] font-bold">✓</span>
+                        <span>Dynamic Certificate Designer & Batch PDF Engine</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                <span>Code of Points 2024–2026</span>
+                <span class="text-brand-400 font-medium">TYSA Secure Portals</span>
+            </div>
+        </div>
+
+        <!-- Right Side: Clean Sign In Form -->
+        <div class="bg-white p-8 sm:p-12 flex flex-col justify-center">
+            <div class="mb-8">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">Staff & Judge Sign In</h3>
+                <p class="text-xs text-slate-500 mt-1">Enter your registered email and password to access your role-scoped desk.</p>
+            </div>
+
+            <form method="POST" action="{% url 'login' %}" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Official Email Address</label>
+                    <div class="relative">
+                        <input type="email" name="email" required placeholder="admin@tysa.org or judge@tysa.org" 
+                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-100 outline-none transition font-medium text-slate-900">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Password</label>
+                    </div>
+                    <div class="relative">
+                        <input type="password" name="password" required placeholder="••••••••" 
+                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-100 outline-none transition font-medium text-slate-900">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs">
+                    <label class="flex items-center space-x-2 text-slate-600 cursor-pointer">
+                        <input type="checkbox" name="remember" class="rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                        <span>Remember my session</span>
+                    </label>
+                    <span class="text-slate-400">Default dev: admin@tysa.org / admin123</span>
+                </div>
+
+                <button type="submit" 
+                    class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2">
+                    <span>Sign In to Desk</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </form>
+
+            <!-- External Portals (No staff credentials required) -->
+            <div class="mt-8 pt-6 border-t border-slate-100 space-y-3">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-500">Universal Judge Applicant?</span>
+                    <a href="{% url 'universal_judge_register' %}" class="font-bold text-brand-600 hover:text-brand-700 hover:underline">
+                        Apply as Judge →
+                    </a>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-500">Athlete Registration & Key Access?</span>
+                    <a href="{% url 'athlete_register_step1' %}" class="font-bold text-teal-600 hover:text-teal-700 hover:underline">
+                        Athlete Portal →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

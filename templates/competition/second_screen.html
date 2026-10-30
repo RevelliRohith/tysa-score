@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Audience Second Screen — TYSA Score Live Stage{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="refresh" content="3">
+<style>
+    body {
+        background-color: #070B14;
+        color: #F8FAFC;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto py-4">
+    <!-- Big Screen Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                🕉️
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-white tracking-tight uppercase">Stage 1 — Main Competition Arena</h1>
+                <p class="text-xs text-brand-400 font-bold tracking-wider">3RD TELANGANA STATE YOGASANA SPORTS CHAMPIONSHIP 2026</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400 bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>AUDIENCE SCREEN SYNCED</span>
+            </div>
+            <button onclick="document.documentElement.requestFullscreen()" class="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">
+                Fullscreen
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Batch on Stage matching 16.1 second screen.jpg -->
+    {% if active_batch %}
+    <div class="bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 rounded-3xl p-6 sm:p-8 border border-brand-800/60 shadow-2xl space-y-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="px-3 py-1 rounded-xl bg-brand-500 text-white font-black text-sm uppercase tracking-wider">
+                    On Stage Now
+                </span>
+                <span class="text-xl font-extrabold text-white">Batch #{{ active_batch.batch_number }}</span>
+            </div>
+            <div class="text-right">
+                <span class="text-xs text-slate-400 block font-semibold">Active Pose</span>
+                <span class="text-lg font-black text-brand-300">Asana {{ active_batch.current_asana_index }} of 7</span>
+            </div>
+        </div>
+
+        <!-- Competitor Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {% for ent in active_batch.entries.all %}
+            <div class="bg-slate-950/80 rounded-2xl p-5 border border-slate-800 space-y-3 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <span class="px-3 py-1 rounded-lg bg-white text-slate-950 font-black text-base font-mono">
+                        Chest #{{ ent.chest_number }}
+                    </span>
+                    <span class="text-xs font-bold text-teal-400">{{ ent.district }}</span>
+                </div>
+                <div class="text-xl font-black text-white tracking-tight truncate">{{ ent.display_names }}</div>
+                <div class="text-xs text-slate-400 font-medium">{{ ent.age_category.name }} • {{ ent.get_gender_display }}</div>
+                <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                    <span class="text-slate-400 font-semibold">Score Status:</span>
+                    <span class="text-amber-400 font-bold animate-pulse">Judging in Progress</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Latest Official Released Scores Table -->
+    <div class="bg-slate-900/90 rounded-3xl p-6 border border-slate-800 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h2 class="font-black text-lg text-white tracking-tight">Latest Approved Results & Stage Standings</h2>
+            <span class="text-xs font-bold text-slate-400">Official Yogasana Bharat COP Standings</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        <th class="py-3 px-4">Rank</th>
+                        <th class="py-3 px-4">Chest No.</th>
+                        <th class="py-3 px-4">Competitor</th>
+                        <th class="py-3 px-4">District</th>
+                        <th class="py-3 px-4 text-right">Official Score</th>
+                        <th class="py-3 px-4 text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 text-sm">
+                    {% for p in released_performances %}
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="py-3.5 px-4 font-black text-base {% if forloop.counter == 1 %}text-amber-400{% elif forloop.counter == 2 %}text-slate-300{% elif forloop.counter == 3 %}text-amber-600{% else %}text-slate-400{% endif %}">
+                            #{{ forloop.counter }}
+                        </td>
+                        <td class="py-3.5 px-4 font-mono font-black text-white">
+                            Chest {{ p.event_entry.chest_number }}
+                        </td>
+                        <td class="py-3.5 px-4 font-bold text-white">
+                            {{ p.event_entry.display_names }}
+                        </td>
+                        <td class="py-3.5 px-4 text-xs font-bold text-slate-300">{{ p.event_entry.district }}</td>
+                        <td class="py-3.5 px-4 text-right font-black font-mono text-base text-brand-400">
+                            {{ p.final_score|default:p.provisional_score|floatformat:3 }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase">
+                                Released
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-500 text-xs">
+                            Awaiting official release of first performance scores from the Chief Judge desk.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

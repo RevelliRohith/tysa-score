@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}District Athlete Approval Queue — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #12</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">District Association Athlete Approval Queue</h1>
+            <p class="text-xs text-slate-500 font-medium">Verify district eligibility, quotas, age proofs, and grant district approval.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- District Selector & Quota Tracker -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <form method="GET" class="flex items-center space-x-3">
+            <label class="text-xs font-bold text-slate-700 uppercase">Select District:</label>
+            <select name="district" onchange="this.form.submit()" class="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900">
+                <option value="">All Telangana Districts</option>
+                {% for d in districts %}
+                <option value="{{ d.district_name }}" {% if selected_district == d.district_name %}selected{% endif %}>
+                    {{ d.district_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% if quota_info %}
+        <div class="flex items-center space-x-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">{{ quota_info.district_name }} Quota</span>
+                <span class="text-sm font-black text-slate-900">{{ quota_info.quota_used }} / {{ quota_info.quota_limit }} Entries</span>
+            </div>
+            <div class="w-24 bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div class="bg-brand-600 h-full" style="width: 30%"></div>
+            </div>
+            <span class="text-xs font-bold text-emerald-600">Quota Available</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Registrations Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span class="text-xs font-bold text-slate-700">Applicants in Queue: {{ registrations.count }}</span>
+            <span class="text-xs text-slate-400">Strict quota enforcement active</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Athlete & Public ID</th>
+                        <th>District</th>
+                        <th>Age & Gender</th>
+                        <th>Event Entries</th>
+                        <th>Documents</th>
+                        <th>Status</th>
+                        <th class="text-right">Approval Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in registrations %}
+                    <tr>
+                        <td class="font-bold text-slate-900">
+                            {{ reg.athlete.full_name }}
+                            <div class="text-[11px] text-brand-700 font-mono font-normal">{{ reg.athlete.public_athlete_id }}</div>
+                        </td>
+                        <td class="text-xs font-semibold text-slate-700">{{ reg.athlete.district }}</td>
+                        <td class="text-xs text-slate-600">
+                            {{ reg.athlete.dob|date:"d M Y" }}
+                            <span class="text-slate-400 font-medium">({{ reg.athlete.get_gender_display }})</span>
+                        </td>
+                        <td>
+                            <div class="flex flex-col gap-0.5">
+                                {% for ent in reg.event_entries.all %}
+                                <span class="text-xs font-semibold text-slate-800">
+                                    • {{ ent.event_config.get_event_type_display }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                {{ reg.athlete.documents.count }} Doc(s)
+                            </span>
+                        </td>
+                        <td>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                                {% if reg.status == 'DISTRICT_APPROVED' %}bg-emerald-100 text-emerald-800
+                                {% elif reg.status == 'VENUE_CLEARED' %}bg-blue-100 text-blue-800
+                                {% elif reg.status == 'DISTRICT_REJECTED' %}bg-rose-100 text-rose-800
+                                {% else %}bg-amber-100 text-amber-800{% endif %}">
+                                {{ reg.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <form method="POST" class="inline-flex space-x-1.5">
+                                {% csrf_token %}
+                                <input type="hidden" name="reg_id" value="{{ reg.id }}">
+                                <button type="submit" name="decision" value="approve" class="px-3 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition">
+                                    Approve
+                                </button>
+                                <button type="submit" name="decision" value="reject" class="px-3 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                                    Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-6 text-slate-400 text-xs">No pending applications for this district.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

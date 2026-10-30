@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Certificate Template Library — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module CERT_TEMPLATES</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Official Certificate Template Library</h1>
+            <p class="text-xs text-slate-500 font-medium">Design, customize canvas fields, upload official border backgrounds, and version certificate layouts.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="document.getElementById('create-template-modal').classList.remove('hidden')" 
+                class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Create New Template</span>
+            </button>
+            <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Template Library Grid matching certifictae templete.jpg -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for t in templates %}
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-brand-300 transition group">
+            <div>
+                <!-- Mockup / Preview Box -->
+                <div class="h-44 bg-gradient-to-tr from-slate-100 via-amber-50/40 to-slate-50 rounded-xl border border-dashed border-slate-300 p-4 flex flex-col items-center justify-center text-center relative overflow-hidden mb-4">
+                    <div class="border-2 border-amber-600/40 w-full h-full rounded-lg p-2 flex flex-col justify-between">
+                        <div class="text-[9px] font-black uppercase tracking-widest text-slate-800">Telangana Yogasana Association</div>
+                        <div class="font-serif italic text-xs font-bold text-brand-800">{{ t.get_template_type_display }}</div>
+                        <div class="text-[8px] text-slate-400 font-mono">Dynamic Fields Canvas Layout</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase">
+                        {{ t.get_template_type_display }}
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono">v{{ t.version }}</span>
+                </div>
+
+                <h3 class="font-extrabold text-base text-slate-900 mt-2">{{ t.name }}</h3>
+                <p class="text-xs text-slate-500 mt-1">Configured dynamic canvas fields for printing & batch PDF exports.</p>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-600 flex items-center">
+                    <i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> Published
+                </span>
+                <a href="{% url 'certificate_template_edit' template_id=t.id %}" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition flex items-center space-x-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                    <span>Edit Canvas Fields</span>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal: Create Template -->
+<div id="create-template-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-slate-900 text-base">Create Certificate Template</h3>
+            <button onclick="document.getElementById('create-template-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Template Name</label>
+                <input type="text" name="name" required placeholder="State Merit 2026 Template" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Certificate Type</label>
+                <select name="template_type" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none font-semibold">
+                    {% for c_code, c_label in types %}
+                    <option value="{{ c_code }}">{{ c_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Background Image / Border (Optional)</label>
+                <input type="file" name="background_image" class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('create-template-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs">Create & Open Canvas</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

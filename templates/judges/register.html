@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Universal Judge Accreditation Application — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs space-y-6">
+        <div class="pb-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #09</span>
+                <h1 class="text-xl font-extrabold text-slate-900">Universal Judge Accreditation Application</h1>
+                <p class="text-xs text-slate-500">Championship-independent universal official roster for Telangana State.</p>
+            </div>
+            <a href="{% url 'login' %}" class="text-xs font-bold text-slate-500 hover:text-slate-800">
+                ← Sign In
+            </a>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Official Name *</label>
+                    <input type="text" name="full_name" required placeholder="Sri / Smt. Name" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Email Address *</label>
+                    <input type="email" name="email" required placeholder="judge@tysa.org" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Contact *</label>
+                    <input type="tel" name="mobile" required placeholder="9848012345" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Home District *</label>
+                    <input type="text" name="district" required placeholder="Hyderabad, Warangal, etc." class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Certification Level *</label>
+                    <select name="certification_level" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                        {% for c_code, c_label in cert_levels %}
+                        <option value="{{ c_code }}">{{ c_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Issuing Authority</label>
+                    <input type="text" name="certification_authority" value="Yogasana Bharat / NYSF" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Certificate Number</label>
+                    <input type="text" name="certificate_number" placeholder="YB-CERT-2024-884" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Experience in Officiating (Years)</label>
+                    <input type="number" name="experience_years" value="3" min="1" max="40" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Portal Password (For Desk Sign In) *</label>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-brand-500 font-semibold">
+                </div>
+            </div>
+
+            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center space-x-2.5">
+                <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                <span>Approval Rule: Applications are verified and approved by the System Admin. Pending judges cannot score or open desks until approved.</span>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <a href="{% url 'login' %}" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</a>
+                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                    Submit Application for Approval
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

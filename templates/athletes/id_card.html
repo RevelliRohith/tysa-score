@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Athlete Status & Accreditation ID Card — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #08</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Athlete Accreditation & Official ID Card</h1>
+            <p class="text-xs text-slate-500 font-medium">Permanent registration profile, secure private access key, and championship accreditation badge.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print ID Card</span>
+            </button>
+            <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Security Key Box matching 08_Athlete_Status_and_ID_Card.png -->
+    <div class="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-6 text-white shadow-xl border border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+                    🔑
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-sm text-white">Permanent Private Access Key</h3>
+                    <p class="text-[11px] text-slate-400">Keep this secret key safe. Use it to access your profile and register for all future championships.</p>
+                </div>
+            </div>
+            <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                Active Credential
+            </span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Private Key:</span>
+                <span id="private-key-text" class="font-mono text-base font-black tracking-widest text-amber-400">
+                    {% if display_key %}{{ display_key }}{% else %}••••-••••-••••-••••{% endif %}
+                </span>
+            </div>
+
+            {% if display_key %}
+            <div class="flex items-center space-x-2">
+                <button onclick="navigator.clipboard.writeText('{{ display_key }}'); alert('Private access key copied to clipboard!');" 
+                    class="px-3 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-lg transition flex items-center space-x-1">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span>Copy Key</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="text-[11px] text-slate-400 flex items-center space-x-2">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+            <span>Privacy Guaranteed: Your private key is NEVER displayed on ID cards, NEVER encoded in QR codes, and NEVER exposed to judges or public viewers.</span>
+        </div>
+    </div>
+
+    <!-- Official Printable ID Card matching Image 08 -->
+    <div class="bg-white rounded-2xl border-2 border-slate-300 p-8 shadow-md max-w-lg mx-auto relative overflow-hidden" id="printable-id-card">
+        <!-- Top Card Header -->
+        <div class="flex items-center justify-between pb-4 border-b-2 border-brand-600 mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-md">
+                    🕉️
+                </div>
+                <div>
+                    <h2 class="font-black text-sm text-slate-900 tracking-tight leading-tight">TYSA ATHLETE ACCREDITATION</h2>
+                    <p class="text-[10px] text-slate-500 font-semibold">{{ championship.name }}</p>
+                </div>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-black rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase">
+                Official
+            </span>
+        </div>
+
+        <!-- ID Card Body -->
+        <div class="grid grid-cols-3 gap-4 items-center">
+            <!-- Photo Box -->
+            <div class="w-28 h-36 bg-slate-100 rounded-xl border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
+                {% if athlete.photo %}
+                <img src="{{ athlete.photo.url }}" alt="{{ athlete.full_name }}" class="w-full h-full object-cover">
+                {% else %}
+                <div class="text-center text-slate-400 p-2">
+                    <i data-lucide="user" class="w-10 h-10 mx-auto mb-1 text-slate-300"></i>
+                    <span class="text-[9px] font-bold block">PHOTO</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Details -->
+            <div class="col-span-2 space-y-2 text-xs">
+                <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Athlete Name</span>
+                    <span class="text-base font-black text-slate-900">{{ athlete.full_name }}</span>
+                </div>
+
+                <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Permanent Athlete ID</span>
+                    <span class="font-mono text-xs font-bold text-brand-700">{{ athlete.public_athlete_id }}</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase font-bold block">District</span>
+                        <span class="font-bold text-slate-800">{{ athlete.district }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase font-bold block">Gender</span>
+                        <span class="font-bold text-slate-800">{{ athlete.get_gender_display }}</span>
+                    </div>
+                </div>
+
+                <!-- Chest Number Highlight -->
+                {% for ent in registration.event_entries.all %}
+                {% if ent.chest_number %}
+                <div class="pt-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Championship Chest No.</span>
+                    <span class="px-2.5 py-0.5 rounded-md bg-slate-900 text-white font-mono font-black text-sm">
+                        Chest #{{ ent.chest_number }}
+                    </span>
+                    <span class="text-[10px] text-slate-500 ml-1">({{ ent.age_category.name }})</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Card Footer with Verification QR & Security Hologram Stamp -->
+        <div class="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+            <div>
+                <span class="font-bold text-slate-700 block">Accredited by TYSA</span>
+                <span>Reg: {{ registration.registration_number }}</span>
+            </div>
+
+            <!-- Public Verification QR (Safe - no secrets) -->
+            <div class="w-14 h-14 bg-slate-100 rounded-lg p-1 border border-slate-200 flex items-center justify-center">
+                <i data-lucide="qr-code" class="w-10 h-10 text-slate-800"></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

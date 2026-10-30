@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Stage Manager Control Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #16</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Stage Manager & Announcer Control Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Coordinate on-stage batches, trigger judge scoring desks, and manage big screen audience display.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'second_screen' %}" target="_blank" class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="monitor" class="w-4 h-4"></i>
+                <span>Open Audience 2nd Screen</span>
+            </a>
+            <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Stage Batch Card matching 16. stage manager.jpg -->
+    {% if active_batch %}
+    <div class="bg-gradient-to-br from-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl border border-emerald-800 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-emerald-800/80 gap-3">
+            <div class="flex items-center space-x-3">
+                <span class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black text-lg shadow-md">
+                    #{{ active_batch.batch_number }}
+                </span>
+                <div>
+                    <h2 class="font-extrabold text-lg text-white">Active Stage Batch #{{ active_batch.batch_number }}</h2>
+                    <p class="text-xs text-emerald-300 font-medium">Currently on Stage • Asana {{ active_batch.current_asana_index }} of 7</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="next_asana">
+                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md transition flex items-center space-x-1.5">
+                        <span>Advance to Next Asana ({{ active_batch.current_asana_index|add:1 }})</span>
+                        <i data-lucide="fast-forward" class="w-4 h-4"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Competitors on Stage -->
+        <div>
+            <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-3">Athletes Currently Performing</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {% for ent in active_batch.entries.all %}
+                <div class="bg-slate-950/70 p-4 rounded-xl border border-emerald-800/60 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-400 text-slate-950 font-black font-mono text-sm">
+                            Chest #{{ ent.chest_number }}
+                        </span>
+                        <span class="text-[10px] text-emerald-300 font-bold">{{ ent.district }}</span>
+                    </div>
+                    <div class="font-black text-base text-white truncate">{{ ent.display_names }}</div>
+                    <div class="text-[11px] text-slate-400">{{ ent.age_category.name }} • {{ ent.get_gender_display }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Realtime Judges Submission Tracker -->
+        <div class="pt-4 border-t border-emerald-800/80">
+            <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-2">Live Judges Submission Status</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs">
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">D1 Judge</span>
+                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">D2 Judge</span>
+                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">D3 Judge</span>
+                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">D4 Judge</span>
+                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">Time Judge</span>
+                    <span class="text-emerald-400 font-bold text-[11px]">Timing Log</span>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">Evaluator</span>
+                    <span class="text-emerald-400 font-bold text-[11px]">Validating</span>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
+                    <span class="text-[10px] text-slate-400 font-bold block">Chief Judge</span>
+                    <span class="text-amber-400 font-bold text-[11px]">Reviewing</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Next Batch Push Queue from Master Roll -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="font-extrabold text-sm text-slate-900">Push Next Batch to Stage & Judges</h3>
+                <p class="text-xs text-slate-500">Select up to 5 verified athletes from the ready queue (max 3 for finals).</p>
+            </div>
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg">
+                {{ queued_entries.count }} Ready for Stage
+            </span>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="push_batch">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                {% for ent in queued_entries %}
+                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-slate-100/70 transition cursor-pointer">
+                    <input type="checkbox" name="entry_ids" value="{{ ent.id }}" class="rounded text-brand-600 mr-3 mt-1">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-black text-xs font-mono bg-slate-900 text-white px-2 py-0.5 rounded">Chest {{ ent.chest_number }}</span>
+                            <span class="text-xs font-bold text-slate-900 truncate">{{ ent.display_names }}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-1">{{ ent.district }} • {{ ent.age_category.name }}</div>
+                    </div>
+                </label>
+                {% empty %}
+                <div class="col-span-full py-6 text-center text-slate-400 text-xs">
+                    No competitors in queue. Verify master roll and venue check-in.
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex justify-end">
+                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                    <span>Push Selected Batch to Stage & Judges</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

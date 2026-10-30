@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Certificate Canvas Editor — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module EDIT_TEMPLATE</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Certificate Dynamic Field Canvas Editor</h1>
+            <p class="text-xs text-slate-500 font-medium">Position dynamic recipient variables, configure typographic weights, and preview certificate layouts.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'certificate_templates' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                ← Templates
+            </a>
+        </div>
+    </div>
+
+    <!-- 2-Column Canvas Layout matching edit templete.jpg -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left: Interactive Canvas Preview (8 cols) -->
+        <div class="lg:col-span-8 bg-slate-900 rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center">
+            <div class="w-full max-w-2xl aspect-[1.414/1] bg-white rounded-xl shadow-2xl p-8 relative border-8 border-double border-amber-600/60 flex flex-col justify-between text-slate-900" id="cert-canvas">
+                
+                <!-- Watermark Logo -->
+                <div class="text-center space-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-700 to-teal-500 flex items-center justify-center text-white text-xl font-bold mx-auto shadow-md">
+                        🕉️
+                    </div>
+                    <div class="text-[10px] font-black tracking-widest text-slate-700 uppercase">Telangana Yogasana Association</div>
+                    <h2 class="text-sm font-black text-brand-900 uppercase tracking-wider">3rd Telangana State Yogasana Sports Championship 2026</h2>
+                    <p class="text-[10px] text-slate-500 font-semibold">{{ template.name }}</p>
+                </div>
+
+                <!-- Dynamic Placeholders on Canvas -->
+                <div class="text-center space-y-3 my-4">
+                    <p class="text-xs text-slate-500 italic">This certificate is proudly awarded to</p>
+                    
+                    <div class="p-2 border-2 border-dashed border-brand-400 bg-brand-50/50 rounded-lg inline-block font-extrabold text-2xl text-slate-950 font-serif" id="preview-recipient-name">
+                        [ Recipient Full Name ]
+                    </div>
+
+                    <div class="text-xs text-slate-600 space-y-1">
+                        <div id="preview-athlete-id" class="font-mono text-slate-500 font-bold">[ Athlete Public ID: TYSA-ATH-00101 ]</div>
+                        <div id="preview-event-name" class="font-bold text-brand-700">[ Event: Traditional Yogasana — Sub Junior Male ]</div>
+                        <div id="preview-district" class="font-semibold text-slate-700">[ District: Hyderabad ]</div>
+                        <div id="preview-rank" class="font-black text-amber-600 text-sm">[ Merit: 1st Place — Gold Medal ]</div>
+                    </div>
+                </div>
+
+                <!-- Footer with Signatures & QR -->
+                <div class="flex items-end justify-between pt-4 border-t border-slate-200 text-[9px] text-slate-500">
+                    <div class="text-left">
+                        <div class="w-20 border-b border-slate-400 mb-1"></div>
+                        <span class="font-bold text-slate-800 block">President / Secretary</span>
+                        <span>TYSA State Committee</span>
+                    </div>
+
+                    <!-- Verification QR -->
+                    <div class="w-16 h-16 bg-slate-100 rounded-lg p-1 border border-slate-300 flex items-center justify-center">
+                        <i data-lucide="qr-code" class="w-12 h-12 text-slate-800"></i>
+                    </div>
+
+                    <div class="text-right">
+                        <div class="w-20 border-b border-slate-400 mb-1 ml-auto"></div>
+                        <span class="font-bold text-slate-800 block">Competition Director</span>
+                        <span>Official Certification</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Inspector & Layout Properties (4 cols) -->
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div class="pb-3 border-b border-slate-100">
+                <h3 class="font-extrabold text-sm text-slate-900">Dynamic Field Inspector</h3>
+                <p class="text-xs text-slate-500">Select canvas element to edit typography and layout parameters.</p>
+            </div>
+
+            <form method="POST" class="space-y-4 text-xs">
+                {% csrf_token %}
+                <input type="hidden" name="field_layout" id="field-layout-input" value="{}">
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase mb-1">Canvas Field Element</label>
+                    <select id="field-selector" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none font-bold" onchange="loadFieldProperties(this.value)">
+                        <option value="recipient_name">Recipient Name</option>
+                        <option value="athlete_id">Public Athlete ID</option>
+                        <option value="event_name">Event Name & Category</option>
+                        <option value="district">District of Representation</option>
+                        <option value="rank">Medal / Merit Rank</option>
+                        <option value="cert_number">Official Certificate Number</option>
+                        <option value="issue_date">Issue Date</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase mb-1">Font Size (px)</label>
+                        <input type="number" id="prop-font-size" value="28" min="10" max="60" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase mb-1">Font Weight</label>
+                        <select id="prop-font-weight" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none font-semibold">
+                            <option value="normal">Regular</option>
+                            <option value="bold" selected>Bold</option>
+                            <option value="900">Black</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase mb-1">Color (Hex)</label>
+                    <input type="color" id="prop-color" value="#0F172A" class="w-full h-9 p-1 border border-slate-200 rounded-xl cursor-pointer">
+                </div>
+
+                <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-900 text-[11px]">
+                    <span class="font-bold">Security Constraint:</span> Private athlete keys are strictly forbidden on certificates and cannot be selected as canvas fields.
+                </div>
+
+                <button type="submit" class="w-full py-2.5 px-4 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                    Save Canvas Configuration
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

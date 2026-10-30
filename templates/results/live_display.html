@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Live Public Score Display — TYSA Score{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="refresh" content="4">
+<style>
+    body {
+        background-color: #0A0F1D;
+        color: #F8FAFC;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto py-2">
+    <!-- Header matching 27_Public_Live_Score_Display.png -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                🕉️
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="text-2xl font-black text-white tracking-tight uppercase">Public Live Scoreboard</h1>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
+                        ● LIVE ARENA
+                    </span>
+                </div>
+                <p class="text-xs text-brand-300 font-semibold">{{ championship.name }} • Stage 1 Main Arena</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="text-right">
+                <span class="text-[10px] text-slate-400 uppercase font-bold block">Progress</span>
+                <span class="font-mono text-sm font-black text-white">{{ performed_count }} / {{ total_count }} Completed</span>
+            </div>
+            <button onclick="document.documentElement.requestFullscreen()" class="px-3 py-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition">
+                Fullscreen
+            </button>
+        </div>
+    </div>
+
+    <!-- Section 1: Pinned Current Performer on Stage (Always at Top) -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 border-2 border-brand-500/40 shadow-2xl relative overflow-hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+            <div class="flex items-center space-x-2">
+                <span class="px-3 py-0.5 rounded-full text-[10px] font-black bg-brand-500 text-white uppercase tracking-wider">
+                    Current Performer on Stage
+                </span>
+                <span class="text-xs text-slate-400 font-medium">Asana Sequence Active</span>
+            </div>
+            <span class="text-xs font-bold text-amber-400 flex items-center">
+                <span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5 animate-ping"></span>
+                Score Awaiting Release
+            </span>
+        </div>
+
+        {% if current_perf %}
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <span class="px-4 py-2 rounded-2xl bg-white text-slate-950 font-mono font-black text-2xl shadow-md">
+                    Chest #{{ current_perf.chest_number }}
+                </span>
+                <div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">{{ current_perf.event_entry.display_names }}</h2>
+                    <p class="text-xs text-brand-300 font-bold mt-0.5">{{ current_perf.event_entry.district }} • {{ current_perf.event_entry.event_config.get_event_type_display }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-6 text-right">
+                <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Current Round</span>
+                    <span class="text-sm font-black text-white">{{ current_perf.round_type }}</span>
+                </div>
+                <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Status</span>
+                    <span class="text-sm font-black text-amber-400">Under Review</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="py-4 text-center text-slate-400 text-xs">
+            Awaiting next batch from Stage Manager.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Section 2: Pinned Top 3 Scores (Podium Leaders) -->
+    <div>
+        <h3 class="text-xs font-bold text-brand-300 uppercase tracking-wider mb-3">Top Podium Standings</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for top in top_scores %}
+            <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black 
+                        {% if forloop.counter == 1 %}bg-amber-400 text-slate-950{% elif forloop.counter == 2 %}bg-slate-300 text-slate-950{% else %}bg-amber-700 text-white{% endif %}">
+                        {{ forloop.counter }}
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm text-white truncate max-w-[150px]">{{ top.event_entry.display_names }}</div>
+                        <div class="text-[11px] text-slate-400">Chest {{ top.chest_number }} • {{ top.event_entry.district }}</div>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <span class="font-mono text-xl font-black text-emerald-400">
+                        {{ top.final_score|default:top.provisional_score|floatformat:3 }}
+                    </span>
+                    <span class="text-[9px] text-slate-500 uppercase font-bold block">Official Mark</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Section 3: Cumulative Released Scores Table -->
+    <div class="bg-slate-900/80 rounded-3xl p-6 border border-slate-800 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+                <h3 class="font-black text-base text-white tracking-tight">Cumulative Released Performances</h3>
+                <p class="text-[11px] text-slate-400">All completed routines retained throughout event • Synchronized Live</p>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">Last update: Live Socket</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        <th class="py-3 px-4">Rank</th>
+                        <th class="py-3 px-4">Chest No.</th>
+                        <th class="py-3 px-4">Athlete / Pair</th>
+                        <th class="py-3 px-4">District</th>
+                        <th class="py-3 px-4 text-right">Official Score</th>
+                        <th class="py-3 px-4 text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    {% for p in cumulative_table %}
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-black font-mono {% if forloop.counter <= 3 %}text-amber-400{% else %}text-slate-400{% endif %}">
+                            #{{ forloop.counter }}
+                        </td>
+                        <td class="py-3 px-4 font-mono font-black text-white">Chest {{ p.chest_number }}</td>
+                        <td class="py-3 px-4 font-bold text-white">{{ p.event_entry.display_names }}</td>
+                        <td class="py-3 px-4 text-xs font-semibold text-slate-300">{{ p.event_entry.district }}</td>
+                        <td class="py-3 px-4 text-right font-mono font-black text-base text-emerald-400">
+                            {{ p.final_score|default:p.provisional_score|floatformat:3 }}
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                Released
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="py-8 text-center text-slate-500 text-xs">Awaiting released scores.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

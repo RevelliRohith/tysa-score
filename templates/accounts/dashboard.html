@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — TYSA Score Championship Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Dashboard Header with Search & Championship Selector -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-3 mb-1">
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Admin & Officials Dashboard</h1>
+                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Active Championship
+                </span>
+            </div>
+            <p class="text-xs text-slate-500 font-medium">
+                {{ championship.name|default:"3rd Telangana State Yogasana Sports Championship 2026" }} • {{ championship.venue_name }}
+            </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <div class="relative w-full md:w-72">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                <input type="text" id="module-search" placeholder="Quick search modules, athletes..." 
+                    class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition text-slate-800"
+                    onkeyup="filterModules(this.value)">
+            </div>
+            
+            <a href="{% url 'public_live_display' %}" target="_blank" class="px-3.5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0">
+                <i data-lucide="airplay" class="w-4 h-4"></i>
+                <span>Live Display</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Registered Athletes</div>
+            <div class="text-2xl font-black text-slate-900 mt-1">{{ stats.total_athletes|default:0 }}</div>
+            <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">Across all districts</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Approved Judges</div>
+            <div class="text-2xl font-black text-slate-900 mt-1">{{ stats.approved_judges|default:0 }}</div>
+            <div class="text-[10px] text-brand-600 font-semibold mt-0.5">Universal roster</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Stages</div>
+            <div class="text-2xl font-black text-emerald-700 mt-1">{{ stats.active_panels|default:1 }}</div>
+            <div class="text-[10px] text-slate-400 font-medium mt-0.5">Panels assigned</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Scored Routines</div>
+            <div class="text-2xl font-black text-indigo-700 mt-1">{{ stats.scored_performances|default:0 }}</div>
+            <div class="text-[10px] text-slate-400 font-medium mt-0.5">Provisional / Released</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">District Queue</div>
+            <div class="text-2xl font-black text-amber-600 mt-1">{{ stats.pending_approvals|default:0 }}</div>
+            <div class="text-[10px] text-amber-600 font-semibold mt-0.5">Pending approvals</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Judge Applications</div>
+            <div class="text-2xl font-black text-purple-700 mt-1">{{ stats.pending_judges|default:0 }}</div>
+            <div class="text-[10px] text-purple-600 font-semibold mt-0.5">Pending Admin check</div>
+        </div>
+    </div>
+
+    <!-- 6 Coloured Module Groups matching 02_Admin_Dashboard.png -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="module-grid">
+
+        <!-- 1. Championship Setup & Rules (Soft Purple/Indigo) -->
+        <div class="module-group bg-gradient-to-br from-indigo-50/70 to-purple-50/50 rounded-2xl p-5 border border-indigo-100 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-indigo-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        1
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-900 text-sm tracking-tight">Championship & Setup</h2>
+                        <p class="text-[11px] text-indigo-700 font-medium">Rules, Events, Categories, Quotas</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-full">Admin</span>
+            </div>
+
+            <div class="space-y-2">
+                <a href="{% url 'championship_create' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-indigo-100 hover:border-indigo-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="settings" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Basic Details & Dates</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#34</span>
+                </a>
+
+                <a href="{% url 'championship_setup' champ_id=championship.id %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-indigo-100 hover:border-indigo-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Event-wise Age & Divisions</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#03</span>
+                </a>
+
+                <a href="{% url 'catalogue_view' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-indigo-100 hover:border-indigo-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="book-open" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Asana Catalogue (250+5)</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">ASANA</span>
+                </a>
+
+                <a href="{% url 'users_and_permissions' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-indigo-100 hover:border-indigo-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Staff Roles & Permissions</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#04</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. Registrations & Approvals (Soft Blue) -->
+        <div class="module-group bg-gradient-to-br from-sky-50/70 to-blue-50/50 rounded-2xl p-5 border border-sky-100 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-sky-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        2
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-900 text-sm tracking-tight">Registrations & Clearance</h2>
+                        <p class="text-[11px] text-sky-700 font-medium">District Approvals, Venue Clearance</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-sky-100 text-sky-800 rounded-full">District / Venue</span>
+            </div>
+
+            <div class="space-y-2">
+                <a href="{% url 'athlete_register_step1' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-sky-100 hover:border-sky-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="user-plus" class="w-4 h-4 text-sky-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-sky-600">Athlete 5-Step Entry Portal</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#05-#07</span>
+                </a>
+
+                <a href="{% url 'district_approvals' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-sky-100 hover:border-sky-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="check-square" class="w-4 h-4 text-sky-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-sky-600">District Approval Queue</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#12</span>
+                </a>
+
+                <a href="{% url 'venue_verification' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-sky-100 hover:border-sky-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-sky-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-sky-600">Venue Verification Desk</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#13</span>
+                </a>
+
+                <a href="{% url 'registers_view' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-sky-100 hover:border-sky-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-sky-600">Coaches, Volunteers, Guests</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#11</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 3. Competition & Stage (Soft Emerald/Green) -->
+        <div class="module-group bg-gradient-to-br from-emerald-50/70 to-teal-50/50 rounded-2xl p-5 border border-emerald-100 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-emerald-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        3
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-900 text-sm tracking-tight">Competition & Stage</h2>
+                        <p class="text-[11px] text-emerald-700 font-medium">Draw, Roll, Panels, Stage Manager</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">CD / Stage</span>
+            </div>
+
+            <div class="space-y-2">
+                <a href="{% url 'district_draw' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="dices" class="w-4 h-4 text-emerald-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-emerald-600">District Draw & Master Roll</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#14</span>
+                </a>
+
+                <a href="{% url 'panel_assignments' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="user-check" class="w-4 h-4 text-emerald-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-emerald-600">CD Judge Panel Assignments</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#15</span>
+                </a>
+
+                <a href="{% url 'stage_manager' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="play" class="w-4 h-4 text-emerald-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-emerald-600">Stage Manager Control Desk</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#16</span>
+                </a>
+
+                <a href="{% url 'second_screen' %}" target="_blank" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="monitor" class="w-4 h-4 text-emerald-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-emerald-600">Audience Second Screen</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#16.1</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 4. Scoring Desks (Soft Amber/Yellow) -->
+        <div class="module-group bg-gradient-to-br from-amber-50/70 to-yellow-50/50 rounded-2xl p-5 border border-amber-100 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-amber-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        4
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-900 text-sm tracking-tight">Scoring Desks</h2>
+                        <p class="text-[11px] text-amber-700 font-medium">Official D, Time, Evaluator, Chief</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">Judges</span>
+            </div>
+
+            <div class="space-y-2">
+                <a href="{% url 'scoring_traditional_d' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-100 hover:border-amber-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-amber-600">Traditional D Judge (1–5 Cards)</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#17</span>
+                </a>
+
+                <a href="{% url 'scoring_artistic_single_d' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-100 hover:border-amber-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="activity" class="w-4 h-4 text-amber-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-amber-600">Artistic Single D Judge (10 Items)</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#18</span>
+                </a>
+
+                <a href="{% url 'scoring_artistic_pair_d' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-100 hover:border-amber-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="users-2" class="w-4 h-4 text-amber-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-amber-600">Artistic Pair D Judge (Dual Chest)</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#19</span>
+                </a>
+
+                <div class="flex space-x-2">
+                    <a href="{% url 'scoring_rhythmic_pair_d' %}" class="module-card flex-1 p-2 bg-white rounded-xl border border-amber-100 hover:border-amber-300 text-center transition">
+                        <span class="text-[11px] font-bold text-slate-800">Rhythmic Pair</span>
+                        <span class="block text-[9px] text-slate-400">#20</span>
+                    </a>
+                    <a href="{% url 'scoring_traditional_time' %}" class="module-card flex-1 p-2 bg-white rounded-xl border border-amber-100 hover:border-amber-300 text-center transition">
+                        <span class="text-[11px] font-bold text-slate-800">Batch Timers</span>
+                        <span class="block text-[9px] text-slate-400">#33</span>
+                    </a>
+                    <a href="{% url 'scoring_chief_judge' %}" class="module-card flex-1 p-2 bg-white rounded-xl border border-amber-100 hover:border-amber-300 text-center transition">
+                        <span class="text-[11px] font-bold text-slate-800">Chief Review</span>
+                        <span class="block text-[9px] text-slate-400">#24</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Audits & CD Corrections (Soft Rose/Red) -->
+        <div class="module-group bg-gradient-to-br from-rose-50/70 to-red-50/50 rounded-2xl p-5 border border-rose-100 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-rose-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        5
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-900 text-sm tracking-tight">Audits & Governance</h2>
+                        <p class="text-[11px] text-rose-700 font-medium">CD Corrections, Read-Only Jury</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full">CD / Jury</span>
+            </div>
+
+            <div class="space-y-2">
+                <a href="{% url 'cd_corrections' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-rose-100 hover:border-rose-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="unlock" class="w-4 h-4 text-rose-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-rose-600">CD Correction & Finalisation</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#26</span>
+                </a>
+
+                <a href="{% url 'jury_view' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-rose-100 hover:border-rose-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="eye" class="w-4 h-4 text-rose-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-rose-600">Jury Read-Only Review Desk</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#25</span>
+                </a>
+
+                <a href="{% url 'public_live_display' %}" target="_blank" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-rose-100 hover:border-rose-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="tv" class="w-4 h-4 text-rose-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-rose-600">Public Live Score Display</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#27</span>
+                </a>
+
+                <a href="{% url 'scoreboard_view' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-rose-100 hover:border-rose-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="table" class="w-4 h-4 text-rose-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-rose-600">Cumulative Scoreboard</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#28</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 6. Certificates & Reports (Soft Cyan/Teal) -->
+        <div class="module-group bg-gradient-to-br from-teal-50/70 to-cyan-50/50 rounded-2xl p-5 border border-teal-100 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-teal-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        6
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-900 text-sm tracking-tight">Certificates & Reports</h2>
+                        <p class="text-[11px] text-teal-700 font-medium">Design, PDF Batches, Headcounts, Trophies</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-teal-100 text-teal-800 rounded-full">Reporting</span>
+            </div>
+
+            <div class="space-y-2">
+                <a href="{% url 'certificate_templates' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-teal-100 hover:border-teal-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="award" class="w-4 h-4 text-teal-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-teal-600">Certificate Templates & Canvas</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">CERT</span>
+                </a>
+
+                <a href="{% url 'certificate_generate' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-teal-100 hover:border-teal-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="printer" class="w-4 h-4 text-teal-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-teal-600">Generate & Export PDF Batches</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">EXPORT</span>
+                </a>
+
+                <a href="{% url 'report_statistics' %}" class="module-card flex items-center justify-between p-2.5 bg-white rounded-xl border border-teal-100 hover:border-teal-300 hover:shadow-xs transition group">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-teal-600"></i>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-teal-600">Statistics & Deduplicated Counts</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">#29</span>
+                </a>
+
+                <div class="flex space-x-2">
+                    <a href="{% url 'report_trophies' %}" class="module-card flex-1 p-2 bg-white rounded-xl border border-teal-100 hover:border-teal-300 text-center transition">
+                        <span class="text-[11px] font-bold text-slate-800">Trophies</span>
+                        <span class="block text-[9px] text-slate-400">#30</span>
+                    </a>
+                    <a href="{% url 'report_ceremonies' %}" class="module-card flex-1 p-2 bg-white rounded-xl border border-teal-100 hover:border-teal-300 text-center transition">
+                        <span class="text-[11px] font-bold text-slate-800">Ceremonies</span>
+                        <span class="block text-[9px] text-slate-400">#31</span>
+                    </a>
+                    <a href="{% url 'report_complete' %}" class="module-card flex-1 p-2 bg-white rounded-xl border border-teal-100 hover:border-teal-300 text-center transition">
+                        <span class="text-[11px] font-bold text-slate-800">Full Report</span>
+                        <span class="block text-[9px] text-slate-400">#32</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    function filterModules(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('.module-card').forEach(card => {
+            const text = card.innerText.toLowerCase();
+            if (text.includes(q)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

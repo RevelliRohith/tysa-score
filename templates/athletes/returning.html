@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Returning Athlete Key Access — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl border border-slate-200 p-8 shadow-xl space-y-6">
+        <div class="text-center space-y-2">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center text-xl font-bold mx-auto">
+                🔑
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Returning Athlete Access</h1>
+            <p class="text-xs text-slate-500">
+                Enter your permanent private access key to access your profile, view accreditation, and enter upcoming championships.
+            </p>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Permanent Private Access Key</label>
+                <input type="text" name="private_key" required placeholder="e.g. TYSA-A1B2-C3D4-E5F6"
+                    class="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-mono font-bold text-slate-900 tracking-wider">
+            </div>
+
+            <button type="submit" class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-2">
+                <span>Verify Key & Open Profile</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </form>
+
+        <div class="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
+            <span>First time registering?</span>
+            <a href="{% url 'athlete_register_step1' %}" class="font-bold text-brand-600 hover:underline ml-1">New Athlete Registration →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

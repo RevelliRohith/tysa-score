@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Evaluator Pose Validity Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #23</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Evaluator Pose Validity Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Verify observed sequence vs declared sequence. Invalidity zeros effective mark while retaining raw D marks.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Evaluator Table matching 23_Evaluator_Valid_Invalid.png -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <span class="px-3 py-1 rounded-md bg-slate-900 text-white font-mono font-black text-xs">
+                    Chest #{{ entry.chest_number|default:"101" }}
+                </span>
+                <span class="ml-2 text-xs font-bold text-slate-700">10-Asana Routine Audit</span>
+            </div>
+            <span class="text-xs font-bold text-emerald-600">All 10 Items Checked</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Seq #</th>
+                        <th>Declared Asana</th>
+                        <th>Observed Asana</th>
+                        <th>Validity Decision</th>
+                        <th>Invalidity Reason (if applicable)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in "1234567890"|make_list %}
+                    <tr>
+                        <td class="font-black text-xs text-brand-700 font-mono">#{{ forloop.counter }}</td>
+                        <td class="font-bold text-xs text-slate-900">Uttanasana (FBS-A{{ forloop.counter }})</td>
+                        <td class="text-xs text-slate-700 font-semibold">Confirmed Observed</td>
+                        <td>
+                            <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100">
+                                <button type="button" class="px-2.5 py-1 text-[11px] font-bold rounded-md bg-emerald-600 text-white shadow-xs">
+                                    Valid
+                                </button>
+                                <button type="button" class="px-2.5 py-1 text-[11px] font-bold rounded-md text-slate-500 hover:text-slate-800">
+                                    Invalid
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" placeholder="Reason if invalid..." class="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg outline-none" disabled>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-end">
+            <button class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                Confirm Evaluator Decisions
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

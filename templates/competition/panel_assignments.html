@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CD Judge Panel Assignments — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #15</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">CD Judge Panel Assignments</h1>
+            <p class="text-xs text-slate-500 font-medium">Competition Director matrix: allocate approved Universal Judges to official stage desks.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Panels List -->
+    <div class="space-y-6">
+        {% for p in panels %}
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center font-bold text-sm">
+                        ⚖️
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-base text-slate-900">{{ p.stage_name }} • {{ p.event_config.get_event_type_display }}</h2>
+                        <span class="text-xs text-brand-600 font-bold uppercase">{{ p.round_type }} Round</span>
+                    </div>
+                </div>
+                <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
+                    Active Judging Stage
+                </span>
+            </div>
+
+            <form method="POST" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {% csrf_token %}
+                <input type="hidden" name="panel_id" value="{{ p.id }}">
+
+                <!-- D1 Judge -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">D1 Judge (Execution)</label>
+                    <select name="d1_judge" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.d1_judge.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.get_certification_level_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- D2 Judge -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">D2 Judge (Execution)</label>
+                    <select name="d2_judge" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.d2_judge.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.get_certification_level_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- D3 Judge -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">D3 Judge (Execution)</label>
+                    <select name="d3_judge" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.d3_judge.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.get_certification_level_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- D4 Judge -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">D4 Judge (Execution)</label>
+                    <select name="d4_judge" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.d4_judge.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.get_certification_level_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Time Judge -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Time Judge (Batch Timers)</label>
+                    <select name="time_judge" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.time_judge.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.district }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Evaluator -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Evaluator (Pose Validity)</label>
+                    <select name="evaluator" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.evaluator.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.get_certification_level_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Chief Judge -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 sm:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Chief Judge (Review & Provisional Release)</label>
+                    <select name="chief_judge" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+                        <option value="">-- Unassigned --</option>
+                        {% for j in approved_judges %}
+                        <option value="{{ j.user.id }}" {% if p.chief_judge.id == j.user.id %}selected{% endif %}>
+                            {{ j.user.full_name }} ({{ j.get_certification_level_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-span-full pt-3 border-t border-slate-100 flex justify-end">
+                    <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                        Save Stage Panel Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

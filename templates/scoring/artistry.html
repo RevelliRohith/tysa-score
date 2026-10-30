@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Artistry Judge Scoring Desk — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #22</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Artistry & Choreography Judge Desk</h1>
+            <p class="text-xs text-slate-500 font-medium">Whole performance-level evaluation (20-point official COP criteria). Applied once per routine.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Artistry Criteria Form matching 22_Artistry_Judge.png -->
+    <form method="POST" class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+        {% csrf_token %}
+
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+                <span class="px-3 py-1 rounded-md bg-slate-900 text-white font-mono font-black text-xs">
+                    Chest #{{ entry.chest_number|default:"101" }}
+                </span>
+                <span class="ml-2 text-xs font-bold text-slate-700">Artistic Routine Performance</span>
+            </div>
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg">Max 20.00 Points</span>
+        </div>
+
+        <div class="space-y-4">
+            <!-- 1. Synchronization & Rhythm -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Synchronization & Rhythm / Tempo</h4>
+                    <p class="text-[10px] text-slate-500">Harmony with background music or partner alignment.</p>
+                </div>
+                <input type="number" step="0.1" min="0" max="4" name="synchronization" value="3.60" class="scoring-input w-24 py-1.5 bg-white">
+            </div>
+
+            <!-- 2. Choreography & Variety -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Choreography, Variety & Creativity</h4>
+                    <p class="text-[10px] text-slate-500">Balanced selection of forward, backward, twist & balance poses.</p>
+                </div>
+                <input type="number" step="0.1" min="0" max="4" name="choreography" value="3.70" class="scoring-input w-24 py-1.5 bg-white">
+            </div>
+
+            <!-- 3. Transition Flow -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Transition Flow & Smoothness</h4>
+                    <p class="text-[10px] text-slate-500">Seamless linkage between poses without hesitation or jerks.</p>
+                </div>
+                <input type="number" step="0.1" min="0" max="4" name="transition_flow" value="3.50" class="scoring-input w-24 py-1.5 bg-white">
+            </div>
+
+            <!-- 4. Musical Expression -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Musical Expression & Grace</h4>
+                    <p class="text-[10px] text-slate-500">Facial serenity, poise, and artistic interpretation.</p>
+                </div>
+                <input type="number" step="0.1" min="0" max="4" name="presentation" value="3.80" class="scoring-input w-24 py-1.5 bg-white">
+            </div>
+
+            <!-- 5. Costume & Stage Poise -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Costume, Attire & General Impression</h4>
+                    <p class="text-[10px] text-slate-500">Traditional/sporting attire, stage etiquette.</p>
+                </div>
+                <input type="number" step="0.1" min="0" max="4" name="costume_grace" value="3.90" class="scoring-input w-24 py-1.5 bg-white">
+            </div>
+
+            <!-- Deductions -->
+            <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-xs text-rose-900">Performance-Level Deductions</h4>
+                    <p class="text-[10px] text-rose-600">Stepping outside mat boundary, costume violation, etc.</p>
+                </div>
+                <input type="number" step="0.1" min="0" max="5" name="deductions" value="0.00" class="scoring-input w-24 py-1.5 bg-white border-rose-300 text-rose-700">
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <div class="text-xs">
+                <span class="text-slate-500">Total Artistry Marks:</span>
+                <span class="font-mono font-black text-lg text-brand-700 ml-1">18.50 / 20.00</span>
+            </div>
+            <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                Submit Artistry Evaluation
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

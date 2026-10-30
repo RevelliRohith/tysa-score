@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Championship Basic Details — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #34</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Championship Basic Details & Configuration</h1>
+            <p class="text-xs text-slate-500 font-medium">Define championship dates, official venue, rules edition, and age cutoff reference.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <form method="POST" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Championship Name</label>
+                <input type="text" name="name" required value="{{ championship.name|default:'3rd Telangana State Yogasana Sports Championship 2026' }}"
+                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Code</label>
+                <input type="text" name="code" required value="{{ championship.code|default:'TYSA-STATE-2026' }}"
+                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-mono text-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Venue Name & Arena</label>
+                <input type="text" name="venue_name" required value="{{ championship.venue_name|default:'G.M.C. Balayogi Indoor Stadium, Gachibowli' }}"
+                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Host City</label>
+                <input type="text" name="venue_city" required value="{{ championship.venue_city|default:'Hyderabad' }}"
+                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100">
+            <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Key Competition & Cutoff Dates</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Championship Start Date</label>
+                    <input type="date" name="start_date" required value="{{ championship.start_date|date:'Y-m-d'|default:'2026-11-15' }}"
+                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Championship End Date</label>
+                    <input type="date" name="end_date" required value="{{ championship.end_date|date:'Y-m-d'|default:'2026-11-17' }}"
+                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-brand-700 mb-1">Age Cutoff Reference Date</label>
+                    <input type="date" name="age_cutoff_date" required value="{{ championship.age_cutoff_date|date:'Y-m-d'|default:'2026-12-31' }}"
+                        class="w-full px-3 py-2 text-xs border border-brand-300 bg-brand-50/30 rounded-xl outline-none focus:border-brand-500 font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Registration Open Date</label>
+                    <input type="date" name="registration_start" required value="{{ championship.registration_start|date:'Y-m-d'|default:'2026-10-01' }}"
+                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Registration Deadline</label>
+                    <input type="date" name="registration_end" required value="{{ championship.registration_end|date:'Y-m-d'|default:'2026-11-10' }}"
+                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Rules Edition Presets</label>
+                    <input type="text" name="rules_edition" required value="{{ championship.rules_edition|default:'Yogasana Bharat COP 2024–2026' }}"
+                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500 font-semibold">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+            <a href="{% url 'admin_dashboard' %}" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</a>
+            <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Save Championship Details</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

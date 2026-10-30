@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Official Registers — Coaches, Volunteers, Guests — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Accredited Officials & Dignitaries Registers</h1>
+            <p class="text-xs text-slate-500 font-medium">
+                Admin-managed championship registries for Coaches, Field Volunteers, and Dignitary Guests.
+            </p>
+        </div>
+
+        <button onclick="document.getElementById('add-register-modal').classList.remove('hidden')" 
+            class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Add to Register</span>
+        </button>
+    </div>
+
+    <!-- Tabs Header matching Image 11 -->
+    <div class="flex border-b border-slate-200 space-x-8 text-sm font-bold">
+        <a href="?tab=coaches" class="pb-3 border-b-2 transition flex items-center space-x-2 {% if tab == 'coaches' %}border-teal-600 text-teal-700{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+            <i data-lucide="briefcase" class="w-4 h-4"></i>
+            <span>Accredited Coaches ({{ coaches.count }})</span>
+        </a>
+        <a href="?tab=volunteers" class="pb-3 border-b-2 transition flex items-center space-x-2 {% if tab == 'volunteers' %}border-teal-600 text-teal-700{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+            <i data-lucide="heart-handshake" class="w-4 h-4"></i>
+            <span>Volunteers & Marshalls ({{ volunteers.count }})</span>
+        </a>
+        <a href="?tab=guests" class="pb-3 border-b-2 transition flex items-center space-x-2 {% if tab == 'guests' %}border-teal-600 text-teal-700{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+            <i data-lucide="crown" class="w-4 h-4"></i>
+            <span>Dignitaries & VIP Guests ({{ guests.count }})</span>
+        </a>
+    </div>
+
+    <!-- Tab 1: Coaches -->
+    {% if tab == 'coaches' %}
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Coach Name</th>
+                        <th>District</th>
+                        <th>Mobile</th>
+                        <th>Academy / Organisation</th>
+                        <th>Qualification</th>
+                        <th>Attendance</th>
+                        <th>Certificate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in coaches %}
+                    <tr>
+                        <td class="font-bold text-slate-900">{{ c.name }}</td>
+                        <td class="text-xs font-semibold text-slate-700">{{ c.district }}</td>
+                        <td class="font-mono text-xs text-slate-600">{{ c.mobile }}</td>
+                        <td class="text-xs text-slate-600">{{ c.academy_org|default:"—" }}</td>
+                        <td class="text-xs text-slate-500">{{ c.qualification|default:"Certified" }}</td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {% if c.attendance_status == 'PRESENT' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                                {{ c.attendance_status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if c.certificate_issued %}
+                            <span class="text-xs font-bold text-teal-600 flex items-center"><i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> Issued</span>
+                            {% else %}
+                            <span class="text-xs text-slate-400">Eligible</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-6 text-slate-400 text-xs">No coaches added to official register yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tab 2: Volunteers -->
+    {% if tab == 'volunteers' %}
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Volunteer Name</th>
+                        <th>District</th>
+                        <th>Mobile</th>
+                        <th>Assigned Duties</th>
+                        <th>Attendance</th>
+                        <th>Certificate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in volunteers %}
+                    <tr>
+                        <td class="font-bold text-slate-900">{{ v.name }}</td>
+                        <td class="text-xs font-semibold text-slate-700">{{ v.district }}</td>
+                        <td class="font-mono text-xs text-slate-600">{{ v.mobile }}</td>
+                        <td class="text-xs text-slate-700 font-medium">{{ v.role_assigned }}</td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {% if v.attendance_status == 'PRESENT' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                                {{ v.attendance_status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if v.certificate_issued %}
+                            <span class="text-xs font-bold text-teal-600 flex items-center"><i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> Issued</span>
+                            {% else %}
+                            <span class="text-xs text-slate-400">Eligible</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">No volunteers registered yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tab 3: Guests -->
+    {% if tab == 'guests' %}
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Dignitary Name</th>
+                        <th>Designation / Office</th>
+                        <th>Organization</th>
+                        <th>Protocol Status</th>
+                        <th>Memento / Certificate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in guests %}
+                    <tr>
+                        <td class="font-bold text-slate-900">{{ g.name }}</td>
+                        <td class="text-xs font-bold text-brand-700">{{ g.designation }}</td>
+                        <td class="text-xs text-slate-600">{{ g.organization|default:"Govt / Sports Body" }}</td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800">
+                                {{ g.attendance_status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-xs text-slate-400">Memento Ready</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-6 text-slate-400 text-xs">No VIP guests registered yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Drawer: Add to Register -->
+<div id="add-register-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-slate-900 text-base">Add Official Accreditation</h3>
+            <button onclick="document.getElementById('add-register-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <form method="POST" action="{% url 'registers_view' %}" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Registration Category</label>
+                <select name="entity_type" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-teal-500 font-semibold" onchange="toggleFields(this.value)">
+                    <option value="coach" {% if tab == 'coaches' %}selected{% endif %}>Coach (Admin Registry)</option>
+                    <option value="volunteer" {% if tab == 'volunteers' %}selected{% endif %}>Volunteer / Marshall</option>
+                    <option value="guest" {% if tab == 'guests' %}selected{% endif %}>Dignitary / Guest</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                <input type="text" name="name" required placeholder="Sri Acharya K." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-teal-500">
+            </div>
+
+            <div id="field-mobile">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Number</label>
+                <input type="text" name="mobile" placeholder="9848012345" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-teal-500">
+            </div>
+
+            <div id="field-district">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">District</label>
+                <input type="text" name="district" placeholder="Hyderabad, Warangal, etc." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-teal-500">
+            </div>
+
+            <div id="field-academy">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Academy / Organization</label>
+                <input type="text" name="academy_org" placeholder="Telangana Yoga Kendra" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-teal-500">
+            </div>
+
+            <div id="field-qualification">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Qualification / Role</label>
+                <input type="text" name="qualification" placeholder="National Certified Yoga Coach" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-teal-500">
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('add-register-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs">Save Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

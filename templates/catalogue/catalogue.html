@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Asana Catalogue (250+5) — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+            <div class="flex items-center space-x-2.5">
+                <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module ASANA</span>
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-700">Official Catalogue</span>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Official Yogasana Catalogue</h1>
+            <p class="text-xs text-slate-500 font-medium">
+                {{ total_poses }} Selectable Competition Poses & {{ total_ref }} Base Difficulty References (BAC-A to BAC-E).
+            </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="document.getElementById('add-asana-modal').classList.remove('hidden')" 
+                class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Add New Asana</span>
+            </button>
+            <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-center">
+            <!-- Search -->
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search pose name, code, description..." 
+                    class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-slate-800">
+            </div>
+
+            <!-- Category Filter -->
+            <div>
+                <select name="category" onchange="this.form.submit()" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-slate-800 font-semibold">
+                    <option value="">All Categories ({{ categories.count }})</option>
+                    {% for c in categories %}
+                    <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Base Value Filter -->
+            <div>
+                <select name="bv" onchange="this.form.submit()" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-slate-800 font-semibold">
+                    <option value="">All Base Values (BV)</option>
+                    <option value="0.80" {% if selected_bv == '0.80' %}selected{% endif %}>BV 0.80 (Standard)</option>
+                    <option value="0.85" {% if selected_bv == '0.85' %}selected{% endif %}>BV 0.85 (Intermediate)</option>
+                    <option value="0.90" {% if selected_bv == '0.90' %}selected{% endif %}>BV 0.90 (Adv-Intermediate)</option>
+                    <option value="0.95" {% if selected_bv == '0.95' %}selected{% endif %}>BV 0.95 (Advanced)</option>
+                    <option value="1.00" {% if selected_bv == '1.00' %}selected{% endif %}>BV 1.00 (Master)</option>
+                </select>
+            </div>
+
+            <!-- Reference Poses Toggle -->
+            <div class="flex items-center justify-between sm:justify-end space-x-2">
+                <label class="flex items-center space-x-2 text-xs text-slate-600 cursor-pointer">
+                    <input type="checkbox" name="show_ref" value="true" onchange="this.form.submit()" {% if show_ref %}checked{% endif %} class="rounded text-indigo-600">
+                    <span>Show Base BAC Reference</span>
+                </label>
+                <button type="submit" class="px-3 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl">Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Asana Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {% for a in page_obj %}
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:border-indigo-300 hover:shadow-md transition flex flex-col justify-between group">
+            <!-- Pose Image Container -->
+            <div class="h-36 bg-slate-50 flex items-center justify-center p-2 relative overflow-hidden border-b border-slate-100">
+                {% if a.image_url %}
+                <img src="{{ a.image_url }}" alt="{{ a.code }}" class="h-full w-full object-contain mix-blend-multiply group-hover:scale-105 transition"
+                    onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394A3B8\' stroke-width=\'1.5\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><path d=\'m21 15-5-5L5 21\'/></svg>'">
+                {% else %}
+                <div class="flex flex-col items-center justify-center text-slate-400">
+                    <i data-lucide="image" class="w-8 h-8 mb-1"></i>
+                    <span class="text-[9px] font-bold">Base Ref</span>
+                </div>
+                {% endif %}
+
+                <!-- BV Badge Top Right -->
+                <div class="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-900 text-white shadow-xs">
+                    BV {{ a.base_value }}
+                </div>
+
+                <!-- Code Badge Top Left -->
+                <div class="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {{ a.code }}
+                </div>
+            </div>
+
+            <!-- Pose Info -->
+            <div class="p-3 flex-1 flex flex-col justify-between">
+                <div>
+                    <h2 class="font-bold text-xs text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition" title="{{ a.display_name }}">
+                        {{ a.display_name }}
+                    </h2>
+                    <p class="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-snug" title="{{ a.description }}">
+                        {{ a.description }}
+                    </p>
+                </div>
+
+                <div class="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-[9px] font-semibold text-slate-400">
+                    <span class="truncate max-w-[100px]">{{ a.display_category }}</span>
+                    <span class="text-emerald-600 font-bold">Published</span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-12 text-center text-slate-400 text-xs">
+            No asanas match your filter criteria.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between bg-white rounded-xl border border-slate-200 px-4 py-3 text-xs">
+        <div class="text-slate-500">
+            Showing <span class="font-bold text-slate-800">{{ page_obj.start_index }}</span> to <span class="font-bold text-slate-800">{{ page_obj.end_index }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.count }}</span> asanas
+        </div>
+        <div class="flex items-center space-x-1">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 font-bold">Prev</a>
+            {% endif %}
+            
+            <span class="px-3 py-1 font-bold text-indigo-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 font-bold">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Add New Asana -->
+<div id="add-asana-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-slate-900 text-base">Add New Pose to Catalogue</h3>
+            <button onclick="document.getElementById('add-asana-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <form method="POST" action="{% url 'catalogue_view' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_asana">
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Pose Code</label>
+                    <input type="text" name="code" required placeholder="FBS-A26" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-mono">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Base Value (BV)</label>
+                    <input type="number" step="0.05" name="base_value" required value="0.80" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-bold">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Category Group</label>
+                <select name="category" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-semibold">
+                    {% for c in categories %}
+                    <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Display Pose Name</label>
+                <input type="text" name="display_name" required placeholder="e.g. Parivrtta Trikonasana" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Full Official Description</label>
+                <textarea name="description" rows="3" required placeholder="Detailed posture definition and execution requirements..." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-500"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('add-asana-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs">Publish Pose</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

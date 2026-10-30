@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Event-wise Age & Divisions Setup — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #03</span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Event-wise Age Categories & Gender Divisions</h1>
+            <p class="text-xs text-slate-500 font-medium">
+                Independent configuration for each of the 4 official sporting events. Pair events strictly exclude mixed pairs.
+            </p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- 4 Event Configuration Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for ev in event_configs %}
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-4">
+            <form method="POST" action="{% url 'championship_setup' champ_id=championship.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_event">
+                <input type="hidden" name="event_config_id" value="{{ ev.id }}">
+
+                <!-- Event Header -->
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-base text-slate-900">{{ ev.get_event_type_display }}</h2>
+                        <span class="text-[11px] font-semibold text-slate-500">
+                            {% if ev.event_type == 'TRADITIONAL' %}
+                                7 Asanas (4 Compulsory + 3 Optional) • Batch Size: 1–5
+                            {% else %}
+                                10 Asanas Execution • Single on Stage
+                            {% endif %}
+                        </span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="is_enabled" class="sr-only peer" {% if ev.is_enabled %}checked{% endif %}>
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                        <span class="ml-2 text-xs font-bold text-slate-700">Active</span>
+                    </label>
+                </div>
+
+                <!-- Gender Divisions -->
+                <div class="my-4">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Gender Divisions (No Mixed Pairs)</label>
+                    <div class="flex items-center space-x-6">
+                        <label class="flex items-center space-x-2 text-xs font-bold text-slate-800 cursor-pointer">
+                            <input type="checkbox" name="allow_male" class="rounded text-brand-600 focus:ring-brand-500" {% if ev.allow_male %}checked{% endif %}>
+                            <span>Male Division</span>
+                        </label>
+                        <label class="flex items-center space-x-2 text-xs font-bold text-slate-800 cursor-pointer">
+                            <input type="checkbox" name="allow_female" class="rounded text-brand-600 focus:ring-brand-500" {% if ev.allow_female %}checked{% endif %}>
+                            <span>Female Division</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Independent Age Categories Selection -->
+                <div class="my-4">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Eligible Age Categories</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        {% for cat in all_categories %}
+                        <label class="flex items-center p-2 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-slate-50 transition cursor-pointer text-xs">
+                            <input type="checkbox" name="age_categories" value="{{ cat.id }}" 
+                                class="rounded text-brand-600 focus:ring-brand-500 mr-2"
+                                {% if cat in ev.age_categories.all %}checked{% endif %}>
+                            <div>
+                                <div class="font-bold text-slate-900">{{ cat.name }}</div>
+                                <div class="text-[10px] text-slate-500">{{ cat.min_age }}–{{ cat.max_age }} Years</div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex justify-end">
+                    <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
+                        Save {{ ev.get_event_type_display }} Rules
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- District Quotas Configuration Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h2 class="font-extrabold text-base text-slate-900">District Athlete Participation Quotas</h2>
+                <p class="text-xs text-slate-500">Maximum allowable athlete entries per Telangana district.</p>
+            </div>
+            <span class="text-xs font-bold text-slate-600">Total Districts: {{ quotas.count }}</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>District Name</th>
+                        <th>Quota Allocated</th>
+                        <th>Approved Entries</th>
+                        <th>Remaining Capacity</th>
+                        <th class="text-right">Update Limit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in quotas %}
+                    <tr>
+                        <td class="font-bold text-slate-900">{{ q.district_name }}</td>
+                        <td class="font-mono text-xs font-bold text-slate-700">{{ q.quota_limit }} athletes</td>
+                        <td>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                {{ q.quota_used }} used
+                            </span>
+                        </td>
+                        <td class="text-xs font-semibold text-emerald-600">
+                            {{ q.quota_limit|add:"-"|add:q.quota_used|default:"20" }} remaining
+                        </td>
+                        <td class="text-right">
+                            <form method="POST" action="{% url 'championship_setup' champ_id=championship.id %}" class="inline-flex items-center space-x-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="update_quota">
+                                <input type="hidden" name="quota_id" value="{{ q.id }}">
+                                <input type="number" name="quota_limit" value="{{ q.quota_limit }}" min="1" max="100" class="w-16 px-2 py-1 text-xs border border-slate-300 rounded-lg text-center font-bold">
+                                <button type="submit" class="px-2.5 py-1 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-lg transition">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

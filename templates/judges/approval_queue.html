@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Universal Judge Admin Approval Queue — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Admin Judge Approval Queue</h1>
+            <p class="text-xs text-slate-500 font-medium">Verify official credentials, certification levels, and approve Universal Judges.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Pending Applications Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-extrabold text-sm text-slate-900">Pending Judge Applications ({{ pending_judges.count }})</h3>
+            <span class="text-xs text-amber-600 font-bold">Unapproved judges cannot access scoring desks</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="tysa-table">
+                <thead>
+                    <tr>
+                        <th>Applicant Official</th>
+                        <th>District</th>
+                        <th>Certification & Authority</th>
+                        <th>Cert. Number</th>
+                        <th>Experience</th>
+                        <th class="text-right">Admin Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for j in pending_judges %}
+                    <tr>
+                        <td class="font-bold text-slate-900">
+                            {{ j.user.full_name }}
+                            <div class="text-[11px] text-slate-500 font-mono">{{ j.user.email }}</div>
+                        </td>
+                        <td class="text-xs font-semibold text-slate-700">{{ j.district }}</td>
+                        <td>
+                            <span class="font-bold text-xs text-indigo-700">{{ j.get_certification_level_display }}</span>
+                            <div class="text-[10px] text-slate-400">{{ j.certification_authority }}</div>
+                        </td>
+                        <td class="font-mono text-xs text-slate-700">{{ j.certificate_number|default:"—" }}</td>
+                        <td class="text-xs font-bold text-slate-800">{{ j.experience_years }} yrs</td>
+                        <td class="text-right">
+                            <form method="POST" class="inline-flex space-x-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="judge_id" value="{{ j.id }}">
+                                <button type="submit" name="decision" value="approve" class="px-3 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition">
+                                    Approve
+                                </button>
+                                <button type="submit" name="decision" value="reject" class="px-3 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                                    Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">No pending judge applications. All officials reviewed.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
