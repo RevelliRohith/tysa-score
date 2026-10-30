@@ -1,117 +1,402 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Generate & Export Certificates — TYSA Score{% endblock %}
+{% block title %}Generate Certificates — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module CERT_GENERATE</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Generate & Export Official Certificates</h1>
-            <p class="text-xs text-slate-500 font-medium">Bulk issuance engine: generate combined PDF batches, ZIP archives, and export CSV/Excel registers.</p>
-        </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
-        </a>
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Header -->
+    <div class="space-y-1">
+        <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Generate certificates</h1>
+        <p class="text-sm text-slate-600">Create and issue certificates for event winners from championship results or an imported list.</p>
     </div>
 
-    <!-- Generator Control Card matching geerate certifictae export.jpg -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <form method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-            {% csrf_token %}
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Certificate Template</label>
-                <select name="template_id" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none font-bold">
-                    {% for t in templates %}
-                    <option value="{{ t.id }}">{{ t.name }} ({{ t.get_template_type_display }})</option>
-                    {% endfor %}
-                </select>
+    <!-- 3-Step Wizard Navigation -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+        <div class="flex items-center justify-center max-w-2xl mx-auto">
+            <!-- Step 1 -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-[#0d5c58] text-white flex items-center justify-center font-bold text-sm shadow-xs">1</div>
+                <div>
+                    <div class="text-xs font-bold text-[#0d5c58]">Choose template</div>
+                    <div class="text-[10px] text-slate-400">Select certificate design</div>
+                </div>
             </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Recipient Source</label>
-                <select name="recipient_source" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none font-semibold">
-                    <option value="athletes">Athletes — Participation Certificate</option>
-                    <option value="merit">Merit Athletes — Medals & Top Ranks</option>
-                    <option value="coaches">Accredited Coaches Register</option>
-                    <option value="volunteers">Volunteers & Marshalls</option>
-                </select>
+            <!-- Line 1 -->
+            <div class="flex-1 h-0.5 bg-slate-200 mx-4"></div>
+            <!-- Step 2 -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm">2</div>
+                <div>
+                    <div class="text-xs font-bold text-slate-700">Load recipients</div>
+                    <div class="text-[10px] text-slate-400">Choose source and filter</div>
+                </div>
             </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-                <button type="submit" name="action" value="generate" class="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    <span>Generate Batch</span>
-                </button>
-
-                <button type="submit" name="action" value="download_pdf" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1.5">
-                    <i data-lucide="file-text" class="w-4 h-4"></i>
-                    <span>Combined PDF</span>
-                </button>
-
-                <button type="submit" name="action" value="download_zip" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1.5">
-                    <i data-lucide="archive" class="w-4 h-4"></i>
-                    <span>Individual ZIP</span>
-                </button>
-
-                <button type="submit" name="action" value="download_csv" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1.5">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                    <span>CSV Register</span>
-                </button>
-
-                <button type="submit" name="action" value="download_xlsx" class="px-4 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition flex items-center space-x-1.5">
-                    <i data-lucide="table" class="w-4 h-4"></i>
-                    <span>Excel (.xlsx)</span>
-                </button>
+            <!-- Line 2 -->
+            <div class="flex-1 h-0.5 bg-slate-200 mx-4"></div>
+            <!-- Step 3 -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm">3</div>
+                <div>
+                    <div class="text-xs font-bold text-slate-700">Preview & export</div>
+                    <div class="text-[10px] text-slate-400">Review and generate</div>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 
-    <!-- Issued Certificates Register -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs space-y-3">
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <span class="text-xs font-bold text-slate-700">Issued Certificate Records: {{ issued_list.count }}</span>
-            <span class="text-xs text-slate-400">Transactional certificate numbering active</span>
-        </div>
+    <!-- Main Two-Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: Template Selection & Recipients List (8 cols) -->
+        <div class="lg:col-span-8 space-y-5">
+            
+            <!-- 1. Certificate Template Selector -->
+            <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3">
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">1. Certificate template</h2>
+                
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">Template</label>
+                    <div class="relative">
+                        <select class="w-full pl-3 pr-8 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-semibold text-slate-800 focus:border-[#0d5c58]">
+                            <option value="merit_2026" selected>Merit 2026 (Sample)</option>
+                            <option value="participation_2026">Participation 2026</option>
+                            <option value="judge_duty_2026">Judge Duty 2026</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-        <div class="overflow-x-auto">
-            <table class="tysa-table">
-                <thead>
-                    <tr>
-                        <th>Certificate No.</th>
-                        <th>Recipient Full Name</th>
-                        <th>Type & Event</th>
-                        <th>District</th>
-                        <th>Merit / Rank</th>
-                        <th>Issue Date</th>
-                        <th class="text-right">Verification</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cert in issued_list %}
-                    <tr>
-                        <td class="font-mono text-xs font-bold text-brand-700">{{ cert.certificate_number }}</td>
-                        <td class="font-bold text-slate-900">{{ cert.recipient_name }}</td>
-                        <td class="text-xs text-slate-600">
-                            {{ cert.template.get_template_type_display }}
-                            <div class="text-[10px] text-slate-400">{{ cert.event_name }}</div>
-                        </td>
-                        <td class="text-xs font-semibold text-slate-700">{{ cert.district }}</td>
-                        <td class="text-xs font-black text-amber-600">{{ cert.rank_achieved|default:"—" }}</td>
-                        <td class="text-xs text-slate-500 font-mono">{{ cert.issued_at|date:"d-m-Y" }}</td>
-                        <td class="text-right">
-                            <a href="{% url 'certificate_verify_qr' uuid=cert.verification_uuid %}" target="_blank" class="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition inline-flex items-center">
-                                <i data-lucide="external-link" class="w-3.5 h-3.5 mr-1"></i> Verify
+            <!-- 2. Load Recipients -->
+            <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">2. Load recipients</h2>
+
+                <!-- 2 Source Option Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Option 1: Championship Event List (Selected) -->
+                    <label class="border-2 border-[#0d5c58] bg-[#f0f9f8] rounded-xl p-4 cursor-pointer block space-y-2">
+                        <div class="flex items-center gap-2">
+                            <input type="radio" name="source" value="championship" checked class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            <span class="text-xs font-black text-slate-900">Championship event list</span>
+                        </div>
+                        <p class="text-[11px] text-slate-600 pl-5">Use participants from final results</p>
+                        <div class="pl-5 pt-1">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i data-lucide="check" class="w-3 h-3"></i> Approved final results only
+                            </span>
+                        </div>
+                    </label>
+
+                    <!-- Option 2: Import CSV / Excel -->
+                    <label class="border border-slate-200 bg-white rounded-xl p-4 cursor-pointer block space-y-2 hover:border-slate-300">
+                        <div class="flex items-center gap-2">
+                            <input type="radio" name="source" value="csv" class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            <span class="text-xs font-bold text-slate-700">Import CSV / Excel</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 pl-5">Upload a list of recipients</p>
+                        <div class="pl-5 pt-1 space-y-1.5">
+                            <button type="button" class="w-full py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 inline-flex items-center justify-center gap-1">
+                                <i data-lucide="upload" class="w-3.5 h-3.5"></i> Upload list (CSV / Excel)
+                            </button>
+                            <a href="#" class="inline-flex items-center gap-1 text-[11px] font-bold text-[#0d5c58] hover:underline">
+                                <i data-lucide="download" class="w-3 h-3"></i> Download CSV / XLSX template
                             </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">No certificates generated yet. Select a template and click "Generate Batch".</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Validation Alert -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800 flex items-center gap-2">
+                    <span class="font-bold">!</span>
+                    <span>Validate mapping and eligibility before issue.</span>
+                </div>
+
+                <!-- Filter Row -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-700">Event</label>
+                        <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                            <option value="traditional" selected>Traditional</option>
+                            <option value="artistic_single">Artistic Single</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-700">Age category</label>
+                        <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                            <option value="senior" selected>Senior</option>
+                            <option value="junior">Junior</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-700">Gender</label>
+                        <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                            <option value="male" selected>Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-700">District</label>
+                        <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                            <option value="" selected>All</option>
+                            <option value="Hyderabad">Hyderabad</option>
+                            <option value="Mancherial">Mancherial</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-700">Recipient type</label>
+                        <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                            <option value="merit" selected>Merit</option>
+                            <option value="participation">Participation</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Select Recipients -->
+            <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">3. Select recipients</h2>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            <span>Preview selected</span>
+                        </button>
+                        <button type="button" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span>Generate certificates</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+                    <input type="checkbox" checked class="text-[#0d5c58] focus:ring-[#0d5c58] rounded">
+                    <span>3 selected</span>
+                </div>
+
+                <!-- Recipients Table -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-2.5 px-3 w-8 text-center">
+                                    <input type="checkbox" checked class="text-[#0d5c58] focus:ring-[#0d5c58] rounded">
+                                </th>
+                                <th class="py-2.5 px-3">Public ID</th>
+                                <th class="py-2.5 px-3">Name</th>
+                                <th class="py-2.5 px-3">Event</th>
+                                <th class="py-2.5 px-3">Category / Gender</th>
+                                <th class="py-2.5 px-3 text-center">Rank</th>
+                                <th class="py-2.5 px-3">Certificate number</th>
+                                <th class="py-2.5 px-3 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-2.5 px-3 text-center">
+                                    <input type="checkbox" checked class="text-[#0d5c58] focus:ring-[#0d5c58] rounded">
+                                </td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-slate-600">TYS2026-0007</td>
+                                <td class="py-2.5 px-3 font-black text-slate-900">Arun Kumar</td>
+                                <td class="py-2.5 px-3 text-slate-700">Traditional</td>
+                                <td class="py-2.5 px-3 text-slate-600">Senior / Male</td>
+                                <td class="py-2.5 px-3 text-center">
+                                    <span class="w-5 h-5 rounded-full bg-amber-400 text-slate-900 font-black text-[11px] inline-flex items-center justify-center">1</span>
+                                </td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-slate-800">TYSA2026-M-0001</td>
+                                <td class="py-2.5 px-3 text-right">
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                                    </span>
+                                </td>
+                            </tr>
+
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-2.5 px-3 text-center">
+                                    <input type="checkbox" checked class="text-[#0d5c58] focus:ring-[#0d5c58] rounded">
+                                </td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-slate-600">TYS2026-0014</td>
+                                <td class="py-2.5 px-3 font-black text-slate-900">Mohan Reddy</td>
+                                <td class="py-2.5 px-3 text-slate-700">Traditional</td>
+                                <td class="py-2.5 px-3 text-slate-600">Senior / Male</td>
+                                <td class="py-2.5 px-3 text-center">
+                                    <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-800 font-black text-[11px] inline-flex items-center justify-center">2</span>
+                                </td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-slate-800">TYSA2026-M-0002</td>
+                                <td class="py-2.5 px-3 text-right">
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                                    </span>
+                                </td>
+                            </tr>
+
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-2.5 px-3 text-center">
+                                    <input type="checkbox" checked class="text-[#0d5c58] focus:ring-[#0d5c58] rounded">
+                                </td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-slate-600">TYS2026-0032</td>
+                                <td class="py-2.5 px-3 font-black text-slate-900">Vikram Rao</td>
+                                <td class="py-2.5 px-3 text-slate-700">Traditional</td>
+                                <td class="py-2.5 px-3 text-slate-600">Senior / Male</td>
+                                <td class="py-2.5 px-3 text-center">
+                                    <span class="w-5 h-5 rounded-full bg-[#c27b40] text-white font-black text-[11px] inline-flex items-center justify-center">3</span>
+                                </td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-slate-800">TYSA2026-M-0003</td>
+                                <td class="py-2.5 px-3 text-right">
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
+        <!-- Right: Certificate Preview & Export Toolbar (4 cols) -->
+        <div class="lg:col-span-4 space-y-5">
+            
+            <!-- Certificate Preview Card -->
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                <div>
+                    <h3 class="text-xs font-black text-slate-900">Certificate preview</h3>
+                    <p class="text-[10px] text-slate-400">This is a sample preview. Content may vary based on event and rank.</p>
+                </div>
+
+                <!-- Framed Preview Box -->
+                <div class="border-4 border-[#0d5c58] rounded-lg p-4 bg-[#fffdfa] shadow-xs text-center space-y-2 text-xs">
+                    <div class="flex justify-between items-center text-[8px] text-slate-400 px-2">
+                        <div class="border border-dashed border-slate-300 p-1 rounded font-bold">YOUR LOGO HERE</div>
+                        <div class="border border-dashed border-slate-300 p-1 rounded font-bold">YOUR LOGO HERE</div>
+                    </div>
+
+                    <div class="pt-2">
+                        <div class="font-serif font-black text-base text-[#8c6200] tracking-widest uppercase">Merit Certificate</div>
+                        <div class="flex items-center justify-center gap-1.5 text-amber-500 text-[10px]">
+                            <span>◇</span><span>◇</span><span>◇</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1 text-[11px] pt-1">
+                        <div class="italic text-slate-500 font-serif text-[10px]">This is to certify that</div>
+                        <div class="font-black text-base text-slate-900 font-serif">Arun Kumar</div>
+                        <div class="text-slate-600">
+                            secured <span class="font-bold text-slate-900">First Rank</span> in
+                        </div>
+                        <div class="font-bold text-[#0d5c58]">Traditional</div>
+                        <div class="text-[10px] text-slate-500">Senior Men</div>
+                        <div class="text-[9px] text-slate-400">at the TYSA State Yogasana Championship 2026.</div>
+                    </div>
+
+                    <div class="flex justify-between items-end pt-3 border-t border-slate-200 text-[8px] text-slate-400">
+                        <div class="text-left">
+                            <div>Certificate No.</div>
+                            <div class="font-mono font-bold text-slate-600">TYSA2026-M-0001</div>
+                        </div>
+                        <div class="text-right">
+                            <div>Date of Issue</div>
+                            <div class="font-semibold text-slate-600">14 Aug 2026</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export & Print Card -->
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4">
+                <div>
+                    <h3 class="text-xs font-black text-slate-900">Export & print</h3>
+                    <p class="text-[10px] text-slate-400">Generate files for selected recipients.</p>
+                </div>
+
+                <!-- 4 Action Cards Grid -->
+                <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                    <!-- PDF -->
+                    <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
+                        <i data-lucide="file-text" class="w-5 h-5 text-rose-500 mx-auto"></i>
+                        <div class="font-bold text-slate-900 text-[11px]">Certificates PDF</div>
+                    </button>
+
+                    <!-- CSV -->
+                    <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600 mx-auto"></i>
+                        <div class="font-bold text-slate-900 text-[11px]">Register CSV</div>
+                    </button>
+
+                    <!-- Excel -->
+                    <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
+                        <i data-lucide="table" class="w-5 h-5 text-emerald-700 mx-auto"></i>
+                        <div class="font-bold text-slate-900 text-[11px]">Register Excel (.xlsx)</div>
+                    </button>
+
+                    <!-- Print -->
+                    <button type="button" class="p-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 space-y-1 shadow-xs">
+                        <i data-lucide="printer" class="w-5 h-5 text-sky-600 mx-auto"></i>
+                        <div class="font-bold text-slate-900 text-[11px]">Print certificates</div>
+                    </button>
+                </div>
+
+                <p class="text-[10px] text-slate-400">PDF contains certificates; CSV/Excel contain recipient and issue data.</p>
+
+                <!-- PDF Options & Print Settings -->
+                <div class="space-y-3 pt-2 border-t border-slate-100 text-xs">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-700 block mb-1">PDF options</span>
+                        <div class="space-y-1">
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-800">
+                                <input type="radio" name="pdf_opt" checked class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                                <span>Combined PDF (all selected)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-800">
+                                <input type="radio" name="pdf_opt" class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                                <span>Individual PDF files (ZIP)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-1">
+                        <span class="text-[11px] font-bold text-slate-700 block">Print settings</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 block">Paper size</label>
+                                <select class="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded-lg font-medium">
+                                    <option value="A4" selected>A4 (Landscape)</option>
+                                    <option value="A3">A3</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block">Certificates per page</label>
+                                <select class="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded-lg font-medium">
+                                    <option value="1" selected>1 certificate per page</option>
+                                    <option value="2">2 certificates per page</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-800 pt-1">
+                            <input type="checkbox" checked class="text-[#0d5c58] focus:ring-[#0d5c58] rounded">
+                            <span>Print selected only (3 recipients)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Bottom Link -->
+                <div class="pt-2 border-t border-slate-100">
+                    <a href="#" class="w-full py-2 px-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 inline-flex items-center justify-between">
+                        <span>View issued register / history</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom watermark info -->
+    <div class="text-right text-xs text-slate-400 pt-1">
+        This is a sample design. Replace logo placeholders with official event logos.
     </div>
 </div>
 {% endblock %}

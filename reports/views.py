@@ -10,6 +10,7 @@ from athletes.models import Athlete
 from registrations.models import ChampionshipRegistration, EventEntry
 from scoring.models import Performance, PerformanceStatus
 from accounts.models import Coach, Volunteer, Guest
+from accounts.permissions import get_active_championship
 from .models import DistrictTrophySetting, CeremonyRecord, PhotoRecord, PressClipping, GuestDignitary
 
 @login_required
@@ -19,7 +20,7 @@ def report_statistics(request):
     Deduplicated unique athletes, event entries, pairs, district breakdown,
     and participation exports.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     
     unique_athletes = Athlete.objects.count()
     total_registrations = ChampionshipRegistration.objects.filter(championship=championship).count()
@@ -52,7 +53,7 @@ def report_trophies(request):
     District medals tally, configurable points (Gold 5, Silver 3, Bronze 2).
     Pair medal counts once (not once per member).
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     trophy_setting, _ = DistrictTrophySetting.objects.get_or_create(
         championship=championship,
         defaults={'gold_points': 5, 'silver_points': 3, 'bronze_points': 2}
@@ -90,7 +91,7 @@ def report_ceremonies(request):
     Opening & closing ceremonies, dignitary guest logs, competition photo gallery,
     and press coverage clippings.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     ceremonies = CeremonyRecord.objects.filter(championship=championship)
     photos = PhotoRecord.objects.filter(championship=championship)
     press = PressClipping.objects.filter(championship=championship)
@@ -108,7 +109,7 @@ def report_complete(request):
     Implements 32_Complete_Championship_Report.png:
     Report section selection, live preview, and combined championship PDF report export.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
 
     if request.method == 'POST':
         action = request.POST.get('action')

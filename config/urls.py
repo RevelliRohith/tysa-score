@@ -17,19 +17,30 @@ import results.views as result_views
 import certificates.views as cert_views
 import reports.views as report_views
 
+def root_router(request):
+    if request.user.is_authenticated:
+        from accounts.permissions import get_user_landing_url
+        return redirect(get_user_landing_url(request))
+    return redirect('login')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', lambda request: redirect('admin_dashboard'), name='root'),
+    path('', root_router, name='root'),
     
     # 01_Login & Dashboard
     path('accounts/login/', accounts_views.login_view, name='login'),
     path('accounts/logout/', accounts_views.logout_view, name='logout'),
+    path('accounts/role-select/', accounts_views.role_select_view, name='role_select'),
+    path('accounts/no-role/', accounts_views.no_role_assigned, name='no_role_assigned'),
     path('dashboard/', accounts_views.admin_dashboard, name='admin_dashboard'),
+    path('cd/dashboard/', comp_views.cd_dashboard, name='cd_dashboard'),
     path('accounts/users/', accounts_views.users_and_permissions, name='users_and_permissions'),
     path('registers/', accounts_views.registers_view, name='registers_view'),
 
-    # Championships
+    # Championships (Multi-Championship Architecture)
+    path('championships/', champ_views.championship_list, name='championship_list'),
     path('championships/create/', champ_views.championship_create, name='championship_create'),
+    path('championships/switch/<int:champ_id>/', champ_views.championship_switch, name='championship_switch'),
     path('championships/<int:champ_id>/setup/', champ_views.championship_setup, name='championship_setup'),
 
     # Catalogue
@@ -46,6 +57,7 @@ urlpatterns = [
 
     # Universal Judges
     path('judges/apply/', judge_views.universal_judge_register, name='universal_judge_register'),
+    path('judges/portal/', judge_views.judge_portal, name='judge_portal'),
     path('judges/<int:judge_id>/', judge_views.judge_profile, name='judge_profile'),
     path('judges/approval-queue/', judge_views.judge_approval_queue, name='judge_approval_queue'),
 

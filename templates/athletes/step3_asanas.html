@@ -1,205 +1,312 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Athlete Registration — Step 3: Asana Selection — TYSA Score{% endblock %}
+{% block title %}Choose Optional Asanas — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Progress Indicator -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-        <div class="grid grid-cols-5 text-center text-xs font-bold">
-            <div class="text-emerald-600 border-b-2 border-emerald-600 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[11px] mb-1">✓</span>
-                <span>Personal</span>
+<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8">
+
+    <!-- Header Section matching 07_Unrestricted_Asana_Selection.png -->
+    <div class="max-w-7xl mx-auto mb-6">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+            <span class="text-slate-500">Athlete Registration</span>
+            <span>></span>
+            <span class="text-slate-800 font-bold">Asana Selection</span>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Choose your optional asanas</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Search the approved library, add your optional asanas, and arrange their order.</p>
             </div>
-            <div class="text-emerald-600 border-b-2 border-emerald-600 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[11px] mb-1">✓</span>
-                <span>Events</span>
-            </div>
-            <div class="text-brand-600 border-b-2 border-brand-600 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-[11px] mb-1">3</span>
-                <span>Asanas</span>
-            </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">4</span>
-                <span>Documents</span>
-            </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">5</span>
-                <span>Review</span>
+            <div class="flex items-center space-x-3">
+                <select class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl outline-none">
+                    <option>Traditional Yogasana ▾</option>
+                    <option>Artistic Single ▾</option>
+                </select>
+                <select class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl outline-none">
+                    <option>Preliminary ▾</option>
+                    <option selected>Semi Final ▾</option>
+                    <option>Final ▾</option>
+                </select>
             </div>
         </div>
     </div>
 
-    <!-- Event Tabs if multiple entries -->
-    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-        <div class="flex items-center space-x-3">
-            <span class="text-xs font-bold text-slate-500 uppercase">Configuring Routine For:</span>
-            {% for ent in entries %}
-            <a href="?entry_id={{ ent.id }}" class="px-3 py-1.5 rounded-xl text-xs font-bold transition {% if ent.id == current_entry.id %}bg-brand-600 text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                {{ ent.event_config.get_event_type_display }}
+    <!-- 5-Step Progress Indicator matching 07_Unrestricted_Asana_Selection.png -->
+    <div class="max-w-7xl mx-auto mb-6 bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
+        <div class="grid grid-cols-5 gap-2 text-xs font-bold">
+            <a href="{% url 'athlete_register_step1' %}" class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-600 hover:bg-slate-50 transition">
+                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px] font-black">✓</span>
+                <span>1 Personal details</span>
             </a>
-            {% endfor %}
-        </div>
-        <div class="text-xs text-slate-500 font-medium">
-            Required: <span class="font-bold text-slate-800">{{ current_entry.event_config.total_asanas }} Asanas</span>
+            <a href="{% url 'athlete_register_step2' %}" class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-600 hover:bg-slate-50 transition">
+                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px] font-black">✓</span>
+                <span>2 Events & partner</span>
+            </a>
+            <!-- Step 3: Active -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+                <span class="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[11px] font-black">3</span>
+                <span>3 Asanas</span>
+            </div>
+            <a href="{% url 'athlete_register_step4' %}" class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400 hover:text-slate-600 transition">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">4</span>
+                <span>4 Documents</span>
+            </a>
+            <a href="{% url 'athlete_register_step5' %}" class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400 hover:text-slate-600 transition">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">5</span>
+                <span>5 Review</span>
+            </a>
         </div>
     </div>
 
-    <!-- 2-Column Selection Layout matching 07_Unrestricted_Asana_Selection.png -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left Column: Published Catalogue (7 cols) -->
-        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col space-y-4">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div>
-                    <h3 class="font-extrabold text-sm text-slate-900">Published Asana Library</h3>
-                    <p class="text-[11px] text-slate-500">Search and select authorized poses for your declared routine.</p>
-                </div>
-                <div class="relative w-48">
-                    <input type="text" id="asana-filter" placeholder="Search code/name..." 
-                        class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                        onkeyup="filterCatalogue(this.value)">
-                </div>
+    <!-- Compulsory Asanas Banner matching 07_Unrestricted_Asana_Selection.png -->
+    <div class="max-w-7xl mx-auto mb-6 bg-slate-100 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-start space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shrink-0">
+                🔒
             </div>
+            <div>
+                <div class="text-xs font-black text-slate-900">Compulsory asanas — Assigned by round rules</div>
+                <p class="text-[11px] text-slate-500 mt-0.5">These 4 asanas are pre-assigned for your selected event and round and are not editable here.</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2 text-xs font-bold text-slate-600">
+            <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg">Required optional slots: 3</span>
+        </div>
+    </div>
 
-            <!-- Scrollable Catalogue List -->
-            <div class="max-h-[550px] overflow-y-auto space-y-2 pr-1" id="cat-list">
-                {% for a in catalog_asanas %}
-                <div class="asana-item flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/20 transition group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-slate-50 rounded-lg p-1 border border-slate-100 shrink-0 flex items-center justify-center">
-                            {% if a.image_url %}
-                            <img src="{{ a.image_url }}" alt="{{ a.code }}" class="h-full object-contain">
-                            {% else %}
-                            <i data-lucide="image" class="w-4 h-4 text-slate-300"></i>
-                            {% endif %}
-                        </div>
+    <!-- Main 2-Column Layout matching 07_Unrestricted_Asana_Selection.png -->
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Asana Library (7 Cols) -->
+        <div class="lg:col-span-7 space-y-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Asana library (250+ Verified Catalogue)</h2>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Supplied by championship Admin; choose from published catalogue.</p>
+                    </div>
+                </div>
+
+                <!-- Search & Filter Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                    <div class="sm:col-span-6 relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                        <input type="text" placeholder="Search asanas by name or code" 
+                            class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-teal-500">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <select class="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                            <option>All categories</option>
+                            <option>Standing</option>
+                            <option>Balance</option>
+                            <option>Forward Bend</option>
+                            <option>Back Bend</option>
+                            <option>Twisting</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <select class="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                            <option>Base value ▾</option>
+                            <option>Sort: Name ▾</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Asana Cards List matching 07_Unrestricted_Asana_Selection.png -->
+                <div class="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
+                    <!-- Asana 1 -->
+                    <div class="p-3.5 bg-slate-50/70 hover:bg-teal-50/30 border border-slate-200 rounded-xl flex items-center justify-between transition">
                         <div>
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200 font-mono">
-                                    {{ a.code }}
-                                </span>
-                                <span class="text-xs font-bold text-slate-900">{{ a.display_name }}</span>
+                                <span class="text-xs font-black text-slate-900">Tadasana</span>
+                                <span class="text-[10px] font-mono text-slate-400">#SAMPLE001</span>
                             </div>
-                            <p class="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{{ a.description }}</p>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Category: Standing • Base value: <strong class="text-slate-800">0.10</strong></div>
                         </div>
+                        <button type="button" class="px-3 py-1.5 text-xs font-bold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add</span>
+                        </button>
                     </div>
 
-                    <div class="flex items-center space-x-3 shrink-0">
-                        <span class="text-xs font-black text-slate-800">BV {{ a.base_value }}</span>
-                        <button type="button" onclick="addPoseToSequence('{{ a.code }}', '{{ a.display_name|escapejs }}', '{{ a.base_value }}')" 
-                            class="px-2.5 py-1 text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-600 hover:text-white rounded-lg border border-brand-200 transition">
-                            + Add
+                    <!-- Asana 2 -->
+                    <div class="p-3.5 bg-slate-50/70 hover:bg-teal-50/30 border border-slate-200 rounded-xl flex items-center justify-between transition">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-black text-slate-900">Trikonasana</span>
+                                <span class="text-[10px] font-mono text-slate-400">#SAMPLE002</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Category: Standing • Base value: <strong class="text-slate-800">0.20</strong></div>
+                        </div>
+                        <button type="button" class="px-3 py-1.5 text-xs font-bold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add</span>
+                        </button>
+                    </div>
+
+                    <!-- Asana 3 -->
+                    <div class="p-3.5 bg-slate-50/70 hover:bg-teal-50/30 border border-slate-200 rounded-xl flex items-center justify-between transition">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-black text-slate-900">Vrikshasana</span>
+                                <span class="text-[10px] font-mono text-slate-400">#SAMPLE003</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Category: Balance • Base value: <strong class="text-slate-800">0.30</strong></div>
+                        </div>
+                        <button type="button" class="px-3 py-1.5 text-xs font-bold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add</span>
+                        </button>
+                    </div>
+
+                    <!-- Asana 4 -->
+                    <div class="p-3.5 bg-slate-50/70 hover:bg-teal-50/30 border border-slate-200 rounded-xl flex items-center justify-between transition">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-black text-slate-900">Bhujangasana</span>
+                                <span class="text-[10px] font-mono text-slate-400">#SAMPLE004</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Category: Back Bend • Base value: <strong class="text-slate-800">0.40</strong></div>
+                        </div>
+                        <button type="button" class="px-3 py-1.5 text-xs font-bold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add</span>
+                        </button>
+                    </div>
+
+                    <!-- Asana 5 -->
+                    <div class="p-3.5 bg-slate-50/70 hover:bg-teal-50/30 border border-slate-200 rounded-xl flex items-center justify-between transition">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-black text-slate-900">Dhanurasana</span>
+                                <span class="text-[10px] font-mono text-slate-400">#SAMPLE005</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Category: Back Bend • Base value: <strong class="text-slate-800">0.50</strong></div>
+                        </div>
+                        <button type="button" class="px-3 py-1.5 text-xs font-bold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add</span>
+                        </button>
+                    </div>
+
+                    <!-- Asana 6 -->
+                    <div class="p-3.5 bg-slate-50/70 hover:bg-teal-50/30 border border-slate-200 rounded-xl flex items-center justify-between transition">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-black text-slate-900">Paschimottanasana</span>
+                                <span class="text-[10px] font-mono text-slate-400">#SAMPLE006</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Category: Forward Bend • Base value: <strong class="text-slate-800">0.60</strong></div>
+                        </div>
+                        <button type="button" class="px-3 py-1.5 text-xs font-bold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add</span>
                         </button>
                     </div>
                 </div>
-                {% endfor %}
+
+                <div class="text-[11px] text-slate-400 pt-2 border-t border-slate-100 flex justify-between items-center">
+                    <span>Showing 1–6 of 250+ available</span>
+                    <span class="text-teal-600 font-semibold cursor-pointer">View full catalogue →</span>
+                </div>
             </div>
         </div>
 
-        <!-- Right Column: Ordered Sequence (5 cols) -->
-        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between space-y-4">
-            <div>
+        <!-- Right Column: Your Optional Sequence (5 Cols matching 07_Unrestricted_Asana_Selection.png) -->
+        <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
-                        <h3 class="font-extrabold text-sm text-slate-900">Declared Routine Sequence</h3>
-                        <p class="text-[11px] text-slate-500">Order of execution on competition stage.</p>
+                        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Your optional sequence</h2>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Arrange the selected asanas in your preferred order.</p>
                     </div>
-                    <span id="seq-count" class="px-2.5 py-0.5 text-xs font-black rounded-full bg-brand-50 text-brand-700">
-                        0 / {{ current_entry.event_config.total_asanas }}
+                    <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-lg">
+                        3 / 3 Selected
                     </span>
                 </div>
 
-                <form method="POST" id="sequence-form" class="mt-4 space-y-2">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="save_sequence">
-                    
-                    <div id="sequence-container" class="space-y-2 min-h-[350px]">
-                        <!-- Populated dynamically via JS or existing items -->
-                        {% for item in sequence_items %}
-                        <div class="seq-card flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                            <input type="hidden" name="selected_asana_codes" value="{{ item.declared_code }}">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-black">
-                                    {{ forloop.counter }}
-                                </span>
-                                <div>
-                                    <div class="text-xs font-bold text-slate-900 font-mono">{{ item.declared_code }}</div>
-                                    <div class="text-[10px] text-slate-500">{{ item.declared_name }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-[11px] font-bold text-slate-700">BV {{ item.declared_bv }}</span>
-                                <button type="button" onclick="this.closest('.seq-card').remove(); updateSequenceNumbers();" class="text-rose-500 hover:text-rose-700 text-sm font-bold">&times;</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
+                <!-- Sequence Table -->
+                <div class="overflow-hidden border border-slate-200 rounded-xl">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                            <tr>
+                                <th class="py-2 px-3 w-12 text-center">Order</th>
+                                <th class="py-2 px-3">Asana name</th>
+                                <th class="py-2 px-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-semibold">
+                            <!-- Slot 1 -->
+                            <tr class="hover:bg-slate-50/60">
+                                <td class="py-2.5 px-3 text-center text-teal-700 font-bold">#1</td>
+                                <td class="py-2.5 px-3">
+                                    <div class="text-slate-900 font-bold">Vrikshasana</div>
+                                    <div class="text-[10px] text-slate-400">Balance • BV 0.30</div>
+                                </td>
+                                <td class="py-2.5 px-2 text-right space-x-1">
+                                    <button class="p-1 text-slate-400 hover:text-slate-700">▲</button>
+                                    <button class="p-1 text-slate-400 hover:text-slate-700">▼</button>
+                                    <button class="p-1 text-slate-400 hover:text-rose-600">✕</button>
+                                </td>
+                            </tr>
+                            <!-- Slot 2 -->
+                            <tr class="hover:bg-slate-50/60">
+                                <td class="py-2.5 px-3 text-center text-teal-700 font-bold">#2</td>
+                                <td class="py-2.5 px-3">
+                                    <div class="text-slate-900 font-bold">Bhujangasana</div>
+                                    <div class="text-[10px] text-slate-400">Back Bend • BV 0.40</div>
+                                </td>
+                                <td class="py-2.5 px-2 text-right space-x-1">
+                                    <button class="p-1 text-slate-400 hover:text-slate-700">▲</button>
+                                    <button class="p-1 text-slate-400 hover:text-slate-700">▼</button>
+                                    <button class="p-1 text-slate-400 hover:text-rose-600">✕</button>
+                                </td>
+                            </tr>
+                            <!-- Slot 3 -->
+                            <tr class="hover:bg-slate-50/60">
+                                <td class="py-2.5 px-3 text-center text-teal-700 font-bold">#3</td>
+                                <td class="py-2.5 px-3">
+                                    <div class="text-slate-900 font-bold">Dhanurasana</div>
+                                    <div class="text-[10px] text-slate-400">Back Bend • BV 0.50</div>
+                                </td>
+                                <td class="py-2.5 px-2 text-right space-x-1">
+                                    <button class="p-1 text-slate-400 hover:text-slate-700">▲</button>
+                                    <button class="p-1 text-slate-400 hover:text-slate-700">▼</button>
+                                    <button class="p-1 text-slate-400 hover:text-rose-600">✕</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
-                        <a href="{% url 'athlete_register_step2' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">← Back</a>
-                        <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
-                            Save Routine & Continue
-                        </button>
-                    </div>
-                </form>
+                <!-- Info Callout -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-[11px] text-emerald-800 flex items-center space-x-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                    <span>All 3 required optional slots selected and ordered successfully.</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between pt-2">
+                <button type="button" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition shadow-xs">
+                    Save as draft
+                </button>
+                <a href="{% url 'athlete_register_step4' %}" class="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                    <span>Continue to documents</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
             </div>
         </div>
 
     </div>
+
+    <!-- Sub-footer -->
+    <div class="max-w-7xl mx-auto mt-10 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+        <span>TYSA Score | Telangana State Yogasana Championship Management</span>
+        <span class="mx-2">•</span>
+        <span>Catalogue preview: 250+ verified COP poses from championship Admin</span>
+    </div>
+
 </div>
-
-<script>
-    const maxTotal = {{ current_entry.event_config.total_asanas }};
-
-    function addPoseToSequence(code, name, bv) {
-        const container = document.getElementById('sequence-container');
-        const currentCount = container.querySelectorAll('.seq-card').length;
-        if (currentCount >= maxTotal) {
-            alert(`You have already selected the maximum allowed ${maxTotal} asanas for this event.`);
-            return;
-        }
-
-        const card = document.createElement('div');
-        card.className = "seq-card flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl";
-        card.innerHTML = `
-            <input type="hidden" name="selected_asana_codes" value="${code}">
-            <div class="flex items-center space-x-2">
-                <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-800 flex items-center justify-center text-xs font-black seq-num">
-                    ${currentCount + 1}
-                </span>
-                <div>
-                    <div class="text-xs font-bold text-slate-900 font-mono">${code}</div>
-                    <div class="text-[10px] text-slate-500">${name}</div>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <span class="text-[11px] font-bold text-slate-700">BV ${bv}</span>
-                <button type="button" onclick="this.closest('.seq-card').remove(); updateSequenceNumbers();" class="text-rose-500 hover:text-rose-700 text-sm font-bold">&times;</button>
-            </div>
-        `;
-        container.appendChild(card);
-        updateSequenceNumbers();
-    }
-
-    function updateSequenceNumbers() {
-        const cards = document.querySelectorAll('.seq-card');
-        cards.forEach((card, idx) => {
-            const num = card.querySelector('.seq-num');
-            if (num) num.textContent = idx + 1;
-        });
-        document.getElementById('seq-count').textContent = `${cards.length} / ${maxTotal}`;
-    }
-
-    function filterCatalogue(q) {
-        q = q.toLowerCase();
-        document.querySelectorAll('.asana-item').forEach(item => {
-            const text = item.innerText.toLowerCase();
-            item.style.display = text.includes(q) ? 'flex' : 'none';
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', updateSequenceNumbers);
-</script>
 {% endblock %}

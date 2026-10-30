@@ -1,101 +1,422 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Certificate Template Library — TYSA Score{% endblock %}
+{% block title %}Certificate Templates — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Top Header & Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-4">
         <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module CERT_TEMPLATES</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Official Certificate Template Library</h1>
-            <p class="text-xs text-slate-500 font-medium">Design, customize canvas fields, upload official border backgrounds, and version certificate layouts.</p>
+            <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Certificate Templates</h1>
+            <p class="text-sm text-slate-600">Create and manage certificate templates for TYSA 2026.</p>
         </div>
-        <div class="flex items-center space-x-2">
-            <button onclick="document.getElementById('create-template-modal').classList.remove('hidden')" 
-                class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+
+        <div class="flex items-center gap-2">
+            <a href="{% url 'certificate_template_edit' template_id=1 %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                <span>Create New Template</span>
-            </button>
-            <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-                ← Dashboard
+                <span>Create template</span>
             </a>
+            <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span>Upload template</span>
+            </button>
         </div>
     </div>
 
-    <!-- Template Library Grid matching certifictae templete.jpg -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for t in templates %}
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-brand-300 transition group">
-            <div>
-                <!-- Mockup / Preview Box -->
-                <div class="h-44 bg-gradient-to-tr from-slate-100 via-amber-50/40 to-slate-50 rounded-xl border border-dashed border-slate-300 p-4 flex flex-col items-center justify-center text-center relative overflow-hidden mb-4">
-                    <div class="border-2 border-amber-600/40 w-full h-full rounded-lg p-2 flex flex-col justify-between">
-                        <div class="text-[9px] font-black uppercase tracking-widest text-slate-800">Telangana Yogasana Association</div>
-                        <div class="font-serif italic text-xs font-bold text-brand-800">{{ t.get_template_type_display }}</div>
-                        <div class="text-[8px] text-slate-400 font-mono">Dynamic Fields Canvas Layout</div>
+    <!-- Navigation Tabs -->
+    <div class="border-b border-slate-200 flex items-center gap-8 text-sm font-bold text-slate-500">
+        <a href="{% url 'certificate_templates' %}" class="pb-3 text-[#0d5c58] border-b-2 border-[#0d5c58]">
+            Templates
+        </a>
+        <a href="{% url 'certificate_generate' %}" class="pb-3 hover:text-slate-900 transition">
+            Generate & Export
+        </a>
+        <a href="#" class="pb-3 hover:text-slate-900 transition">
+            Issue register
+        </a>
+    </div>
+
+    <!-- Info & Search Toolbar -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-xs text-slate-600">
+            <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0"></i>
+            <span>Create a layout or upload your own design, then map certificate fields.</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="relative w-56">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="text" placeholder="Search templates..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+            </div>
+
+            <select class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-700 focus:border-[#0d5c58]">
+                <option value="">Type</option>
+                <option value="participation">Participation</option>
+                <option value="merit">Merit</option>
+                <option value="duty">Judge Duty</option>
+            </select>
+
+            <select class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-700 focus:border-[#0d5c58]">
+                <option value="">Status</option>
+                <option value="ready">Ready</option>
+                <option value="draft">Draft</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 6 Templates Grid (3 columns x 2 rows) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- 1. Participation -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+            <div class="space-y-3">
+                <!-- Thumbnail Preview -->
+                <div class="h-44 bg-[#f8fbff] rounded-lg border-2 border-sky-300 p-3 flex flex-col justify-between items-center text-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center text-[9px] text-slate-400">
+                        <span class="w-4 h-4 border border-sky-400 rounded flex items-center justify-center font-bold text-sky-600">☯</span>
+                        <span class="font-bold text-slate-500 uppercase tracking-widest text-[8px]">YOUR LOGO</span>
+                    </div>
+                    <div>
+                        <div class="font-black text-sm text-[#002f54] uppercase tracking-wide">CERTIFICATE</div>
+                        <div class="text-[10px] text-slate-600 font-bold uppercase tracking-wider">OF PARTICIPATION</div>
+                        <div class="w-10 h-0.5 bg-sky-400 mx-auto my-1"></div>
+                        <div class="w-32 h-1 bg-slate-200 mx-auto rounded mt-2"></div>
+                        <div class="w-24 h-1 bg-slate-200 mx-auto rounded mt-1"></div>
+                    </div>
+                    <div class="w-full flex justify-between items-center text-[8px] text-slate-400">
+                        <span>Signatory</span>
+                        <span>Date & Seal</span>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase">
-                        {{ t.get_template_type_display }}
-                    </span>
-                    <span class="text-[10px] text-slate-400 font-mono">v{{ t.version }}</span>
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-black text-slate-900">Participation</h2>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Type: Participation</div>
+                        <div>Version: 1.0</div>
+                        <div>Last updated: 10 Aug 2026</div>
+                    </div>
                 </div>
-
-                <h3 class="font-extrabold text-base text-slate-900 mt-2">{{ t.name }}</h3>
-                <p class="text-xs text-slate-500 mt-1">Configured dynamic canvas fields for printing & batch PDF exports.</p>
             </div>
 
-            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
-                <span class="text-xs font-bold text-emerald-600 flex items-center">
-                    <i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> Published
-                </span>
-                <a href="{% url 'certificate_template_edit' template_id=t.id %}" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition flex items-center space-x-1">
-                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                    <span>Edit Canvas Fields</span>
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <a href="{% url 'certificate_template_edit' template_id=1 %}" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                </a>
+                <button type="button" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview
+                </button>
+                <a href="{% url 'certificate_generate' %}" class="flex-1 py-1.5 px-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold inline-flex items-center justify-center gap-1 shadow-xs">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Use
                 </a>
             </div>
         </div>
-        {% endfor %}
-    </div>
-</div>
 
-<!-- Modal: Create Template -->
-<div id="create-template-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="font-bold text-slate-900 text-base">Create Certificate Template</h3>
-            <button onclick="document.getElementById('create-template-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        <!-- 2. Merit -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+            <div class="space-y-3">
+                <!-- Thumbnail Preview -->
+                <div class="h-44 bg-[#fffdf8] rounded-lg border-2 border-amber-400 p-3 flex flex-col justify-between items-center text-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center text-[9px] text-slate-400">
+                        <span class="w-4 h-4 border border-amber-400 rounded flex items-center justify-center font-bold text-amber-600">☯</span>
+                        <span class="font-bold text-slate-500 uppercase tracking-widest text-[8px]">YOUR LOGO</span>
+                    </div>
+                    <div>
+                        <div class="font-black text-sm text-[#8c6200] uppercase tracking-wide">MERIT CERTIFICATE</div>
+                        <div class="w-12 h-0.5 bg-amber-400 mx-auto my-1"></div>
+                        <div class="w-32 h-1 bg-amber-200 mx-auto rounded mt-2"></div>
+                        <div class="w-24 h-1 bg-amber-200 mx-auto rounded mt-1"></div>
+                    </div>
+                    <div class="w-full flex justify-between items-center text-[8px] text-slate-400">
+                        <span>Signatory</span>
+                        <span>Date & Seal</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-black text-slate-900">Merit</h2>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Type: Merit</div>
+                        <div>Version: 1.0</div>
+                        <div>Last updated: 08 Aug 2026</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <a href="{% url 'certificate_template_edit' template_id=2 %}" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                </a>
+                <button type="button" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview
+                </button>
+                <a href="{% url 'certificate_generate' %}" class="flex-1 py-1.5 px-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold inline-flex items-center justify-center gap-1 shadow-xs">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Use
+                </a>
+            </div>
         </div>
 
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
-            {% csrf_token %}
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Template Name</label>
-                <input type="text" name="name" required placeholder="State Merit 2026 Template" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none">
+        <!-- 3. Judge Duty -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+            <div class="space-y-3">
+                <!-- Thumbnail Preview -->
+                <div class="h-44 bg-[#f8fbff] rounded-lg border-2 border-blue-400 p-3 flex flex-col justify-between items-center text-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center text-[9px] text-slate-400">
+                        <span class="w-4 h-4 border border-blue-400 rounded flex items-center justify-center font-bold text-blue-600">☯</span>
+                        <span class="font-bold text-slate-500 uppercase tracking-widest text-[8px]">YOUR LOGO</span>
+                    </div>
+                    <div>
+                        <div class="font-black text-xs text-[#002f54] uppercase tracking-wide">CERTIFICATE</div>
+                        <div class="text-[10px] text-slate-600 font-bold uppercase tracking-wider">OF JUDGE DUTY</div>
+                        <div class="w-10 h-0.5 bg-blue-400 mx-auto my-1"></div>
+                        <div class="w-32 h-1 bg-slate-200 mx-auto rounded mt-2"></div>
+                        <div class="w-24 h-1 bg-slate-200 mx-auto rounded mt-1"></div>
+                    </div>
+                    <div class="w-full flex justify-between items-center text-[8px] text-slate-400">
+                        <span>Signatory</span>
+                        <span>Date & Seal</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-black text-slate-900">Judge Duty</h2>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Draft
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Type: Judge Duty</div>
+                        <div>Version: 0.1</div>
+                        <div>Last updated: 05 Aug 2026</div>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Certificate Type</label>
-                <select name="template_type" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none font-semibold">
-                    {% for c_code, c_label in types %}
-                    <option value="{{ c_code }}">{{ c_label }}</option>
-                    {% endfor %}
-                </select>
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <a href="{% url 'certificate_template_edit' template_id=3 %}" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                </a>
+                <button type="button" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview
+                </button>
+                <a href="{% url 'certificate_generate' %}" class="flex-1 py-1.5 px-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold inline-flex items-center justify-center gap-1 shadow-xs">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Use
+                </a>
+            </div>
+        </div>
+
+        <!-- 4. Coach Recognition -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+            <div class="space-y-3">
+                <!-- Thumbnail Preview -->
+                <div class="h-44 bg-[#f8faf8] rounded-lg border-2 border-emerald-400 p-3 flex flex-col justify-between items-center text-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center text-[9px] text-slate-400">
+                        <span class="w-4 h-4 border border-emerald-400 rounded flex items-center justify-center font-bold text-emerald-600">☯</span>
+                        <span class="font-bold text-slate-500 uppercase tracking-widest text-[8px]">YOUR LOGO</span>
+                    </div>
+                    <div>
+                        <div class="font-black text-xs text-emerald-950 uppercase tracking-wide">CERTIFICATE</div>
+                        <div class="text-[9px] text-slate-600 font-bold uppercase tracking-wider">OF COACH RECOGNITION</div>
+                        <div class="w-10 h-0.5 bg-emerald-400 mx-auto my-1"></div>
+                        <div class="w-32 h-1 bg-emerald-200 mx-auto rounded mt-2"></div>
+                    </div>
+                    <div class="w-full flex justify-between items-center text-[8px] text-slate-400">
+                        <span>Signatory</span>
+                        <span>Date & Seal</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-black text-slate-900">Coach Recognition</h2>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Type: Coach Recognition</div>
+                        <div>Version: 1.0</div>
+                        <div>Last updated: 09 Aug 2026</div>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Background Image / Border (Optional)</label>
-                <input type="file" name="background_image" class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <a href="{% url 'certificate_template_edit' template_id=4 %}" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                </a>
+                <button type="button" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview
+                </button>
+                <a href="{% url 'certificate_generate' %}" class="flex-1 py-1.5 px-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold inline-flex items-center justify-center gap-1 shadow-xs">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Use
+                </a>
+            </div>
+        </div>
+
+        <!-- 5. Volunteer Service -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+            <div class="space-y-3">
+                <!-- Thumbnail Preview -->
+                <div class="h-44 bg-[#f8faf8] rounded-lg border-2 border-teal-300 p-3 flex flex-col justify-between items-center text-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center text-[9px] text-slate-400">
+                        <span class="w-4 h-4 border border-teal-400 rounded flex items-center justify-center font-bold text-teal-600">☯</span>
+                        <span class="font-bold text-slate-500 uppercase tracking-widest text-[8px]">YOUR LOGO</span>
+                    </div>
+                    <div>
+                        <div class="font-black text-xs text-teal-950 uppercase tracking-wide">CERTIFICATE</div>
+                        <div class="text-[9px] text-slate-600 font-bold uppercase tracking-wider">OF VOLUNTEER SERVICE</div>
+                        <div class="w-10 h-0.5 bg-teal-400 mx-auto my-1"></div>
+                        <div class="w-32 h-1 bg-teal-200 mx-auto rounded mt-2"></div>
+                    </div>
+                    <div class="w-full flex justify-between items-center text-[8px] text-slate-400">
+                        <span>Signatory</span>
+                        <span>Date & Seal</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-black text-slate-900">Volunteer Service</h2>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ready
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Type: Volunteer Service</div>
+                        <div>Version: 1.0</div>
+                        <div>Last updated: 07 Aug 2026</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-                <button type="button" onclick="document.getElementById('create-template-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
-                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs">Create & Open Canvas</button>
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <a href="{% url 'certificate_template_edit' template_id=5 %}" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                </a>
+                <button type="button" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview
+                </button>
+                <a href="{% url 'certificate_generate' %}" class="flex-1 py-1.5 px-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold inline-flex items-center justify-center gap-1 shadow-xs">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Use
+                </a>
             </div>
-        </form>
+        </div>
+
+        <!-- 6. Guest Appreciation -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+            <div class="space-y-3">
+                <!-- Thumbnail Preview -->
+                <div class="h-44 bg-[#fffdf8] rounded-lg border-2 border-amber-300 p-3 flex flex-col justify-between items-center text-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center text-[9px] text-slate-400">
+                        <span class="w-4 h-4 border border-amber-400 rounded flex items-center justify-center font-bold text-amber-600">☯</span>
+                        <span class="font-bold text-slate-500 uppercase tracking-widest text-[8px]">YOUR LOGO</span>
+                    </div>
+                    <div>
+                        <div class="font-black text-xs text-amber-950 uppercase tracking-wide">CERTIFICATE</div>
+                        <div class="text-[9px] text-slate-600 font-bold uppercase tracking-wider">OF APPRECIATION</div>
+                        <div class="w-10 h-0.5 bg-amber-400 mx-auto my-1"></div>
+                        <div class="w-32 h-1 bg-amber-200 mx-auto rounded mt-2"></div>
+                    </div>
+                    <div class="w-full flex justify-between items-center text-[8px] text-slate-400">
+                        <span>Signatory</span>
+                        <span>Date & Seal</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-black text-slate-900">Guest Appreciation</h2>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Draft
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Type: Guest Appreciation</div>
+                        <div>Version: 0.1</div>
+                        <div>Last updated: 06 Aug 2026</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <a href="{% url 'certificate_template_edit' template_id=6 %}" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                </a>
+                <button type="button" class="flex-1 py-1.5 px-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Preview
+                </button>
+                <a href="{% url 'certificate_generate' %}" class="flex-1 py-1.5 px-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold inline-flex items-center justify-center gap-1 shadow-xs">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Use
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Setup & Upload Card matching certifictae templete.jpg -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <!-- Upload Background (5 cols) -->
+        <div class="md:col-span-5 border-2 border-dashed border-slate-300 rounded-xl p-5 text-center bg-slate-50/50 hover:bg-slate-50 space-y-2">
+            <i data-lucide="cloud-upload" class="w-8 h-8 text-sky-600 mx-auto"></i>
+            <div class="text-xs font-bold text-slate-900">Upload certificate background</div>
+            <div class="text-[11px] text-slate-500">PDF, PNG or JPG (max 10 MB)</div>
+            <button type="button" class="px-4 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs">
+                Choose file
+            </button>
+        </div>
+
+        <!-- Setup Template Layout (7 cols) -->
+        <div class="md:col-span-7 space-y-4">
+            <div class="flex items-start gap-2.5">
+                <i data-lucide="settings" class="w-5 h-5 text-slate-700 shrink-0 mt-0.5"></i>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-900">Set up template layout</h3>
+                    <p class="text-[11px] text-slate-500">Set page size, orientation and field positions before use.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">Page size</label>
+                    <select class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                        <option value="A4" selected>A4 (210 × 297 mm)</option>
+                        <option value="A3">A3 (297 × 420 mm)</option>
+                        <option value="Letter">US Letter</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">Orientation</label>
+                    <div class="flex items-center gap-4 pt-1.5 text-xs text-slate-800 font-medium">
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="orientation" value="portrait" checked class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            <span>Portrait</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="orientation" value="landscape" class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            <span>Landscape</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

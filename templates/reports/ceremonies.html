@@ -1,94 +1,251 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Ceremonies, Photos & Press Coverage — TYSA Score{% endblock %}
+{% block title %}Championship Records & Ceremonies — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #31</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Ceremonies, Official Photos & Press Coverage</h1>
-            <p class="text-xs text-slate-500 font-medium">Record opening & closing protocols, media gallery, and press coverage documentation.</p>
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Top Championship Banner -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+        <div class="flex items-start gap-3">
+            <a href="{% url 'admin_dashboard' %}" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5 transition">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </a>
+            <div>
+                <div class="flex items-center gap-2.5">
+                    <h1 class="text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
+                        Telangana State Yogasana Championship 2026
+                    </h1>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Active
+                    </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Manage ceremony details, photos and press coverage for this championship.</p>
+            </div>
         </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
+
+        <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span>Edit Championship</span>
+        </button>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="border-b border-slate-200 flex items-center gap-8 text-sm font-bold text-slate-500">
+        <a href="#" class="pb-3 text-[#0d5c58] border-b-2 border-[#0d5c58]">
+            Opening ceremony
+        </a>
+        <a href="#" class="pb-3 hover:text-slate-900 transition">
+            Closing ceremony
+        </a>
+        <a href="#" class="pb-3 hover:text-slate-900 transition">
+            Photos
+        </a>
+        <a href="#" class="pb-3 hover:text-slate-900 transition">
+            Press coverage
         </a>
     </div>
 
-    <!-- Ceremonies Records Card matching 31_Ceremonies_Photos_and_Press.png -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 class="font-extrabold text-sm text-slate-900">Opening Ceremony & Protocol</h3>
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Concluded</span>
-            </div>
-            <div class="text-xs text-slate-600 space-y-1">
-                <div><span class="font-bold text-slate-800">Date & Venue:</span> 15 Nov 2026, G.M.C. Balayogi Indoor Stadium</div>
-                <div><span class="font-bold text-slate-800">Chief Dignitary:</span> Hon. Minister for Youth & Sports Affairs, Govt of Telangana</div>
-                <p class="text-slate-500 mt-2 leading-relaxed">
-                    Official march past by all 33 Telangana district associations, traditional lamp lighting ceremony, and demonstration by national medalists.
-                </p>
-            </div>
-        </div>
+    <!-- Card 1: Opening Ceremony Details -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <h2 class="text-sm font-black text-slate-900">Opening Ceremony Details</h2>
 
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 class="font-extrabold text-sm text-slate-900">Closing & Prize Distribution Ceremony</h3>
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">Scheduled</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Ceremony Date</label>
+                <div class="relative">
+                    <i data-lucide="calendar" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" value="12 Jan 2026" class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                </div>
             </div>
-            <div class="text-xs text-slate-600 space-y-1">
-                <div><span class="font-bold text-slate-800">Date & Venue:</span> 17 Nov 2026, Main Arena</div>
-                <div><span class="font-bold text-slate-800">Presentation:</span> General Championship Trophy & Medal Distribution</div>
-                <p class="text-slate-500 mt-2 leading-relaxed">
-                    Awarding of individual merit certificates, district team trophies, and recognition mementos to universal judges and volunteer marshalls.
-                </p>
+
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Venue</label>
+                <div class="relative">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" value="Gachibowli Indoor Stadium, Hyderabad" class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Photo Gallery & Press Clippings -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="font-extrabold text-sm text-slate-900">Competition Photo & Press Media Archive</h3>
-            <button class="px-3 py-1.5 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200">
-                + Add Photo / Clipping
+    <!-- Card 2: Chief Guests -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-black text-slate-900">Chief Guests</h2>
+                <p class="text-xs text-slate-500">List of guests invited for the opening ceremony.</p>
+            </div>
+            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Guest</span>
             </button>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-2 space-y-1">
-                <div class="h-28 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-                    <i data-lucide="image" class="w-8 h-8"></i>
+        <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                        <th class="py-2.5 px-3 text-center w-12">#</th>
+                        <th class="py-2.5 px-3">Name</th>
+                        <th class="py-2.5 px-3">Designation</th>
+                        <th class="py-2.5 px-3">Role</th>
+                        <th class="py-2.5 px-3 text-center w-28">Attendance</th>
+                        <th class="py-2.5 px-3 text-right w-24">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-3 text-center font-bold text-slate-500">1</td>
+                        <td class="py-3 px-3 font-bold text-slate-900">Dr. S. Raghavendra</td>
+                        <td class="py-3 px-3 text-slate-600">Principal Secretary, Youth Affairs & Sports, Government of Telangana</td>
+                        <td class="py-3 px-3 text-slate-700">Chief Guest</td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Present
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="flex items-center justify-end gap-2 text-slate-400">
+                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-3 text-center font-bold text-slate-500">2</td>
+                        <td class="py-3 px-3 font-bold text-slate-900">Ms. Anitha Reddy</td>
+                        <td class="py-3 px-3 text-slate-600">Chairperson, Telangana State Yogasana Association</td>
+                        <td class="py-3 px-3 text-slate-700">Guest of Honour</td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Present
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="flex items-center justify-end gap-2 text-slate-400">
+                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-3 text-center font-bold text-slate-500">3</td>
+                        <td class="py-3 px-3 font-bold text-slate-900">Sri K. Murali Krishna</td>
+                        <td class="py-3 px-3 text-slate-600">Director, Sports Authority of Telangana</td>
+                        <td class="py-3 px-3 text-slate-700">Special Invitee</td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                Absent
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="flex items-center justify-end gap-2 text-slate-400">
+                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Card 3: Opening Ceremony Photos -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-black text-slate-900">Opening Ceremony Photos</h2>
+                <p class="text-xs text-slate-500">Upload and manage photos from the opening ceremony.</p>
+            </div>
+            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                <span>Add Photos</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Photo 1 -->
+            <div class="space-y-2">
+                <div class="relative bg-slate-100 rounded-lg h-36 flex items-center justify-center border border-slate-200 overflow-hidden">
+                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
+                    <button type="button" class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-slate-600 hover:text-slate-900 flex items-center justify-center shadow-xs">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
                 </div>
-                <div class="font-bold text-xs text-slate-900 truncate">Opening March Past</div>
-                <div class="text-[10px] text-slate-500">Ceremonies</div>
+                <input type="text" value="Lighting of the lamp" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-medium">
             </div>
 
-            <div class="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-2 space-y-1">
-                <div class="h-28 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-                    <i data-lucide="image" class="w-8 h-8"></i>
+            <!-- Photo 2 -->
+            <div class="space-y-2">
+                <div class="relative bg-slate-100 rounded-lg h-36 flex items-center justify-center border border-slate-200 overflow-hidden">
+                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
+                    <button type="button" class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-slate-600 hover:text-slate-900 flex items-center justify-center shadow-xs">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
                 </div>
-                <div class="font-bold text-xs text-slate-900 truncate">Traditional Stage Action</div>
-                <div class="text-[10px] text-slate-500">Stage Action</div>
+                <input type="text" value="Chief Guest address" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-medium">
             </div>
 
-            <div class="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-2 space-y-1">
-                <div class="h-28 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-                    <i data-lucide="image" class="w-8 h-8"></i>
+            <!-- Photo 3 -->
+            <div class="space-y-2">
+                <div class="relative bg-slate-100 rounded-lg h-36 flex items-center justify-center border border-slate-200 overflow-hidden">
+                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
+                    <button type="button" class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-slate-600 hover:text-slate-900 flex items-center justify-center shadow-xs">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
                 </div>
-                <div class="font-bold text-xs text-slate-900 truncate">Artistic Pair Routine</div>
-                <div class="text-[10px] text-slate-500">Stage Action</div>
-            </div>
-
-            <div class="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-2 space-y-1">
-                <div class="h-28 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-                    <i data-lucide="newspaper" class="w-8 h-8"></i>
-                </div>
-                <div class="font-bold text-xs text-slate-900 truncate">Namasthe Telangana Coverage</div>
-                <div class="text-[10px] text-slate-500">Daily Press</div>
+                <input type="text" value="Dignitaries on stage" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-medium">
             </div>
         </div>
+    </div>
+
+    <!-- Card 4: Recent Press Coverage -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-black text-slate-900">Recent Press Coverage</h2>
+                <p class="text-xs text-slate-500">Latest media coverage related to the opening ceremony.</p>
+            </div>
+            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Press Item</span>
+            </button>
+        </div>
+
+        <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                        <th class="py-2.5 px-3 text-center w-12">#</th>
+                        <th class="py-2.5 px-4 w-44">Media Outlet</th>
+                        <th class="py-2.5 px-4">Headline</th>
+                        <th class="py-2.5 px-4 w-32">Date</th>
+                        <th class="py-2.5 px-3 text-right w-24">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-3 text-center font-bold text-slate-500">1</td>
+                        <td class="py-3 px-4 font-bold text-slate-900">The Hindu</td>
+                        <td class="py-3 px-4 text-slate-700">Telangana hosts State Yogasana Championship 2026 with grand opening</td>
+                        <td class="py-3 px-4 text-slate-600 font-medium">12 Jan 2026</td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="flex items-center justify-end gap-2 text-slate-400">
+                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bottom watermark info -->
+    <div class="text-right text-xs text-slate-400 pt-1">
+        Design preview • Sample data
     </div>
 </div>
 {% endblock %}

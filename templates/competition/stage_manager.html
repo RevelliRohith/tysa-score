@@ -1,151 +1,371 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Stage Manager Control Desk — TYSA Score{% endblock %}
+{% block title %}Stage Control — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+<div class="max-w-7xl mx-auto space-y-6 py-2">
+    <!-- Top Metadata Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #16</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Stage Manager & Announcer Control Desk</h1>
-            <p class="text-xs text-slate-500 font-medium">Coordinate on-stage batches, trigger judge scoring desks, and manage big screen audience display.</p>
-        </div>
-        <div class="flex items-center space-x-2">
-            <a href="{% url 'second_screen' %}" target="_blank" class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
-                <i data-lucide="monitor" class="w-4 h-4"></i>
-                <span>Open Audience 2nd Screen</span>
-            </a>
-            <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-                ← Dashboard
-            </a>
-        </div>
-    </div>
-
-    <!-- Active Stage Batch Card matching 16. stage manager.jpg -->
-    {% if active_batch %}
-    <div class="bg-gradient-to-br from-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl border border-emerald-800 space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-emerald-800/80 gap-3">
-            <div class="flex items-center space-x-3">
-                <span class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black text-lg shadow-md">
-                    #{{ active_batch.batch_number }}
-                </span>
-                <div>
-                    <h2 class="font-extrabold text-lg text-white">Active Stage Batch #{{ active_batch.batch_number }}</h2>
-                    <p class="text-xs text-emerald-300 font-medium">Currently on Stage • Asana {{ active_batch.current_asana_index }} of 7</p>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-2">
-                <form method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="next_asana">
-                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md transition flex items-center space-x-1.5">
-                        <span>Advance to Next Asana ({{ active_batch.current_asana_index|add:1 }})</span>
-                        <i data-lucide="fast-forward" class="w-4 h-4"></i>
-                    </button>
-                </form>
-            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Stage Control</h1>
+            <p class="text-sm text-slate-500 mt-1">Manage athlete flow, send to judges and monitor scoring in real time.</p>
         </div>
 
-        <!-- Competitors on Stage -->
-        <div>
-            <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-3">Athletes Currently Performing</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {% for ent in active_batch.entries.all %}
-                <div class="bg-slate-950/70 p-4 rounded-xl border border-emerald-800/60 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-400 text-slate-950 font-black font-mono text-sm">
-                            Chest #{{ ent.chest_number }}
-                        </span>
-                        <span class="text-[10px] text-emerald-300 font-bold">{{ ent.district }}</span>
-                    </div>
-                    <div class="font-black text-base text-white truncate">{{ ent.display_names }}</div>
-                    <div class="text-[11px] text-slate-400">{{ ent.age_category.name }} • {{ ent.get_gender_display }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Realtime Judges Submission Tracker -->
-        <div class="pt-4 border-t border-emerald-800/80">
-            <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-2">Live Judges Submission Status</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs">
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">D1 Judge</span>
-                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
-                </div>
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">D2 Judge</span>
-                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
-                </div>
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">D3 Judge</span>
-                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
-                </div>
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">D4 Judge</span>
-                    <span class="text-emerald-400 font-bold text-[11px]">Active</span>
-                </div>
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">Time Judge</span>
-                    <span class="text-emerald-400 font-bold text-[11px]">Timing Log</span>
-                </div>
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">Evaluator</span>
-                    <span class="text-emerald-400 font-bold text-[11px]">Validating</span>
-                </div>
-                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-emerald-800">
-                    <span class="text-[10px] text-slate-400 font-bold block">Chief Judge</span>
-                    <span class="text-amber-400 font-bold text-[11px]">Reviewing</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Next Batch Push Queue from Master Roll -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
             <div>
-                <h3 class="font-extrabold text-sm text-slate-900">Push Next Batch to Stage & Judges</h3>
-                <p class="text-xs text-slate-500">Select up to 5 verified athletes from the ready queue (max 3 for finals).</p>
+                <span class="text-slate-400 block font-medium">Championship</span>
+                <span class="font-bold text-slate-900 truncate block">Telangana State Yogasana Championship 2026</span>
             </div>
-            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg">
-                {{ queued_entries.count }} Ready for Stage
-            </span>
+            <div>
+                <span class="text-slate-400 block font-medium">Event</span>
+                <span class="font-bold text-slate-900">Traditional</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-medium">Category</span>
+                <span class="font-bold text-slate-900">Junior Boys</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-medium">Round</span>
+                <span class="font-bold text-slate-900">Semi Final</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-medium">Stage</span>
+                <span class="font-bold text-teal-800">Stage A</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main 2-Column Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Column: Next Athlete List & Event Controls -->
+        <div class="lg:col-span-7 space-y-6">
+            <!-- Next Athlete List Card -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Next Athlete List</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Select up to 5 athletes and send to all judges.</p>
+                    </div>
+                    <div class="text-right text-xs">
+                        <span class="font-bold text-slate-900">Batch 3 selected</span>
+                        <span class="text-slate-500">(Maximum 5 in this round)</span>
+                        <div class="text-[11px] text-slate-400">Final: Maximum 3 will be published.</div>
+                    </div>
+                </div>
+
+                <!-- Athlete Table -->
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 bg-slate-50/60 text-slate-600 text-xs font-semibold">
+                                <th class="py-3 px-4 w-10 text-center">
+                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
+                                </th>
+                                <th class="py-3 px-4">Chest No.</th>
+                                <th class="py-3 px-4">Athlete Name</th>
+                                <th class="py-3 px-4">District</th>
+                                <th class="py-3 px-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-800">
+                            <!-- Row 1 -->
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
+                                </td>
+                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">101</td>
+                                <td class="py-3 px-4 font-semibold text-slate-900">Arun Kumar</td>
+                                <td class="py-3 px-4 text-slate-600">Mancherial</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center text-xs font-medium text-emerald-700">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Present
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Row 2 -->
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
+                                </td>
+                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">301</td>
+                                <td class="py-3 px-4 font-semibold text-slate-900">Sai Teja</td>
+                                <td class="py-3 px-4 text-slate-600">Hyderabad</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center text-xs font-medium text-emerald-700">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Present
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Row 3 -->
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
+                                </td>
+                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">205</td>
+                                <td class="py-3 px-4 font-semibold text-slate-900">Rohit Varma</td>
+                                <td class="py-3 px-4 text-slate-600">Medak</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center text-xs font-medium text-emerald-700">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Present
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Row 4 -->
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
+                                </td>
+                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">119</td>
+                                <td class="py-3 px-4 font-semibold text-slate-900">Karthik Reddy</td>
+                                <td class="py-3 px-4 text-slate-600">Nizamabad</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center text-xs font-medium text-slate-500">
+                                        <span class="w-2 h-2 rounded-full bg-slate-300 mr-2"></span> Pending
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Row 5 -->
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
+                                </td>
+                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">220</td>
+                                <td class="py-3 px-4 font-semibold text-slate-900">Vivek Naidu</td>
+                                <td class="py-3 px-4 text-slate-600">Karimnagar</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center text-xs font-medium text-slate-500">
+                                        <span class="w-2 h-2 rounded-full bg-slate-300 mr-2"></span> Pending
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Event Controls Card -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Event Controls</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Manage athlete status and send to all judges.</p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-medium text-xs transition shadow-xs">
+                        <i data-lucide="play" class="w-4 h-4 mb-1"></i>
+                        <span class="font-bold">Present</span>
+                        <span class="text-[10px] text-teal-200">Mark selected as Present</span>
+                    </button>
+                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs transition">
+                        <i data-lucide="x" class="w-4 h-4 mb-1 text-slate-500"></i>
+                        <span class="font-bold">Absent</span>
+                        <span class="text-[10px] text-slate-400">Mark selected as Absent</span>
+                    </button>
+                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs transition">
+                        <i data-lucide="pause" class="w-4 h-4 mb-1 text-slate-500"></i>
+                        <span class="font-bold">Hold</span>
+                        <span class="text-[10px] text-slate-400">Hold selected athletes</span>
+                    </button>
+                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs transition">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4 mb-1 text-slate-500"></i>
+                        <span class="font-bold">Resume</span>
+                        <span class="text-[10px] text-slate-400">Resume from Hold</span>
+                    </button>
+                </div>
+
+                <!-- Push to all judges button -->
+                <button type="button" class="w-full py-4 px-4 bg-teal-800 hover:bg-teal-900 text-white rounded-xl font-bold text-sm flex flex-col items-center justify-center shadow-sm transition">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span class="text-base">Push to all judges (3)</span>
+                    </div>
+                    <span class="text-xs text-teal-200 mt-0.5 font-normal">Send selected athletes to D1–D4, T, E (Maximum 5 in this round)</span>
+                </button>
+
+                <div class="bg-sky-50 border border-sky-100 rounded-lg p-3 flex items-center space-x-2 text-xs text-sky-900">
+                    <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0"></i>
+                    <span>You can select up to 5 athletes in this round.</span>
+                </div>
+            </div>
         </div>
 
-        <form method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="push_batch">
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                {% for ent in queued_entries %}
-                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-slate-100/70 transition cursor-pointer">
-                    <input type="checkbox" name="entry_ids" value="{{ ent.id }}" class="rounded text-brand-600 mr-3 mt-1">
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-black text-xs font-mono bg-slate-900 text-white px-2 py-0.5 rounded">Chest {{ ent.chest_number }}</span>
-                            <span class="text-xs font-bold text-slate-900 truncate">{{ ent.display_names }}</span>
-                        </div>
-                        <div class="text-[11px] text-slate-500 mt-1">{{ ent.district }} • {{ ent.age_category.name }}</div>
-                    </div>
-                </label>
-                {% empty %}
-                <div class="col-span-full py-6 text-center text-slate-400 text-xs">
-                    No competitors in queue. Verify master roll and venue check-in.
+        <!-- Right Column: Judge Submission Progress & Big Screen Display -->
+        <div class="lg:col-span-5 space-y-6">
+            <!-- Judge Submission Progress Card -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Judge Submission Progress</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Live status of scores submitted by judges for selected athletes.</p>
                 </div>
-                {% endfor %}
+
+                <!-- 7 Judge submission cards -->
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center">
+                    <!-- D1 -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">D1</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>Submitted</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
+                    </div>
+                    <!-- D2 -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">D2</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>Submitted</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
+                    </div>
+                    <!-- D3 -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">D3</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>Submitted</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
+                    </div>
+                    <!-- D4 -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">D4</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>Submitted</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
+                    </div>
+                    <!-- T -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">T</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>Submitted</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
+                    </div>
+                    <!-- E -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">E</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>Submitted</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
+                    </div>
+                    <!-- Chief -->
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
+                        <div class="font-bold text-xs text-slate-800">Chief</div>
+                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-slate-500">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                            <span>Pending</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-900">0 / 3</div>
+                    </div>
+                </div>
+
+                <!-- Chief Judge Status & Publish Button -->
+                <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-800">
+                            <span>Chief Judge Status</span>
+                            <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+                        </div>
+                        <div class="flex items-center space-x-2 mt-0.5 text-xs">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span class="font-medium text-slate-700">Current batch: Pending</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Scores can be published after Chief Judge submits.</p>
+                    </div>
+
+                    <button type="button" disabled class="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-xs font-semibold cursor-not-allowed flex items-center space-x-1.5 shrink-0">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Publish Current Batch</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="pt-3 border-t border-slate-100 flex justify-end">
-                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
-                    <i data-lucide="play" class="w-4 h-4"></i>
-                    <span>Push Selected Batch to Stage & Judges</span>
-                </button>
+            <!-- Big Screen Display Card -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="tv" class="w-5 h-5 text-teal-800"></i>
+                        <h2 class="text-base font-bold text-slate-900">Big Screen Display</h2>
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span> Connected · Display 2
+                    </span>
+                </div>
+
+                <div>
+                    <div class="text-xs font-semibold text-slate-700">Second screen — Audience display</div>
+                    <p class="text-xs text-slate-500 mt-0.5">Open on the connected monitor or projector. Stage controls stay on this screen.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <a href="{% url 'second_screen' %}" target="_blank" class="py-2.5 px-3 border border-teal-800 text-teal-800 hover:bg-teal-50 rounded-lg text-xs font-semibold text-center flex items-center justify-center space-x-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span>Open display window</span>
+                    </a>
+                    <button type="button" onclick="alert('Full screen triggered on Display 2')" class="py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 shadow-xs transition">
+                        <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+                        <span>Full screen on display 2</span>
+                    </button>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
+                    <button type="button" class="flex-1 py-1.5 bg-white text-teal-900 rounded-lg font-bold shadow-xs">Live results</button>
+                    <button type="button" class="flex-1 py-1.5 hover:text-slate-900">Current batch</button>
+                    <button type="button" class="flex-1 py-1.5 hover:text-slate-900">Holding screen</button>
+                </div>
+
+                <!-- Status Strip -->
+                <div class="border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">On air: approved results · Stage A</div>
+                        <p class="text-[11px] text-slate-500">Only approved, released scores appear on the audience display. Pending scores stay private.</p>
+                    </div>
+                    <div class="text-right text-xs shrink-0">
+                        <div class="text-slate-400 text-[10px]">Last synced</div>
+                        <div class="font-bold text-slate-900 font-mono">10:24:12</div>
+                        <div class="text-[10px] text-slate-500">Recent published batch <span class="font-semibold text-slate-800">Batch 2</span></div>
+                    </div>
+                </div>
+
+                <!-- 4 Action Pills -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <button type="button" class="p-2 border border-blue-600 bg-blue-50 text-blue-700 font-semibold rounded-lg flex items-center justify-center space-x-1">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>Show approved</span>
+                    </button>
+                    <button type="button" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1">
+                        <i data-lucide="pause" class="w-3.5 h-3.5"></i>
+                        <span>Pause updates</span>
+                    </button>
+                    <button type="button" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1">
+                        <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+                        <span>Holding screen</span>
+                    </button>
+                    <button type="button" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1">
+                        <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                        <span>Hide scores</span>
+                    </button>
+                </div>
+
+                <!-- Toggle Switch -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <label class="flex items-center space-x-2.5 cursor-pointer">
+                        <input type="checkbox" checked class="w-4 h-4 text-teal-800 rounded focus:ring-teal-700">
+                        <span class="font-semibold text-slate-800">Auto-update approved results</span>
+                    </label>
+                    <span class="text-[11px] text-slate-400">Only approved, released scores appear on audience display.</span>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
+    <div class="text-right text-[11px] text-slate-400 mt-3">Design preview · Sample data</div>
 </div>
 {% endblock %}

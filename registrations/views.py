@@ -6,26 +6,38 @@ from django.db.models import Q
 from .models import ChampionshipRegistration, EventEntry, RegistrationStatus
 from championships.models import Championship, DistrictQuota
 from championships.services import ChampionshipService
+from accounts.models import RoleChoices, ScopedRole
+from accounts.permissions import get_active_championship, role_required, get_user_roles_for_request
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.DISTRICT_USER)
 def district_approvals(request):
     """
     Implements 12_District_Athlete_Approval.png:
     District queue, quota tracker, document inspection, approve/request correction/reject.
-    Enforces quota updates transactionally.
+    Enforces district scope: District users only see and manage their own assigned district.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
+    user_roles = get_user_roles_for_request(request, championship)
+    is_admin = request.user.is_superuser or (RoleChoices.ADMIN in user_roles)
+
+    # Resolve assigned district
+    user_scoped = ScopedRole.objects.filter(user=request.user, role=RoleChoices.DISTRICT_USER).first()
+    assigned_district = user_scoped.district if user_scoped else ''
+
+    if is_admin:
+        selected_district = request.GET.get('district', '')
+    else:
+        # Strict enforcement: district user can ONLY view their assigned district
+        selected_district = assigned_district
+
+    districts = DistrictQuota.objects.filter(championship=championship) if championship else DistrictQuota.objects.none()
     
-    # Filter by user's assigned district or all if Admin
-    selected_district = request.GET.get('district', '')
-    districts = DistrictQuota.objects.filter(championship=championship)
-    
-    registrations = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete')
+    registrations = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete') if championship else ChampionshipRegistration.objects.none()
     if selected_district:
         registrations = registrations.filter(athlete__district=selected_district)
     
     quota_info = None
-    if selected_district:
+    if selected_district and championship:
         quota_info = DistrictQuota.objects.filter(championship=championship, district_name=selected_district).first()
 
     if request.method == 'POST':
@@ -33,6 +45,11 @@ def district_approvals(request):
         decision = request.POST.get('decision')
         notes = request.POST.get('notes', '')
         reg = get_object_or_404(ChampionshipRegistration, id=reg_id, championship=championship)
+
+        # Ensure district user cannot modify another district's athlete
+        if not is_admin and reg.athlete.district != assigned_district:
+            messages.error(request, "Permission denied: You can only approve athletes from your assigned district.")
+            return redirect('district_approvals')
 
         if decision == 'approve':
             success = ChampionshipService.approve_district_registration(reg.id, request.user)
@@ -56,11 +73,13 @@ def district_approvals(request):
         'championship': championship,
         'districts': districts,
         'selected_district': selected_district,
+        'assigned_district': assigned_district,
+        'is_admin': is_admin,
         'registrations': registrations,
         'quota_info': quota_info,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.VENUE_DESK)
 def venue_verification(request):
     """
     Implements 13_Venue_Verification.png:
@@ -68,7 +87,7 @@ def venue_verification(request):
     Shows matching records before selecting athlete.
     Verify identity, attendance, required documents, and issue clearance.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     query = request.GET.get('q', '').strip()
     district_filter = request.GET.get('district', '').strip()
     
@@ -80,7 +99,7 @@ def venue_verification(request):
         'Karimnagar', 'Nizamabad', 'Khammam', 'Nalgonda', 'Mahabubnagar', 'Adilabad'
     ]
 
-    if query or district_filter:
+    if (query or district_filter) and championship:
         qs = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete')
         if query:
             qs = qs.filter(
@@ -95,7 +114,7 @@ def venue_verification(request):
         matches = list(qs[:25])
 
     reg_id = request.GET.get('select_id')
-    if reg_id:
+    if reg_id and championship:
         selected_registration = ChampionshipRegistration.objects.filter(id=reg_id, championship=championship).select_related('athlete').first()
 
     if request.method == 'POST':

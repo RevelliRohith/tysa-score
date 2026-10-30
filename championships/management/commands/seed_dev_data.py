@@ -20,61 +20,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Seeding TYSA Score development fixtures...")
 
-        # 1. Admin & Officials Users
-        admin, _ = User.objects.get_or_create(
-            email='admin@tysa.org',
-            defaults={'full_name': 'Dr. K. Srinivas Rao (System Admin)', 'is_staff': True, 'is_superuser': True}
-        )
-        admin.set_password('admin123')
-        admin.save()
-        ScopedRole.objects.get_or_create(user=admin, role=RoleChoices.ADMIN)
-
-        cd_user, _ = User.objects.get_or_create(
-            email='cd@tysa.org',
-            defaults={'full_name': 'Prof. Ananya Sharma (Competition Director)', 'is_staff': True}
-        )
-        cd_user.set_password('cd123')
-        cd_user.save()
-        ScopedRole.objects.get_or_create(user=cd_user, role=RoleChoices.CD)
-
-        # 2. Universal Judges
-        judge_specs = [
-            ('d1@tysa.org', 'Smt. Lakshmi Devi', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.D_JUDGE),
-            ('d2@tysa.org', 'Sri R. Venkatraman', CertificationLevel.NATIONAL_A, 'Rangareddy', RoleChoices.D_JUDGE),
-            ('d3@tysa.org', 'Dr. Sunita Reddy', CertificationLevel.NATIONAL_B, 'Warangal', RoleChoices.D_JUDGE),
-            ('d4@tysa.org', 'Sri M. Ramesh', CertificationLevel.STATE, 'Karimnagar', RoleChoices.D_JUDGE),
-            ('time@tysa.org', 'Sri K. Prakash', CertificationLevel.STATE, 'Nizamabad', RoleChoices.TIME_JUDGE),
-            ('evaluator@tysa.org', 'Smt. Priya Varun', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.EVALUATOR),
-            ('artistry@tysa.org', 'Sri Arvind Swamy', CertificationLevel.NATIONAL_B, 'Medchal', RoleChoices.ARTISTRY_JUDGE),
-            ('chief@tysa.org', 'Dr. V. Nageshwar Rao', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.CHIEF_JUDGE),
-            ('jury@tysa.org', 'Sri B. Chandrasekhar', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.JURY),
-            ('stage@tysa.org', 'Smt. Radhika Nair', CertificationLevel.STATE, 'Hyderabad', RoleChoices.STAGE_MANAGER),
-        ]
-
-        judges_created = {}
-        for email, name, cert, dist, role in judge_specs:
-            u, _ = User.objects.get_or_create(
-                email=email,
-                defaults={'full_name': name, 'is_staff': True}
-            )
-            u.set_password('judge123')
-            u.save()
-            ScopedRole.objects.get_or_create(user=u, role=role)
-            
-            # Universal Judge Profile (Admin Approved)
-            uj, _ = UniversalJudge.objects.get_or_create(
-                user=u,
-                defaults={
-                    'certification_level': cert,
-                    'district': dist,
-                    'approval_status': ApprovalStatus.APPROVED,
-                    'approved_by': admin,
-                    'experience_years': 8
-                }
-            )
-            judges_created[email] = u
-
-        # 3. Championship & Event Configuration
+        # 1. Championship Contexts
         champ, _ = Championship.objects.get_or_create(
             code='TYSA-STATE-2026',
             defaults={
@@ -91,6 +37,109 @@ class Command(BaseCommand):
                 'status': ChampionshipStatus.IN_PROGRESS,
             }
         )
+
+        champ2, _ = Championship.objects.get_or_create(
+            code='TYSA-DIST-2025',
+            defaults={
+                'name': '2nd Telangana Inter-District Yogasana Championship 2025',
+                'year': 2025,
+                'start_date': datetime.date(2025, 8, 16),
+                'end_date': datetime.date(2025, 8, 17),
+                'registration_start': datetime.date(2025, 7, 1),
+                'registration_end': datetime.date(2025, 8, 10),
+                'age_cutoff_date': datetime.date(2025, 12, 31),
+                'venue_name': 'Kotla Vijaya Bhaskara Reddy Indoor Stadium, Yousufguda',
+                'venue_city': 'Hyderabad',
+                'rules_edition': 'Yogasana Bharat Official COP 2024–2026',
+                'status': ChampionshipStatus.COMPLETED,
+            }
+        )
+
+        # 2. Admin & Officials Users (Preserve passwords if existing)
+        admin, created = User.objects.get_or_create(
+            email='admin@tysa.org',
+            defaults={'full_name': 'Dr. K. Srinivas Rao (System Admin)', 'is_staff': True, 'is_superuser': True}
+        )
+        if created:
+            admin.set_password('admin123')
+            admin.save()
+        ScopedRole.objects.get_or_create(user=admin, role=RoleChoices.ADMIN, championship=None)
+
+        cd_user, created = User.objects.get_or_create(
+            email='cd@tysa.org',
+            defaults={'full_name': 'Prof. Ananya Sharma (Competition Director)', 'is_staff': True}
+        )
+        if created:
+            cd_user.set_password('cd123')
+            cd_user.save()
+        ScopedRole.objects.get_or_create(user=cd_user, role=RoleChoices.CD, championship=champ)
+
+        district_user, created = User.objects.get_or_create(
+            email='district@tysa.org',
+            defaults={'full_name': 'Hyderabad District Officer', 'is_staff': True}
+        )
+        if created:
+            district_user.set_password('district123')
+            district_user.save()
+        ScopedRole.objects.get_or_create(user=district_user, role=RoleChoices.DISTRICT_USER, championship=champ, district='Hyderabad')
+
+        venue_user, created = User.objects.get_or_create(
+            email='venue@tysa.org',
+            defaults={'full_name': 'Gachibowli Venue Verification Officer', 'is_staff': True}
+        )
+        if created:
+            venue_user.set_password('venue123')
+            venue_user.save()
+        ScopedRole.objects.get_or_create(user=venue_user, role=RoleChoices.VENUE_DESK, championship=champ)
+
+        # Multi-role demonstration user (CD in Champ 1, Jury in Champ 2)
+        multi_user, created = User.objects.get_or_create(
+            email='multirole@tysa.org',
+            defaults={'full_name': 'Multi-Role Official (CD + Jury)', 'is_staff': True}
+        )
+        if created:
+            multi_user.set_password('multi123')
+            multi_user.save()
+        ScopedRole.objects.get_or_create(user=multi_user, role=RoleChoices.CD, championship=champ)
+        ScopedRole.objects.get_or_create(user=multi_user, role=RoleChoices.JURY, championship=champ2)
+
+        # 3. Universal Judges
+        judge_specs = [
+            ('d1@tysa.org', 'Smt. Lakshmi Devi', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.D_JUDGE),
+            ('d2@tysa.org', 'Sri R. Venkatraman', CertificationLevel.NATIONAL_A, 'Rangareddy', RoleChoices.D_JUDGE),
+            ('d3@tysa.org', 'Dr. Sunita Reddy', CertificationLevel.NATIONAL_B, 'Warangal', RoleChoices.D_JUDGE),
+            ('d4@tysa.org', 'Sri M. Ramesh', CertificationLevel.STATE, 'Karimnagar', RoleChoices.D_JUDGE),
+            ('time@tysa.org', 'Sri K. Prakash', CertificationLevel.STATE, 'Nizamabad', RoleChoices.TIME_JUDGE),
+            ('evaluator@tysa.org', 'Smt. Priya Varun', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.EVALUATOR),
+            ('artistry@tysa.org', 'Sri Arvind Swamy', CertificationLevel.NATIONAL_B, 'Medchal', RoleChoices.ARTISTRY_JUDGE),
+            ('chief@tysa.org', 'Dr. V. Nageshwar Rao', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.CHIEF_JUDGE),
+            ('jury@tysa.org', 'Sri B. Chandrasekhar', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.JURY),
+            ('stage@tysa.org', 'Smt. Radhika Nair', CertificationLevel.STATE, 'Hyderabad', RoleChoices.STAGE_MANAGER),
+        ]
+
+        judges_created = {}
+        for email, name, cert, dist, role in judge_specs:
+            u, created = User.objects.get_or_create(
+                email=email,
+                defaults={'full_name': name, 'is_staff': True}
+            )
+            if created:
+                u.set_password('judge123')
+                u.save()
+            ScopedRole.objects.get_or_create(user=u, role=role, championship=champ)
+            
+            # Universal Judge Profile (Admin Approved)
+            uj, _ = UniversalJudge.objects.get_or_create(
+                user=u,
+                defaults={
+                    'certification_level': cert,
+                    'district': dist,
+                    'approval_status': ApprovalStatus.APPROVED,
+                    'approved_by': admin,
+                    'experience_years': 8
+                }
+            )
+            judges_created[email] = u
 
         # Age Categories
         cat_specs = [

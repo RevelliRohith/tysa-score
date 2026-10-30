@@ -1,131 +1,225 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Athlete Registration — Step 1: Personal Details — TYSA Score{% endblock %}
+{% block title %}Athlete Registration — Personal Details — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6">
-    <!-- 5-Step Progress Indicator matching Reference Flow -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-        <div class="grid grid-cols-5 text-center text-xs font-bold">
-            <div class="text-brand-600 border-b-2 border-brand-600 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-[11px] mb-1">1</span>
-                <span>Personal</span>
+<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8">
+
+    <!-- Header Section matching 05_Athlete_Personal_Details.png -->
+    <div class="max-w-4xl mx-auto mb-6">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+            <span class="text-slate-800 font-bold">Athlete Registration</span>
+            <span>/</span>
+            <span class="text-slate-500">Step 1: Personal Details</span>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Athlete registration</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Enter athlete personal details to register for the championship.</p>
             </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">2</span>
+            <a href="{% url 'athlete_returning' %}" class="px-4 py-2 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-xl border border-teal-200 transition shadow-xs flex items-center space-x-1.5 self-start">
+                <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                <span>Returning Athlete Key Access →</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 4-Step Progress Indicator matching 05_Athlete_Personal_Details.png -->
+    <div class="max-w-4xl mx-auto mb-6 bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
+        <div class="grid grid-cols-4 gap-2 text-xs font-bold">
+            <!-- Step 1: Active -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+                <span class="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[11px] font-black">1</span>
+                <span>Personal details</span>
+            </div>
+            <!-- Step 2 -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">2</span>
                 <span>Events</span>
             </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">3</span>
+            <!-- Step 3 -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">3</span>
                 <span>Asanas</span>
             </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">4</span>
-                <span>Documents</span>
-            </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">5</span>
+            <!-- Step 4 -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">4</span>
                 <span>Review</span>
             </div>
         </div>
     </div>
 
-    <!-- Registration Card matching 05_Athlete_Personal_Details.png -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
-            <div>
-                <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #05</span>
-                <h1 class="text-xl font-extrabold text-slate-900">Athlete Personal Information</h1>
-                <p class="text-xs text-slate-500">Provide official details as shown on birth certificate or Aadhaar.</p>
-            </div>
-            <a href="{% url 'athlete_returning' %}" class="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline">
-                Returning Athlete with Key? →
-            </a>
+    <!-- Registration Form Card matching 05_Athlete_Personal_Details.png -->
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+        <div class="pb-4 border-b border-slate-100 mb-6 flex items-center justify-between">
+            <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+                <span>Personal details</span>
+            </h2>
+            <span class="text-[11px] font-semibold text-slate-400">Fields marked * are mandatory</span>
         </div>
 
-        <form method="POST" class="space-y-6">
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Full name -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">First Name *</label>
-                    <input type="text" name="first_name" required value="{{ athlete.first_name|default:'' }}" placeholder="Aarav"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Full name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="full_name" required value="{{ athlete.first_name }} {{ athlete.last_name }}" placeholder="Arun Kumar"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
                 </div>
 
+                <!-- Mobile number -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Last Name / Surname *</label>
-                    <input type="text" name="last_name" required value="{{ athlete.last_name|default:'' }}" placeholder="Reddy"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Mobile number <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="tel" name="mobile" required value="{{ athlete.mobile|default:'' }}" placeholder="9876543210"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
                 </div>
 
+                <!-- Father's name -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date of Birth *</label>
-                    <input type="date" name="dob" required value="{{ athlete.dob|date:'Y-m-d'|default:'2010-04-15' }}"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Father's name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="guardian_name" required value="{{ athlete.guardian_name|default:'' }}" placeholder="Ramesh Kumar"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
                 </div>
 
+                <!-- Email address -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Gender Division *</label>
-                    <select name="gender" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-                        <option value="M" {% if athlete.gender == 'M' %}selected{% endif %}>Male</option>
-                        <option value="F" {% if athlete.gender == 'F' %}selected{% endif %}>Female</option>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Email address <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="email" name="email" required value="{{ athlete.email|default:'' }}" placeholder="arunkumar@example.com"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
+                </div>
+
+                <!-- Date of birth -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Date of birth <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="date" name="dob" required value="{{ athlete.date_of_birth|date:'Y-m-d'|default:'2010-08-15' }}"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
+                </div>
+
+                <!-- Academy (optional) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Academy (optional)
+                    </label>
+                    <input type="text" name="academy_name" value="{{ athlete.academy_name|default:'' }}" placeholder="Sri Sai Yogasana Academy"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
+                </div>
+
+                <!-- Gender -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Gender <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center justify-center space-x-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-teal-50 hover:border-teal-300 transition text-xs font-bold">
+                            <input type="radio" name="gender" value="M" checked class="text-teal-600 focus:ring-teal-500">
+                            <span>Male</span>
+                        </label>
+                        <label class="flex items-center justify-center space-x-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-teal-50 hover:border-teal-300 transition text-xs font-bold">
+                            <input type="radio" name="gender" value="F" class="text-teal-600 focus:ring-teal-500">
+                            <span>Female</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- District -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        District <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="district" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-900 transition">
+                        <option value="Hyderabad">Hyderabad</option>
+                        <option value="Rangareddy">Rangareddy</option>
+                        <option value="Medchal-Malkajgiri">Medchal-Malkajgiri</option>
+                        <option value="Warangal">Warangal</option>
+                        <option value="Mancherial" selected>Mancherial</option>
+                        <option value="Karimnagar">Karimnagar</option>
+                        <option value="Nizamabad">Nizamabad</option>
+                        <option value="Khammam">Khammam</option>
+                        <option value="Nalgonda">Nalgonda</option>
+                        <option value="Mahabubnagar">Mahabubnagar</option>
+                        <option value="Adilabad">Adilabad</option>
                     </select>
                 </div>
 
+                <!-- Aadhaar number -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Father / Guardian Name *</label>
-                    <input type="text" name="guardian_name" required value="{{ athlete.guardian_name|default:'' }}" placeholder="Sri K. Srinivas Reddy"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Aadhaar number <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="aadhaar_number" required maxlength="12" placeholder="Enter 12 digits"
+                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-mono font-semibold text-slate-900 transition">
                 </div>
 
+                <!-- Photo Upload Box -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">District of Representation *</label>
-                    <select name="district" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-                        {% for d in districts %}
-                        <option value="{{ d }}" {% if athlete.district == d %}selected{% endif %}>{{ d }}</option>
-                        {% endfor %}
-                    </select>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Photo <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="border-2 border-dashed border-slate-200 hover:border-teal-400 rounded-xl p-3 text-center cursor-pointer transition bg-slate-50 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                                <i data-lucide="camera" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-xs font-bold text-slate-800">Upload athlete photo</div>
+                                <div class="text-[10px] text-slate-400">JPG or PNG, max 2 MB</div>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-white border border-slate-200 rounded-lg shadow-2xs">Browse</span>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Contact *</label>
-                    <input type="tel" name="mobile" required value="{{ athlete.mobile|default:'' }}" placeholder="9848012345"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email (Optional)</label>
-                    <input type="email" name="email" value="{{ athlete.email|default:'' }}" placeholder="athlete@example.com"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-                </div>
-
-                <div class="col-span-1 md:col-span-2">
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Yoga Academy / Club Name (Optional)</label>
-                    <input type="text" name="academy" value="{{ athlete.academy|default:'' }}" placeholder="Telangana State Yoga Academy, Gachibowli"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
+                <!-- Age proof document (Span full width) -->
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Age proof document <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="border-2 border-dashed border-slate-200 hover:border-teal-400 rounded-xl p-4 text-center cursor-pointer transition bg-slate-50 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                                <i data-lucide="file-text" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-xs font-bold text-slate-800">Upload age proof (Birth Certificate / Aadhaar / Passport)</div>
+                                <div class="text-[10px] text-slate-400">PDF, JPG or PNG, max 5 MB</div>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 text-xs font-bold text-teal-700 bg-white border border-slate-200 rounded-lg shadow-2xs">Upload file</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Identity Architecture Notice -->
-            <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 text-xs text-brand-900 flex items-center space-x-3">
-                <i data-lucide="shield-alert" class="w-5 h-5 text-brand-600 shrink-0"></i>
-                <div>
-                    <span class="font-bold">Permanent Identity Notice:</span> You will receive a permanent Public Athlete ID and a Private Access Key upon registration. Keep your private key safe for future logins.
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between pt-4 border-t border-slate-100">
-                <a href="{% url 'admin_dashboard' %}" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-                    Cancel
-                </a>
-                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
-                    <span>Continue to Events Selection</span>
+            <!-- Form Actions -->
+            <div class="flex items-center justify-end pt-4 border-t border-slate-100">
+                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                    <span>Continue to Events</span>
                     <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
             </div>
         </form>
     </div>
+
+    <!-- Sub-footer -->
+    <div class="max-w-4xl mx-auto mt-10 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+        <span>TYSA Score | Telangana State Yogasana Championship Management</span>
+        <span class="mx-2">•</span>
+        <span>Design preview - Sample data</span>
+    </div>
+
 </div>
 {% endblock %}

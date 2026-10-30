@@ -9,15 +9,76 @@ from championships.models import Championship, EventConfiguration, AgeCategory, 
 from registrations.models import EventEntry, RegistrationStatus
 from judges.models import UniversalJudge, ApprovalStatus
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission
+from accounts.models import RoleChoices
+from accounts.permissions import get_active_championship, role_required
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
+def cd_dashboard(request):
+    """
+    Implements Competition Director (CD) Dashboard:
+    Championship readiness, technical operational governance, lottery draw status,
+    panel configurations, live stage monitoring, and active correction grants.
+    """
+    championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected or assigned.")
+        return redirect('no_role_assigned')
+
+    from corrections.models import CDCorrectionGrant, GrantStatus
+
+    # Active grants for this championship
+    active_grants = CDCorrectionGrant.objects.filter(
+        performance__event_entry__registration__championship=championship,
+        status=GrantStatus.OPEN
+    ).select_related('performance', 'judge_submission', 'judge_submission__judge')
+
+    locked_rolls = MasterRoll.objects.filter(championship=championship, is_locked=True).count()
+    total_rolls = MasterRoll.objects.filter(championship=championship).count()
+    cleared_athletes = EventEntry.objects.filter(
+        registration__championship=championship,
+        registration__status=RegistrationStatus.VENUE_CLEARED
+    ).count()
+
+    panels = JudgePanel.objects.filter(championship=championship)
+    total_panels = panels.count()
+    active_panels = panels.filter(is_active=True).count()
+    approved_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.APPROVED).count()
+
+    active_batches = StageBatch.objects.filter(panel__championship=championship, status='ACTIVE').count()
+    scored_performances = Performance.objects.filter(
+        event_entry__registration__championship=championship,
+        status__in=[PerformanceStatus.SUBMITTED, PerformanceStatus.CHIEF_REVIEWED, PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED]
+    ).count()
+    cd_finalized_count = Performance.objects.filter(
+        event_entry__registration__championship=championship,
+        status=PerformanceStatus.CD_FINALIZED
+    ).count()
+
+    district_count = championship.district_quotas.count()
+
+    return render(request, 'competition/cd_dashboard.html', {
+        'championship': championship,
+        'active_grants': active_grants,
+        'locked_rolls': locked_rolls,
+        'total_rolls': total_rolls,
+        'cleared_athletes': cleared_athletes,
+        'total_panels': total_panels,
+        'active_panels': active_panels,
+        'approved_judges': approved_judges,
+        'active_batches': active_batches,
+        'scored_performances': scored_performances,
+        'cd_finalized_count': cd_finalized_count,
+        'district_count': district_count,
+    })
+
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def district_draw(request):
     """
     Implements 14_District_Draw_and_Master_Roll.png:
     District lottery draw, auditable round-robin performance order generation,
     cycle table, and master roll finalisation/lock.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     event_configs = championship.event_configurations.filter(is_enabled=True)
     selected_event_id = request.GET.get('event_id')
     current_event = event_configs.filter(id=selected_event_id).first() if selected_event_id else event_configs.first()
@@ -125,14 +186,14 @@ def district_draw(request):
         'roll_entries': roll_entries,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def panel_assignments(request):
     """
     Implements 15_CD_Judge_Panel_Assignment.png:
     Competition Director (CD) judge panel assignments, conflict detection,
     and stage schedule.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     panels = JudgePanel.objects.filter(championship=championship).select_related('event_config', 'chief_judge', 'stage_manager')
     approved_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.APPROVED).select_related('user')
 
@@ -166,14 +227,14 @@ def panel_assignments(request):
         'approved_judges': approved_judges,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.STAGE_MANAGER, RoleChoices.CD)
 def stage_manager(request):
     """
     Implements 16. stage manager.jpg:
     Stage queue, batch push controls (1-5 prelims / 1-3 finals), per-judge submission monitor,
     second-screen controls.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     panels = JudgePanel.objects.filter(championship=championship, is_active=True)
     current_panel = panels.first()
 
@@ -242,7 +303,7 @@ def second_screen(request):
     Audience second screen display visual treatment and latest approved results mode.
     High-contrast stage standings, active batch display, and synchronization status.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     active_batch = StageBatch.objects.filter(status='ACTIVE').first()
     
     # Latest released performances

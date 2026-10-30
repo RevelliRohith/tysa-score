@@ -69,15 +69,43 @@ class JudgePanel(models.Model):
     d3_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d3_panels')
     d4_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d4_panels')
     time_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='time_panels')
+    time_judge_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='time_panels_2')
     evaluator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluator_panels')
+    evaluator_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluator_panels_2')
     artistry_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='artistry_panels')
+    artistry_judge_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='artistry_panels_2')
     stage_manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_panels')
     
+    age_category = models.ForeignKey('championships.AgeCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='panels')
+    gender = models.CharField(max_length=10, blank=True, choices=[('M', 'Male'), ('F', 'Female')])
+    session_name = models.CharField(max_length=100, blank=True, default="Morning Session")
+    scheduled_start = models.DateTimeField(null=True, blank=True)
+    scheduled_end = models.DateTimeField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    d_judges_count = models.PositiveIntegerField(default=4, help_text="Configurable D-seats: typically 4 for Traditional")
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.stage_name} - {self.event_config.get_event_type_display()} ({self.round_type})"
+        cat_str = f" - {self.age_category.name}" if self.age_category else ""
+        gender_str = f" ({self.gender})" if self.gender else ""
+        return f"{self.stage_name} - {self.event_config.get_event_type_display()}{cat_str}{gender_str} ({self.round_type})"
+
+class PanelSeatAssignment(models.Model):
+    panel = models.ForeignKey(JudgePanel, on_delete=models.CASCADE, related_name='seat_assignments')
+    seat_name = models.CharField(max_length=50, help_text="e.g. D1, D2, D3, D4, TIME_1, TIME_2, ARTISTRY_1, ARTISTRY_2, EVALUATOR_1, EVALUATOR_2, CHIEF, STAGE")
+    judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='panel_seats')
+    version = models.PositiveIntegerField(default=1)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_seats')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['seat_name']
+
+    def __str__(self):
+        return f"{self.panel.stage_name} - {self.seat_name}: {self.judge.email}"
 
 class StageBatch(models.Model):
     panel = models.ForeignKey(JudgePanel, on_delete=models.CASCADE, related_name='batches')

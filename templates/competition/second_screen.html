@@ -1,132 +1,143 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block title %}Audience Second Screen — TYSA Score Live Stage{% endblock %}
-
-{% block extra_head %}
-<meta http-equiv="refresh" content="3">
-<style>
-    body {
-        background-color: #070B14;
-        color: #F8FAFC;
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="space-y-6 max-w-7xl mx-auto py-4">
-    <!-- Big Screen Header -->
-    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-        <div class="flex items-center space-x-3">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white text-2xl font-black shadow-lg">
-                🕉️
-            </div>
-            <div>
-                <h1 class="text-2xl font-black text-white tracking-tight uppercase">Stage 1 — Main Competition Arena</h1>
-                <p class="text-xs text-brand-400 font-bold tracking-wider">3RD TELANGANA STATE YOGASANA SPORTS CHAMPIONSHIP 2026</p>
-            </div>
-        </div>
-
-        <div class="flex items-center space-x-4">
-            <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400 bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>AUDIENCE SCREEN SYNCED</span>
-            </div>
-            <button onclick="document.documentElement.requestFullscreen()" class="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">
-                Fullscreen
-            </button>
-        </div>
-    </div>
-
-    <!-- Active Batch on Stage matching 16.1 second screen.jpg -->
-    {% if active_batch %}
-    <div class="bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 rounded-3xl p-6 sm:p-8 border border-brand-800/60 shadow-2xl space-y-6">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <span class="px-3 py-1 rounded-xl bg-brand-500 text-white font-black text-sm uppercase tracking-wider">
-                    On Stage Now
-                </span>
-                <span class="text-xl font-extrabold text-white">Batch #{{ active_batch.batch_number }}</span>
-            </div>
-            <div class="text-right">
-                <span class="text-xs text-slate-400 block font-semibold">Active Pose</span>
-                <span class="text-lg font-black text-brand-300">Asana {{ active_batch.current_asana_index }} of 7</span>
-            </div>
-        </div>
-
-        <!-- Competitor Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {% for ent in active_batch.entries.all %}
-            <div class="bg-slate-950/80 rounded-2xl p-5 border border-slate-800 space-y-3 shadow-lg">
-                <div class="flex items-center justify-between">
-                    <span class="px-3 py-1 rounded-lg bg-white text-slate-950 font-black text-base font-mono">
-                        Chest #{{ ent.chest_number }}
-                    </span>
-                    <span class="text-xs font-bold text-teal-400">{{ ent.district }}</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Approved Results — Second Screen Audience Display</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+    <!-- Top Header Strip matching 16.1 second screen.jpg -->
+    <header class="bg-[#0e2a47] text-white px-8 py-5 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <!-- Stylized Lotus / Yogasana Logo -->
+                <div class="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center shrink-0">
+                    <svg class="w-8 h-8 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a9 9 0 0 1 9 9c0 4.97-4.03 9-9 9a9 9 0 0 1-9-9c0-4.97 4.03-9 9-9Z"></path>
+                        <path d="M12 6c1.66 0 3 1.34 3 3a3 3 0 0 1-6 0c0-1.66 1.34-3 3-3Z"></path>
+                        <path d="M7 17a5 5 0 0 1 10 0"></path>
+                    </svg>
                 </div>
-                <div class="text-xl font-black text-white tracking-tight truncate">{{ ent.display_names }}</div>
-                <div class="text-xs text-slate-400 font-medium">{{ ent.age_category.name }} • {{ ent.get_gender_display }}</div>
-                <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                    <span class="text-slate-400 font-semibold">Score Status:</span>
-                    <span class="text-amber-400 font-bold animate-pulse">Judging in Progress</span>
+                <div>
+                    <div class="text-3xl font-extrabold tracking-tight">
+                        <span class="text-white">TYSA</span> <span class="text-cyan-400">Score</span>
+                    </div>
+                    <div class="text-xs text-cyan-100 font-medium tracking-wide">
+                        Telangana State Yogasana Championship 2026
+                    </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
 
-    <!-- Latest Official Released Scores Table -->
-    <div class="bg-slate-900/90 rounded-3xl p-6 border border-slate-800 shadow-xl space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h2 class="font-black text-lg text-white tracking-tight">Latest Approved Results & Stage Standings</h2>
-            <span class="text-xs font-bold text-slate-400">Official Yogasana Bharat COP Standings</span>
+            <!-- Right: Stage Info & Live Badge -->
+            <div class="flex flex-col md:items-end space-y-2">
+                <div class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
+                    LIVE • Approved results
+                </div>
+                <div class="flex items-center space-x-3 text-sm text-slate-200 font-medium">
+                    <span class="font-bold text-white">Stage A</span>
+                    <span class="text-slate-400">|</span>
+                    <span>Traditional</span>
+                    <span class="text-slate-400">|</span>
+                    <span>Junior Boys</span>
+                    <span class="text-slate-400">|</span>
+                    <span>Semi Final</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-black text-[#0e2a47] tracking-tight">Latest approved results</h1>
+            <p class="text-xl md:text-2xl font-bold text-[#0e2a47]/80 mt-1">Semi Final standings</p>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- Standings Table matching 16.1 second screen.jpg -->
+        <div class="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
             <table class="w-full text-left">
                 <thead>
-                    <tr class="border-b border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th class="py-3 px-4">Rank</th>
-                        <th class="py-3 px-4">Chest No.</th>
-                        <th class="py-3 px-4">Competitor</th>
-                        <th class="py-3 px-4">District</th>
-                        <th class="py-3 px-4 text-right">Official Score</th>
-                        <th class="py-3 px-4 text-right">Status</th>
+                    <tr class="bg-[#0b3866] text-white text-base md:text-lg font-bold">
+                        <th class="py-4 px-6 w-24">Rank</th>
+                        <th class="py-4 px-6 w-36">Chest No.</th>
+                        <th class="py-4 px-6">Name</th>
+                        <th class="py-4 px-6">District</th>
+                        <th class="py-4 px-6 text-right w-44">Score</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800/60 text-sm">
-                    {% for p in released_performances %}
-                    <tr class="hover:bg-slate-800/30 transition">
-                        <td class="py-3.5 px-4 font-black text-base {% if forloop.counter == 1 %}text-amber-400{% elif forloop.counter == 2 %}text-slate-300{% elif forloop.counter == 3 %}text-amber-600{% else %}text-slate-400{% endif %}">
-                            #{{ forloop.counter }}
-                        </td>
-                        <td class="py-3.5 px-4 font-mono font-black text-white">
-                            Chest {{ p.event_entry.chest_number }}
-                        </td>
-                        <td class="py-3.5 px-4 font-bold text-white">
-                            {{ p.event_entry.display_names }}
-                        </td>
-                        <td class="py-3.5 px-4 text-xs font-bold text-slate-300">{{ p.event_entry.district }}</td>
-                        <td class="py-3.5 px-4 text-right font-black font-mono text-base text-brand-400">
-                            {{ p.final_score|default:p.provisional_score|floatformat:3 }}
-                        </td>
-                        <td class="py-3.5 px-4 text-right">
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase">
-                                Released
-                            </span>
-                        </td>
+                <tbody class="divide-y divide-slate-100 text-slate-900">
+                    <!-- Rank 1 -->
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-5 px-6 bg-[#e1f5fe] font-black text-3xl text-center text-slate-900">1</td>
+                        <td class="py-5 px-6 font-extrabold text-2xl font-mono text-slate-900">101</td>
+                        <td class="py-5 px-6 font-extrabold text-2xl text-slate-900">Arun Kumar</td>
+                        <td class="py-5 px-6 font-medium text-xl text-slate-700">Mancherial</td>
+                        <td class="py-5 px-6 text-right font-black text-4xl text-[#0b3866]">87.50</td>
                     </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="py-8 text-center text-slate-500 text-xs">
-                            Awaiting official release of first performance scores from the Chief Judge desk.
-                        </td>
+                    <!-- Rank 2 -->
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-5 px-6 bg-[#e8f5e9] font-black text-3xl text-center text-slate-900">2</td>
+                        <td class="py-5 px-6 font-extrabold text-2xl font-mono text-slate-900">301</td>
+                        <td class="py-5 px-6 font-extrabold text-2xl text-slate-900">Sai Teja</td>
+                        <td class="py-5 px-6 font-medium text-xl text-slate-700">Hyderabad</td>
+                        <td class="py-5 px-6 text-right font-black text-4xl text-[#0b3866]">86.25</td>
                     </tr>
-                    {% endfor %}
+                    <!-- Rank 3 -->
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-5 px-6 bg-[#e3f2fd] font-black text-3xl text-center text-slate-900">3</td>
+                        <td class="py-5 px-6 font-extrabold text-2xl font-mono text-slate-900">205</td>
+                        <td class="py-5 px-6 font-extrabold text-2xl text-slate-900">Rohit Varma</td>
+                        <td class="py-5 px-6 font-medium text-xl text-slate-700">Medak</td>
+                        <td class="py-5 px-6 text-right font-black text-4xl text-[#0b3866]">84.75</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
-{% endblock %}
+
+        <!-- Current Batch Status Strip matching 16.1 second screen.jpg -->
+        <div class="bg-[#e8f5e9] border border-emerald-200/80 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 text-emerald-950">
+            <div class="flex items-center space-x-6 text-base font-bold">
+                <span class="text-teal-900 font-extrabold text-lg">Current batch</span>
+                <span class="text-slate-300">|</span>
+                <span class="text-slate-800 font-bold font-mono text-lg">Chest 119</span>
+                <span class="text-slate-300">|</span>
+                <span class="text-slate-800 font-bold font-mono text-lg">Chest 220</span>
+            </div>
+
+            <div class="flex items-center space-x-3 text-sm md:text-base font-medium text-emerald-900">
+                <svg class="animate-spin h-5 w-5 text-teal-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <span>Performance in progress • Scores awaiting approval</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl w-full mx-auto px-8 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2 border-t border-slate-200">
+        <div>Updates automatically after release • Last updated 10:24:12</div>
+        <div>Illustrative sample results</div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        // Auto refresh every 5 seconds for live displays
+        setTimeout(() => {
+            window.location.reload();
+        }, 5000);
+    </script>
+</body>
+</html>

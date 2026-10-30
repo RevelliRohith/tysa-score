@@ -4,9 +4,24 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from django.core.exceptions import PermissionDenied, ValidationError
 from .models import CDCorrectionGrant, GrantStatus
+from .services import (
+    grant_correction_access,
+    revoke_correction_access,
+    resubmit_judge_correction,
+    finalize_performance_by_cd
+)
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem
 from championships.models import Championship, EventConfiguration
+from accounts.models import RoleChoices
+from accounts.permissions import (
+    get_active_championship,
+    role_required,
+    user_can_grant_correction,
+    get_user_roles_for_request,
+    get_user_landing_url
+)
 
 @login_required
 def cd_corrections(request):
@@ -14,17 +29,30 @@ def cd_corrections(request):
     Implements 26_CD_Correction_and_Finalisation.png:
     CD searches performance by chest number, inspects marks,
     grants access to 1 judge's entire submission for 1 performance with reason,
-    revokes access or finalises score. Restricted to Staff/Admin/CD.
-    """
-    # Strict permission check: CD, Admin, Superuser only
-    is_authorized = request.user.is_superuser or request.user.scoped_roles.filter(role__in=['CD', 'ADMIN']).exists()
-    if not is_authorized:
-        messages.error(request, "Permission denied. Only Competition Director or Admin can access CD Corrections.")
-        return redirect('admin_dashboard')
+    revokes access or finalises score.
 
-    championship = Championship.objects.first()
+    Strict Championship Isolation & Transactional Governance:
+    - Every performance, submission, and grant lookup is strictly scoped to the active championship.
+    - Only an assigned CD may grant/revoke correction access or finalize scores.
+    - Only the original authorized judge may resubmit their corrected performance.
+    - All mutations route through transactional production services.
+    """
+    championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected or assigned.")
+        return redirect('no_role_assigned')
+
+    can_unlock = user_can_grant_correction(request.user, championship)
+
+    # For GET requests, ensure user is Admin or CD on this championship
+    if request.method == 'GET':
+        user_roles = get_user_roles_for_request(request, championship=championship)
+        is_cd_or_admin = (RoleChoices.ADMIN in user_roles or RoleChoices.CD in user_roles)
+        if not is_cd_or_admin:
+            messages.warning(request, "Access restricted: Only Competition Director or Admin can access the CD Correction Desk.")
+            return redirect(get_user_landing_url(request))
+
     chest_query = request.GET.get('chest', '').strip()
-    
     selected_perf = None
     if chest_query:
         selected_perf = Performance.objects.filter(
@@ -32,7 +60,10 @@ def cd_corrections(request):
             event_entry__chest_number=chest_query
         ).select_related('event_entry__registration__athlete').first()
 
-    grants = CDCorrectionGrant.objects.filter(status=GrantStatus.OPEN).select_related('performance__event_entry', 'judge_submission__judge')
+    grants = CDCorrectionGrant.objects.filter(
+        performance__event_entry__registration__championship=championship,
+        status=GrantStatus.OPEN
+    ).select_related('performance__event_entry', 'judge_submission__judge')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -41,76 +72,82 @@ def cd_corrections(request):
             sub_id = request.POST.get('submission_id')
             reason = request.POST.get('reason', '').strip()
 
-            perf = get_object_or_404(Performance, id=perf_id)
-            sub = get_object_or_404(JudgeSubmission, id=sub_id, performance=perf)
-
-            # Open 1 judge's entire submission only
-            grant = CDCorrectionGrant.objects.create(
-                performance=perf,
-                judge_submission=sub,
-                granted_by=request.user,
-                reason=reason,
-                status=GrantStatus.OPEN
-            )
-            # Unlock that judge's sheet
-            sub.is_locked = False
-            sub.is_draft = True
-            sub.save()
-
-            messages.success(request, f"Correction access granted to {sub.get_judge_role_display()} for Chest {perf.chest_number}. Reason recorded: {reason}")
-            return redirect(f"/cd/corrections/?chest={perf.chest_number}")
+            try:
+                grant = grant_correction_access(
+                    user=request.user,
+                    performance_id=perf_id,
+                    submission_id=sub_id,
+                    reason=reason,
+                    championship=championship
+                )
+                messages.success(
+                    request,
+                    f"Correction access granted to {grant.judge_submission.get_judge_role_display()} "
+                    f"for Chest {grant.performance.chest_number}. Reason recorded: {grant.reason}"
+                )
+                return redirect(f"/cd/corrections/?chest={grant.performance.chest_number}")
+            except (ValidationError, PermissionDenied) as e:
+                err_msg = e.message if hasattr(e, 'message') else str(e)
+                messages.error(request, err_msg)
+                return redirect(f"/cd/corrections/?chest={chest_query}")
 
         elif action == 'resubmit_correction':
-            # Resubmits and locks the corrected submission, transitioning grant to RESUBMITTED
             grant_id = request.POST.get('grant_id')
-            grant = get_object_or_404(CDCorrectionGrant, id=grant_id, status=GrantStatus.OPEN)
-            sub = grant.judge_submission
-            sub.is_locked = True
-            sub.is_draft = False
-            sub.is_submitted = True
-            sub.version += 1
-            sub.submitted_at = datetime.datetime.now()
-            sub.save()
-
-            grant.status = GrantStatus.RESUBMITTED
-            grant.resubmitted_at = datetime.datetime.now()
-            grant.save()
-
-            messages.success(request, f"Corrected submission v{sub.version} for {sub.get_judge_role_display()} relocked successfully.")
-            return redirect(f"/cd/corrections/?chest={grant.performance.chest_number}")
+            try:
+                grant, sub = resubmit_judge_correction(
+                    user=request.user,
+                    grant_id=grant_id,
+                    championship=championship
+                )
+                messages.success(
+                    request,
+                    f"Corrected submission v{sub.version} for {sub.get_judge_role_display()} "
+                    f"officially resubmitted and relocked."
+                )
+                return redirect(f"/cd/corrections/?chest={grant.performance.chest_number}")
+            except (ValidationError, PermissionDenied) as e:
+                err_msg = e.message if hasattr(e, 'message') else str(e)
+                messages.error(request, err_msg)
+                return redirect(f"/cd/corrections/?chest={chest_query}")
 
         elif action == 'revoke_grant':
             grant_id = request.POST.get('grant_id')
-            grant = get_object_or_404(CDCorrectionGrant, id=grant_id)
-            grant.status = GrantStatus.REVOKED
-            grant.revoked_at = datetime.datetime.now()
-            grant.revoked_by = request.user
-            grant.save()
-
-            grant.judge_submission.is_locked = True
-            grant.judge_submission.save()
-
-            messages.info(request, f"Correction access revoked for Grant #{grant.id}.")
+            try:
+                grant = revoke_correction_access(
+                    user=request.user,
+                    grant_id=grant_id,
+                    championship=championship
+                )
+                messages.info(request, f"Correction access revoked for Grant #{grant.id}.")
+            except (ValidationError, PermissionDenied) as e:
+                err_msg = e.message if hasattr(e, 'message') else str(e)
+                messages.error(request, err_msg)
             return redirect('cd_corrections')
 
         elif action == 'cd_finalise':
             perf_id = request.POST.get('performance_id')
-            perf = get_object_or_404(Performance, id=perf_id)
-            perf.status = PerformanceStatus.CD_FINALIZED
-            perf.cd_finalized_by = request.user
-            perf.cd_finalized_at = datetime.datetime.now()
-            perf.save()
-            messages.success(request, f"Performance for Chest {perf.chest_number} officially FINALIZED and locked by CD.")
-            return redirect(f"/cd/corrections/?chest={perf.chest_number}")
+            try:
+                perf = finalize_performance_by_cd(
+                    user=request.user,
+                    performance_id=perf_id,
+                    championship=championship
+                )
+                messages.success(request, f"Performance for Chest {perf.chest_number} officially FINALIZED and locked by CD.")
+                return redirect(f"/cd/corrections/?chest={perf.chest_number}")
+            except (ValidationError, PermissionDenied) as e:
+                err_msg = e.message if hasattr(e, 'message') else str(e)
+                messages.error(request, err_msg)
+                return redirect(f"/cd/corrections/?chest={chest_query}")
 
     return render(request, 'corrections/cd_corrections.html', {
         'championship': championship,
         'chest_query': chest_query,
         'selected_perf': selected_perf,
         'active_grants': grants,
+        'can_unlock': can_unlock,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.JURY, RoleChoices.CD)
 def jury_view(request):
     """
     Implements 25 jury.png:
@@ -119,9 +156,11 @@ def jury_view(request):
     per-judge breakdown, sequence marks, and revision history.
     Cannot edit scores, unlock judges, or finalise results.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     query = request.GET.get('q', '').strip()
     district = request.GET.get('district', '').strip()
+    event_id = request.GET.get('event_id')
+    round_type = request.GET.get('round_type')
 
     performances = Performance.objects.filter(
         event_entry__registration__championship=championship
@@ -135,17 +174,26 @@ def jury_view(request):
         )
     if district:
         performances = performances.filter(event_entry__registration__athlete__district=district)
+    if event_id:
+        performances = performances.filter(event_entry__event_config_id=event_id)
+    if round_type:
+        performances = performances.filter(round_type=round_type)
 
     selected_perf_id = request.GET.get('select_id')
     selected_perf = performances.filter(id=selected_perf_id).first() if selected_perf_id else performances.first()
 
     submissions = selected_perf.submissions.prefetch_related('items').all() if selected_perf else []
 
+    event_configs = championship.event_configurations.filter(is_enabled=True) if championship else []
+
     return render(request, 'corrections/jury.html', {
         'championship': championship,
         'query': query,
         'district': district,
-        'performances': performances[:20],
+        'event_id': event_id,
+        'round_type': round_type,
+        'event_configs': event_configs,
+        'performances': performances[:25],
         'selected_perf': selected_perf,
         'submissions': submissions,
     })

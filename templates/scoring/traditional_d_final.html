@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Traditional D Judge — FINAL — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6 py-2">
+    <!-- Top Metadata Card matching 35_Traditional_Final_Multiple_Athletes.png -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Traditional D Judge — FINAL</h1>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Maximum 3 simultaneous athletes</p>
+        </div>
+
+        <div class="flex items-center space-x-6 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div>
+                <span class="text-slate-400 block font-medium">Event</span>
+                <span class="font-bold text-slate-900 text-sm">Traditional Yogasana</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-medium">Round</span>
+                <span class="font-bold text-slate-900 text-sm">Final</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-medium">Judge</span>
+                <span class="font-bold text-teal-800 text-sm">D-Judge</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sequence & Pose Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+            <span class="text-xl font-black text-slate-900">Asana <span class="text-teal-700">3</span> of 7</span>
+            <div class="flex items-center space-x-2">
+                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">1</span>
+                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">2</span>
+                <span class="w-8 h-8 rounded-full bg-teal-800 text-white font-bold flex items-center justify-center text-xs shadow-xs">3</span>
+                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">4</span>
+                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">5</span>
+                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">6</span>
+                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">7</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-6">
+            <div>
+                <span class="text-[10px] text-slate-400 font-medium block">Current asana</span>
+                <span class="text-sm font-mono text-slate-400 font-bold">SAMPLE-003</span>
+                <span class="text-base font-bold text-slate-900 block">Vrikshasana</span>
+                <span class="text-xs text-slate-500">Tree Pose</span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-2xl shrink-0">
+                🧘
+            </div>
+        </div>
+    </div>
+
+    <!-- 3 Finalist Athletes Cards Grid matching 35_Traditional_Final_Multiple_Athletes.png -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Chest 101 -->
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="bg-teal-800 text-white p-3.5 px-4 flex items-center justify-between">
+                <span class="font-mono font-black text-lg">Chest 101</span>
+                <span class="text-xs text-teal-100 font-medium">Asana 3 of 7</span>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex items-center space-x-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="text-3xl">🧘</div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 font-mono block">SAMPLE-003</span>
+                        <div class="font-bold text-sm text-slate-900">Vrikshasana</div>
+                        <div class="text-xs text-slate-500">Tree Pose</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 text-center items-end text-xs">
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Posture / 6</span>
+                        <input type="number" step="0.25" value="5.00" class="w-full text-center py-1.5 border border-slate-300 rounded-lg font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Stability / 2</span>
+                        <input type="number" step="0.25" value="1.50" class="w-full text-center py-1.5 border border-slate-300 rounded-lg font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Time / 2</span>
+                        <div class="py-1.5 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-600">2.00</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5">
+                        <span class="text-[10px] text-emerald-800 font-semibold block">Total</span>
+                        <span class="text-lg font-black text-emerald-950">8.50</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chest 102 -->
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="bg-teal-800 text-white p-3.5 px-4 flex items-center justify-between">
+                <span class="font-mono font-black text-lg">Chest 102</span>
+                <span class="text-xs text-teal-100 font-medium">Asana 3 of 7</span>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex items-center space-x-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="text-3xl">🧘</div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 font-mono block">SAMPLE-003</span>
+                        <div class="font-bold text-sm text-slate-900">Vrikshasana</div>
+                        <div class="text-xs text-slate-500">Tree Pose</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 text-center items-end text-xs">
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Posture / 6</span>
+                        <input type="number" step="0.25" value="4.50" class="w-full text-center py-1.5 border border-slate-300 rounded-lg font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Stability / 2</span>
+                        <input type="number" step="0.25" value="1.50" class="w-full text-center py-1.5 border border-slate-300 rounded-lg font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Time / 2</span>
+                        <div class="py-1.5 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-600">2.00</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5">
+                        <span class="text-[10px] text-emerald-800 font-semibold block">Total</span>
+                        <span class="text-lg font-black text-emerald-950">8.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chest 103 -->
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="bg-teal-800 text-white p-3.5 px-4 flex items-center justify-between">
+                <span class="font-mono font-black text-lg">Chest 103</span>
+                <span class="text-xs text-teal-100 font-medium">Asana 3 of 7</span>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex items-center space-x-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="text-3xl">🧘</div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 font-mono block">SAMPLE-003</span>
+                        <div class="font-bold text-sm text-slate-900">Vrikshasana</div>
+                        <div class="text-xs text-slate-500">Tree Pose</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 text-center items-end text-xs">
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Posture / 6</span>
+                        <input type="number" step="0.25" value="5.50" class="w-full text-center py-1.5 border border-slate-300 rounded-lg font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Stability / 2</span>
+                        <input type="number" step="0.25" value="1.50" class="w-full text-center py-1.5 border border-slate-300 rounded-lg font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block mb-1">Time / 2</span>
+                        <div class="py-1.5 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-600">2.00</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5">
+                        <span class="text-[10px] text-emerald-800 font-semibold block">Total</span>
+                        <span class="text-lg font-black text-emerald-950">9.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Round Progress Table (all 7 asanas) matching 35_Traditional_Final_Multiple_Athletes.png -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
+        <h2 class="text-sm font-bold text-slate-900">Round progress <span class="text-slate-500 font-normal">(all 7 asanas)</span></h2>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
+                        <th rowspan="2" class="py-2.5 px-3 w-10">#</th>
+                        <th rowspan="2" class="py-2.5 px-3">Asana (code)</th>
+                        <th colspan="4" class="py-1 px-3 text-center border-l border-slate-200 text-teal-900 font-bold">Chest 101</th>
+                        <th colspan="4" class="py-1 px-3 text-center border-l border-slate-200 text-teal-900 font-bold">Chest 102</th>
+                        <th colspan="4" class="py-1 px-3 text-center border-l border-slate-200 text-teal-900 font-bold">Chest 103</th>
+                    </tr>
+                    <tr class="border-b border-slate-200 bg-slate-50/50 text-[10px] text-slate-500 text-center">
+                        <th class="py-1 px-2 border-l border-slate-200">P / 6</th>
+                        <th class="py-1 px-2">S / 2</th>
+                        <th class="py-1 px-2">T / 2</th>
+                        <th class="py-1 px-2 font-bold">Total</th>
+                        <th class="py-1 px-2 border-l border-slate-200">P / 6</th>
+                        <th class="py-1 px-2">S / 2</th>
+                        <th class="py-1 px-2">T / 2</th>
+                        <th class="py-1 px-2 font-bold">Total</th>
+                        <th class="py-1 px-2 border-l border-slate-200">P / 6</th>
+                        <th class="py-1 px-2">S / 2</th>
+                        <th class="py-1 px-2">T / 2</th>
+                        <th class="py-1 px-2 font-bold">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800 text-center">
+                    <tr>
+                        <td class="py-2.5 px-3 font-bold">1</td>
+                        <td class="py-2.5 px-3 text-left font-medium">SAMPLE-001 <span class="text-slate-500">Tadasana (Mountain Pose)</span></td>
+                        <td class="border-l border-slate-100">5.00</td><td>1.50</td><td>2.00</td><td class="font-bold">8.50</td>
+                        <td class="border-l border-slate-100">4.50</td><td>1.50</td><td>2.00</td><td class="font-bold">8.00</td>
+                        <td class="border-l border-slate-100">5.00</td><td>1.50</td><td>2.00</td><td class="font-bold">8.50</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 font-bold">2</td>
+                        <td class="py-2.5 px-3 text-left font-medium">SAMPLE-002 <span class="text-slate-500">Padmasana (Lotus Pose)</span></td>
+                        <td class="border-l border-slate-100">4.50</td><td>1.50</td><td>2.00</td><td class="font-bold">8.00</td>
+                        <td class="border-l border-slate-100">5.00</td><td>1.50</td><td>2.00</td><td class="font-bold">8.50</td>
+                        <td class="border-l border-slate-100">4.50</td><td>1.50</td><td>2.00</td><td class="font-bold">8.00</td>
+                    </tr>
+                    <!-- 3 (Active) -->
+                    <tr class="bg-blue-50/60 font-semibold text-blue-950">
+                        <td class="py-2.5 px-3 font-bold text-blue-900">▶ 3</td>
+                        <td class="py-2.5 px-3 text-left font-bold text-blue-900">SAMPLE-003 Vrikshasana (Tree Pose)</td>
+                        <td class="border-l border-blue-100">5.00</td><td>1.50</td><td>2.00</td><td class="font-black text-blue-900">8.50</td>
+                        <td class="border-l border-blue-100">4.50</td><td>1.50</td><td>2.00</td><td class="font-black text-blue-900">8.00</td>
+                        <td class="border-l border-blue-100">5.50</td><td>1.50</td><td>2.00</td><td class="font-black text-blue-900">9.00</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 font-bold text-slate-400">4</td>
+                        <td class="py-2.5 px-3 text-left text-slate-400">SAMPLE-004 Trikonasana (Triangle Pose)</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 font-bold text-slate-400">5</td>
+                        <td class="py-2.5 px-3 text-left text-slate-400">SAMPLE-005 Bhujangasana (Cobra Pose)</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 font-bold text-slate-400">6</td>
+                        <td class="py-2.5 px-3 text-left text-slate-400">SAMPLE-006 Paschimottanasana (Seated Forward Bend)</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 font-bold text-slate-400">7</td>
+                        <td class="py-2.5 px-3 text-left text-slate-400">SAMPLE-007 Shavasana (Corpse Pose)</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                        <td class="border-l border-slate-100 text-slate-300">-</td><td>-</td><td>-</td><td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bottom Actions matching 35_Traditional_Final_Multiple_Athletes.png -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+        <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Save draft</span>
+        </button>
+
+        <div class="flex items-center space-x-2 text-xs text-slate-400">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+            <span class="text-slate-600 font-medium">Auto-saved</span>
+            <span>•</span>
+            <span>Last saved 10:24:12</span>
+            <span>•</span>
+            <span>Illustrative sample</span>
+        </div>
+
+        <button type="button" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Submit final batch</span>
+        </button>
+    </div>
+</div>
+{% endblock %}

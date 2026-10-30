@@ -6,13 +6,14 @@ from .models import Athlete, AthleteDocument, generate_private_key, generate_ath
 from championships.models import Championship, EventConfiguration, AgeCategory, EventType
 from registrations.models import ChampionshipRegistration, EventEntry, RegistrationStatus, AsanaSequenceItem
 from catalogue.models import Asana
+from accounts.permissions import get_active_championship
 
 def athlete_register_step1(request):
     """
     Implements 05_Athlete_Personal_Details.png:
     Step 1: Personal Details, DOB, Gender, District, Photo, Guardian Name.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     districts = [
         'Hyderabad', 'Rangareddy', 'Medchal-Malkajgiri', 'Warangal', 
         'Karimnagar', 'Nizamabad', 'Khammam', 'Nalgonda', 'Mahabubnagar', 'Adilabad'
@@ -81,7 +82,7 @@ def athlete_register_step2(request):
         return redirect('athlete_register_step1')
     
     athlete = get_object_or_404(Athlete, id=athlete_id)
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     
     # Calculate athlete age as of championship cutoff date
     cutoff = championship.age_cutoff_date if championship else datetime.date(2026, 12, 31)
@@ -154,7 +155,7 @@ def athlete_register_step3(request):
         return redirect('athlete_register_step1')
     
     athlete = get_object_or_404(Athlete, id=athlete_id)
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     reg = ChampionshipRegistration.objects.filter(athlete=athlete, championship=championship).first()
     if not reg:
         return redirect('athlete_register_step2')
@@ -240,7 +241,7 @@ def athlete_register_step5(request):
         return redirect('athlete_register_step1')
     
     athlete = get_object_or_404(Athlete, id=athlete_id)
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     reg = get_object_or_404(ChampionshipRegistration, athlete=athlete, championship=championship)
 
     if request.method == 'POST':
@@ -262,7 +263,7 @@ def athlete_id_card(request, athlete_id):
     verification QR, and printable championship ID card.
     """
     athlete = get_object_or_404(Athlete, public_athlete_id=athlete_id)
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     registration = ChampionshipRegistration.objects.filter(athlete=athlete, championship=championship).first()
 
     # Show private key if in athlete's own authenticated session

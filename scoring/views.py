@@ -9,8 +9,10 @@ from .models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreI
 from competition.models import StageBatch, JudgePanel
 from registrations.models import EventEntry, AsanaSequenceItem
 from catalogue.models import Asana
+from accounts.models import RoleChoices
+from accounts.permissions import role_required
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_traditional_d(request):
     """
     Implements 17_Traditional_D_Judge.png:
@@ -24,20 +26,32 @@ def scoring_traditional_d(request):
     
     current_asana_seq = int(request.GET.get('seq', batch.current_asana_index if batch else 1))
 
+    judge_role = 'D1_JUDGE'
+    if batch and batch.panel:
+        p = batch.panel
+        if p.d2_judge_id == request.user.id:
+            judge_role = 'D2_JUDGE'
+        elif p.d3_judge_id == request.user.id:
+            judge_role = 'D3_JUDGE'
+        elif p.d4_judge_id == request.user.id:
+            judge_role = 'D4_JUDGE'
+        elif p.d1_judge_id == request.user.id:
+            judge_role = 'D1_JUDGE'
+
     # Get or create submissions for this judge
     submissions = {}
     for e in entries:
         perf, _ = Performance.objects.get_or_create(
             event_entry=e,
-            round_type='PRELIMINARY',
+            round_type=batch.panel.round_type if batch and batch.panel else 'PRELIMINARY',
             defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         )
-        sub = JudgeSubmission.objects.filter(performance=perf, judge_role='D1_JUDGE').first()
+        sub = JudgeSubmission.objects.filter(performance=perf, judge=request.user).first()
         if not sub:
             sub = JudgeSubmission.objects.create(
                 performance=perf,
                 judge=request.user,
-                judge_role='D1_JUDGE',
+                judge_role=judge_role,
                 version=1,
                 is_draft=True,
                 raw_total=Decimal('0.00')
@@ -60,10 +74,13 @@ def scoring_traditional_d(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         for e in entries:
+            sub_id = request.POST.get(f'submission_{e.id}')
+            sub = JudgeSubmission.objects.get(id=sub_id, judge=request.user)
+            if sub.is_locked:
+                continue
+
             p_val = Decimal(request.POST.get(f'posture_{e.id}', '0.0'))
             s_val = Decimal(request.POST.get(f'stability_{e.id}', '0.0'))
-            sub_id = request.POST.get(f'submission_{e.id}')
-            sub = JudgeSubmission.objects.get(id=sub_id)
             
             # Update score item
             AsanaScoreItem.objects.update_or_create(
@@ -79,18 +96,19 @@ def scoring_traditional_d(request):
         if action == 'submit_batch':
             for e in entries:
                 sub_id = request.POST.get(f'submission_{e.id}')
-                sub = JudgeSubmission.objects.get(id=sub_id)
-                sub.is_draft = False
-                sub.is_submitted = True
-                sub.is_locked = True
-                sub.submitted_at = datetime.datetime.now()
-                # Calculate total
-                total = sum(item.effective_item_score for item in sub.items.all())
-                sub.raw_total = total
-                sub.effective_total = total
-                sub.save()
-            messages.success(request, "Official D1 scores submitted and locked for current batch!")
-            return redirect('stage_manager')
+                sub = JudgeSubmission.objects.get(id=sub_id, judge=request.user)
+                if not sub.is_locked:
+                    sub.is_draft = False
+                    sub.is_submitted = True
+                    sub.is_locked = True
+                    sub.submitted_at = datetime.datetime.now()
+                    # Calculate total
+                    total = sum(item.effective_item_score for item in sub.items.all())
+                    sub.raw_total = total
+                    sub.effective_total = total
+                    sub.save()
+            messages.success(request, f"Official {judge_role} scores submitted and locked for current batch!")
+            return redirect('judge_portal')
         else:
             messages.success(request, f"Scores saved for Asana #{current_asana_seq}.")
             next_seq = min(7, current_asana_seq + 1)
@@ -104,7 +122,7 @@ def scoring_traditional_d(request):
         'is_final': False,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_traditional_d_final(request):
     """
     Implements 35_Traditional_Final_Multiple_Athletes.png:
@@ -122,7 +140,7 @@ def scoring_traditional_d_final(request):
         'is_final': True,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_artistic_single_d(request):
     """
     Implements 18_Artistic_Single_D_Judge.png:
@@ -194,7 +212,7 @@ def scoring_artistic_single_d(request):
         'items': items,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_artistic_pair_d(request):
     """
     Implements 19_Artistic_Pair_D_Judge.png:
@@ -211,7 +229,7 @@ def scoring_artistic_pair_d(request):
         'current_seq': current_seq,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_rhythmic_pair_d(request):
     """
     Implements 20_Rhythmic_Pair_D_Judge.png:
@@ -227,7 +245,7 @@ def scoring_rhythmic_pair_d(request):
         'current_seq': current_seq,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.TIME_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_traditional_time(request):
     """
     Implements 33_Traditional_Time_Judge.png:
@@ -242,7 +260,7 @@ def scoring_traditional_time(request):
         'entries': entries,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.TIME_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_music_time(request):
     """
     Implements 21_Music_Event_Time_Judge.png:
@@ -256,7 +274,7 @@ def scoring_music_time(request):
         'entry': entry,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.ARTISTRY_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_artistry(request):
     """
     Implements 22_Artistry_Judge.png:
@@ -270,7 +288,7 @@ def scoring_artistry(request):
         'entry': entry,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.EVALUATOR, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_evaluator(request):
     """
     Implements 23_Evaluator_Valid_Invalid.png:
@@ -285,7 +303,7 @@ def scoring_evaluator(request):
         'entry': entry,
     })
 
-@login_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CHIEF_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_chief_judge(request):
     """
     Implements 24_Chief_Judge_Review.png:

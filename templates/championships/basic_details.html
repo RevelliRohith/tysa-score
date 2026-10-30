@@ -1,98 +1,446 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Championship Basic Details — TYSA Score{% endblock %}
+{% block title %}Championship Setup — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #34</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Championship Basic Details & Configuration</h1>
-            <p class="text-xs text-slate-500 font-medium">Define championship dates, official venue, rules edition, and age cutoff reference.</p>
+<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8">
+
+    <!-- Top Breadcrumb & Page Header -->
+    <div class="max-w-7xl mx-auto mb-6">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+            <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition flex items-center space-x-1">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Dashboard</span>
+            </a>
+            <span>/</span>
+            <span class="text-slate-800 font-bold">Championship Setup</span>
         </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
-        </a>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Championship Setup</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Configure championship details, events and registration settings.</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'championship_list' %}" class="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition shadow-xs flex items-center space-x-1.5">
+                    <i data-lucide="layers" class="w-3.5 h-3.5 text-slate-500"></i>
+                    <span>All Championships</span>
+                </a>
+                {% if championship.id %}
+                <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="px-4 py-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition shadow-xs flex items-center space-x-1.5">
+                    <span>Category & Gender Editor</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
-    <form method="POST" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-        {% csrf_token %}
+    <!-- Main 2-Column Grid Layout matching 34_Championship_Basic_Details.png -->
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Championship Name</label>
-                <input type="text" name="name" required value="{{ championship.name|default:'3rd Telangana State Yogasana Sports Championship 2026' }}"
-                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-            </div>
+        <!-- Left Column: Forms (8 Cols) -->
+        <div class="lg:col-span-8 space-y-6">
+            <form method="POST" id="champForm" class="space-y-6">
+                {% csrf_token %}
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Code</label>
-                <input type="text" name="code" required value="{{ championship.code|default:'TYSA-STATE-2026' }}"
-                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-mono text-slate-900">
-            </div>
+                <!-- CARD 1: Basic Details -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+                            <span>Basic Details</span>
+                        </h2>
+                        <span class="text-[11px] font-semibold text-slate-400">Step 1 of Setup</span>
+                    </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Venue Name & Arena</label>
-                <input type="text" name="venue_name" required value="{{ championship.venue_name|default:'G.M.C. Balayogi Indoor Stadium, Gachibowli' }}"
-                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-            </div>
+                    <!-- Championship Name -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Championship Name <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="name" required 
+                            value="{{ championship.name|default:'3rd Telangana State Yogasana Sports Championship 2026' }}"
+                            placeholder="Enter championship name"
+                            class="w-full px-3.5 py-2.5 text-xs bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none font-semibold text-slate-900 transition">
+                    </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Host City</label>
-                <input type="text" name="venue_city" required value="{{ championship.venue_city|default:'Hyderabad' }}"
-                    class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-500 outline-none font-semibold text-slate-900">
-            </div>
+                    <!-- Start Date, End Date, Venue (3 Columns) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Start Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="start_date" required 
+                                value="{{ championship.start_date|date:'Y-m-d'|default:'2026-11-15' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-medium text-slate-900 transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                End Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="end_date" required 
+                                value="{{ championship.end_date|date:'Y-m-d'|default:'2026-11-17' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-medium text-slate-900 transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Venue <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" name="venue_name" required 
+                                value="{{ championship.venue_name|default:'G.M.C. Balayogi Indoor Stadium, Gachibowli' }}"
+                                placeholder="Enter venue (hall, stadium, city)"
+                                class="w-full px-3 py-2 text-xs bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-medium text-slate-900 transition">
+                        </div>
+                    </div>
+
+                    <!-- Registration Start & End (2 Columns) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Registration Start Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="registration_start" required 
+                                value="{{ championship.registration_start|date:'Y-m-d'|default:'2026-10-01' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-medium text-slate-900 transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Registration End Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="registration_end" required 
+                                value="{{ championship.registration_end|date:'Y-m-d'|default:'2026-11-10' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-medium text-slate-900 transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: Events, Age Categories & Gender (Table matching 34_Championship_Basic_Details.png) -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+                    <div class="pb-3 border-b border-slate-100">
+                        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Events, Age Categories & Gender</h2>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">Set age categories and gender separately for each event. Eligibility follows the verified COP edition.</p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 pb-2">
+                                    <th class="py-2.5 px-3 w-16 text-center">Enabled</th>
+                                    <th class="py-2.5 px-3 w-40">Event</th>
+                                    <th class="py-2.5 px-3">Age Categories (select eligible age groups)</th>
+                                    <th class="py-2.5 px-3 w-36">Gender Divisions</th>
+                                    <th class="py-2.5 px-3 w-32 text-right">Configure</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-xs">
+                                <!-- Row 1: Traditional Yogasana -->
+                                <tr class="hover:bg-slate-50/60 transition">
+                                    <td class="py-3 px-3 text-center align-middle">
+                                        <input type="checkbox" checked class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+                                    </td>
+                                    <td class="py-3 px-3 font-bold text-slate-900 align-middle">
+                                        Traditional Yogasana
+                                        <div class="text-[10px] text-slate-400 font-normal">7 Asanas (4 Comp + 3 Opt)</div>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Sub Junior (10+ - 14) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Junior (14+ - 18) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Senior (18+ - 28) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Senior A (28+ - 35) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <div class="flex items-center space-x-3 text-[11px] font-medium text-slate-700">
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Male</span>
+                                            </label>
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Female</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 text-right align-middle">
+                                        <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="inline-flex items-center px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition">
+                                            Configure
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <!-- Row 2: Artistic Single -->
+                                <tr class="hover:bg-slate-50/60 transition">
+                                    <td class="py-3 px-3 text-center align-middle">
+                                        <input type="checkbox" checked class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+                                    </td>
+                                    <td class="py-3 px-3 font-bold text-slate-900 align-middle">
+                                        Artistic Single
+                                        <div class="text-[10px] text-slate-400 font-normal">10 Asanas Routine</div>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Sub Junior (10+ - 14) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Junior (14+ - 18) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Senior (18+ - 28) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Senior A (28+ - 35) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Senior B (35+ - 45) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                Senior C (45+ - 55) <span class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer">×</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <div class="flex items-center space-x-3 text-[11px] font-medium text-slate-700">
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Male</span>
+                                            </label>
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Female</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 text-right align-middle">
+                                        <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="inline-flex items-center px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition">
+                                            Configure
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <!-- Row 3: Artistic Pair -->
+                                <tr class="hover:bg-slate-50/60 transition">
+                                    <td class="py-3 px-3 text-center align-middle">
+                                        <input type="checkbox" checked class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+                                    </td>
+                                    <td class="py-3 px-3 font-bold text-slate-900 align-middle">
+                                        Artistic Pair
+                                        <div class="text-[10px] text-slate-400 font-normal">Synchronized Pair Routine</div>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <button type="button" class="w-full text-left px-3 py-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between hover:bg-white transition">
+                                            <span>Sub Junior, Junior, Senior (4 groups)</span>
+                                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        </button>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <div class="flex items-center space-x-3 text-[11px] font-medium text-slate-700">
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Male</span>
+                                            </label>
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Female</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 text-right align-middle">
+                                        <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="inline-flex items-center px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition">
+                                            Configure
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <!-- Row 4: Rhythmic Pair -->
+                                <tr class="hover:bg-slate-50/60 transition">
+                                    <td class="py-3 px-3 text-center align-middle">
+                                        <input type="checkbox" checked class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+                                    </td>
+                                    <td class="py-3 px-3 font-bold text-slate-900 align-middle">
+                                        Rhythmic Pair
+                                        <div class="text-[10px] text-slate-400 font-normal">Music & Rhythm Synchronization</div>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <button type="button" class="w-full text-left px-3 py-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between hover:bg-white transition">
+                                            <span>Sub Junior, Junior, Senior (3 groups)</span>
+                                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        </button>
+                                    </td>
+                                    <td class="py-3 px-3 align-middle">
+                                        <div class="flex items-center space-x-3 text-[11px] font-medium text-slate-700">
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Male</span>
+                                            </label>
+                                            <label class="flex items-center space-x-1 cursor-pointer">
+                                                <input type="checkbox" checked class="text-teal-600 rounded"> <span>Female</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 text-right align-middle">
+                                        <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="inline-flex items-center px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition">
+                                            Configure
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CARD 3: Rules and Quotas -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+                    <div class="pb-3 border-b border-slate-100">
+                        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Rules and Quotas</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Rules Version (Verified COP Edition) <span class="text-rose-500">*</span>
+                            </label>
+                            <select name="rules_edition" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-800">
+                                <option value="Yogasana Bharat COP 2024–2026" selected>Yogasana Bharat COP 2024–2026</option>
+                                <option value="TYSA State Rules Preset v2.4">TYSA State Rules Preset v2.4</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Age Cutoff Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="age_cutoff_date" required 
+                                value="{{ championship.age_cutoff_date|date:'Y-m-d'|default:'2026-12-31' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-500 outline-none font-semibold text-slate-800">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                District Quotas
+                            </label>
+                            <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="w-full px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition text-center inline-block">
+                                View / Manage District Quotas
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Form Buttons -->
+                <div class="flex items-center justify-between pt-2">
+                    <button type="submit" name="save_draft" class="px-5 py-2.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition shadow-xs">
+                        Save as Draft
+                    </button>
+                    <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                        <span>Save & Next Step: Categories</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <div class="pt-4 border-t border-slate-100">
-            <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Key Competition & Cutoff Dates</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Championship Start Date</label>
-                    <input type="date" name="start_date" required value="{{ championship.start_date|date:'Y-m-d'|default:'2026-11-15' }}"
-                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
-                </div>
+        <!-- Right Column: Sidebar Panels (4 Cols matching 34_Championship_Basic_Details.png) -->
+        <div class="lg:col-span-4 space-y-6">
 
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Championship End Date</label>
-                    <input type="date" name="end_date" required value="{{ championship.end_date|date:'Y-m-d'|default:'2026-11-17' }}"
-                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-brand-700 mb-1">Age Cutoff Reference Date</label>
-                    <input type="date" name="age_cutoff_date" required value="{{ championship.age_cutoff_date|date:'Y-m-d'|default:'2026-12-31' }}"
-                        class="w-full px-3 py-2 text-xs border border-brand-300 bg-brand-50/30 rounded-xl outline-none focus:border-brand-500 font-semibold">
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Registration Open Date</label>
-                    <input type="date" name="registration_start" required value="{{ championship.registration_start|date:'Y-m-d'|default:'2026-10-01' }}"
-                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Registration Deadline</label>
-                    <input type="date" name="registration_end" required value="{{ championship.registration_end|date:'Y-m-d'|default:'2026-11-10' }}"
-                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500">
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Rules Edition Presets</label>
-                    <input type="text" name="rules_edition" required value="{{ championship.rules_edition|default:'Yogasana Bharat COP 2024–2026' }}"
-                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500 font-semibold">
+            <!-- Card 1: Championship Logo Upload Box -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Championship Logo</h3>
+                <div class="border-2 border-dashed border-slate-200 hover:border-teal-400 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-50/50 hover:bg-teal-50/20">
+                    <div class="w-12 h-12 mx-auto rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-2">
+                        <i data-lucide="image-plus" class="w-6 h-6"></i>
+                    </div>
+                    <div class="text-xs font-bold text-slate-800">Upload Championship Logo</div>
+                    <p class="text-[11px] text-slate-400 mt-0.5">PNG or JPG, max 2 MB</p>
                 </div>
             </div>
+
+            <!-- Card 2: Summary Panel -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Summary</h3>
+                    <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Live Config</span>
+                </div>
+
+                <div class="space-y-2.5 text-xs">
+                    <div class="flex justify-between items-start">
+                        <span class="text-slate-500 font-medium">Championship Name:</span>
+                        <span class="font-bold text-slate-900 text-right max-w-[180px] truncate" title="{{ championship.name }}">
+                            {{ championship.name|default:"3rd Telangana State Meet" }}
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Dates:</span>
+                        <span class="font-semibold text-slate-800">
+                            {{ championship.start_date|date:"d M"|default:"15 Nov" }} – {{ championship.end_date|date:"d M Y"|default:"17 Nov 2026" }}
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Venue:</span>
+                        <span class="font-semibold text-slate-800 text-right truncate max-w-[180px]" title="{{ championship.venue_name }}">
+                            {{ championship.venue_name|default:"G.M.C. Balayogi Stadium" }}
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Registration Period:</span>
+                        <span class="font-semibold text-slate-800">
+                            {{ championship.registration_start|date:"d M"|default:"01 Oct" }} – {{ championship.registration_end|date:"d M"|default:"10 Nov" }}
+                        </span>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Events (4 configured):</span>
+                        <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[11px]">
+                            4 Active Events
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Rules Version:</span>
+                        <span class="font-semibold text-slate-800">COP 2024–2026</span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Age Categories:</span>
+                        <span class="font-semibold text-slate-800">6 Categories</span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Gender Divisions:</span>
+                        <span class="font-semibold text-slate-800">Male & Female</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Incomplete Warning Callout matching 34_Championship_Basic_Details.png -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4.5 text-xs text-amber-900 space-y-1.5 shadow-xs">
+                <div class="flex items-center space-x-2 font-bold text-amber-800">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                    <span>Event configuration incomplete:</span>
+                </div>
+                <p class="text-[11px] text-amber-700 leading-relaxed pl-6">
+                    Please select age categories, gender divisions and configure divisions for each event before proceeding.
+                </p>
+            </div>
+
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
-            <a href="{% url 'admin_dashboard' %}" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</a>
-            <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
-                <i data-lucide="check" class="w-4 h-4"></i>
-                <span>Save Championship Details</span>
-            </button>
-        </div>
-    </form>
+    </div>
+
+    <!-- Sub-footer matching reference screen -->
+    <div class="max-w-7xl mx-auto mt-10 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+        <span>TYSA Score | Telangana Yogasana Championship Management System</span>
+        <span class="mx-2">•</span>
+        <span>Visual design preview | championship2026</span>
+    </div>
+
 </div>
 {% endblock %}

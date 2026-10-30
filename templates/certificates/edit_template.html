@@ -1,132 +1,407 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Certificate Canvas Editor — TYSA Score{% endblock %}
+{% block title %}Create or Edit Certificate Template — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module EDIT_TEMPLATE</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Certificate Dynamic Field Canvas Editor</h1>
-            <p class="text-xs text-slate-500 font-medium">Position dynamic recipient variables, configure typographic weights, and preview certificate layouts.</p>
-        </div>
-        <div class="flex items-center space-x-2">
-            <a href="{% url 'certificate_templates' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-                ← Templates
+<div class="space-y-5 max-w-7xl mx-auto pb-12">
+    <!-- Top Bar: Back, Title & Header Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+        <div class="space-y-1">
+            <a href="{% url 'certificate_templates' %}" class="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Certificates and printing</span>
             </a>
+            <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Create or edit template</h1>
+            <p class="text-xs text-slate-500">Design and customize certificate templates for TYSA 2026. Use dynamic fields to automatically generate certificates.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                <span>Save draft</span>
+            </button>
+            <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>Preview sample</span>
+            </button>
+            <button type="button" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Publish template</span>
+            </button>
         </div>
     </div>
 
-    <!-- 2-Column Canvas Layout matching edit templete.jpg -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Top Metadata Card -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <!-- Template Name -->
+        <div class="md:col-span-5 space-y-1">
+            <label class="block text-xs font-bold text-slate-700">Template name <span class="text-rose-500">*</span></label>
+            <input type="text" value="Participation2026" class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-semibold text-slate-800 focus:border-[#0d5c58]">
+        </div>
 
-        <!-- Left: Interactive Canvas Preview (8 cols) -->
-        <div class="lg:col-span-8 bg-slate-900 rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center">
-            <div class="w-full max-w-2xl aspect-[1.414/1] bg-white rounded-xl shadow-2xl p-8 relative border-8 border-double border-amber-600/60 flex flex-col justify-between text-slate-900" id="cert-canvas">
-                
-                <!-- Watermark Logo -->
-                <div class="text-center space-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-700 to-teal-500 flex items-center justify-center text-white text-xl font-bold mx-auto shadow-md">
-                        🕉️
-                    </div>
-                    <div class="text-[10px] font-black tracking-widest text-slate-700 uppercase">Telangana Yogasana Association</div>
-                    <h2 class="text-sm font-black text-brand-900 uppercase tracking-wider">3rd Telangana State Yogasana Sports Championship 2026</h2>
-                    <p class="text-[10px] text-slate-500 font-semibold">{{ template.name }}</p>
+        <!-- Template Type -->
+        <div class="md:col-span-4 space-y-1">
+            <label class="block text-xs font-bold text-slate-700">Template type <span class="text-rose-500">*</span></label>
+            <select class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                <option value="participation" selected>Participation</option>
+                <option value="merit">Merit</option>
+                <option value="judge_duty">Judge Duty</option>
+            </select>
+        </div>
+
+        <!-- Version History -->
+        <div class="md:col-span-3 border-t md:border-t-0 md:border-l md:border-slate-200 md:pl-4 space-y-0.5">
+            <div class="flex items-center gap-1 text-xs font-bold text-slate-800">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Version history</span>
+            </div>
+            <div class="text-[11px] text-slate-500">Version 2 (14 Aug 2026, 10:30 AM)</div>
+            <a href="#" class="text-xs font-bold text-[#0d5c58] hover:underline block pt-0.5">View history</a>
+        </div>
+    </div>
+
+    <!-- 3-Column Editor Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        <!-- Left: Template Tools (3 cols) -->
+        <div class="lg:col-span-3 bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4">
+            <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">Template tools</h2>
+
+            <!-- Upload Background -->
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Upload background <span class="text-slate-400 font-normal">(optional)</span></label>
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center bg-slate-50/50 hover:bg-slate-50 cursor-pointer space-y-1">
+                    <i data-lucide="cloud-upload" class="w-5 h-5 text-sky-600 mx-auto"></i>
+                    <div class="text-[11px] font-bold text-slate-800">Click to upload background</div>
+                    <div class="text-[9px] text-slate-400">PDF, PNG or JPG (Max 5 MB)</div>
+                </div>
+            </div>
+
+            <!-- Page Setup -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+                <h3 class="text-xs font-bold text-slate-800">Page setup</h3>
+                <div class="space-y-1">
+                    <label class="block text-[11px] text-slate-500 font-medium">Page size</label>
+                    <select class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                        <option value="A4_Landscape" selected>A4 Landscape (297 × 210 mm)</option>
+                        <option value="A4_Portrait">A4 Portrait (210 × 297 mm)</option>
+                    </select>
                 </div>
 
-                <!-- Dynamic Placeholders on Canvas -->
-                <div class="text-center space-y-3 my-4">
-                    <p class="text-xs text-slate-500 italic">This certificate is proudly awarded to</p>
-                    
-                    <div class="p-2 border-2 border-dashed border-brand-400 bg-brand-50/50 rounded-lg inline-block font-extrabold text-2xl text-slate-950 font-serif" id="preview-recipient-name">
-                        [ Recipient Full Name ]
-                    </div>
-
-                    <div class="text-xs text-slate-600 space-y-1">
-                        <div id="preview-athlete-id" class="font-mono text-slate-500 font-bold">[ Athlete Public ID: TYSA-ATH-00101 ]</div>
-                        <div id="preview-event-name" class="font-bold text-brand-700">[ Event: Traditional Yogasana — Sub Junior Male ]</div>
-                        <div id="preview-district" class="font-semibold text-slate-700">[ District: Hyderabad ]</div>
-                        <div id="preview-rank" class="font-black text-amber-600 text-sm">[ Merit: 1st Place — Gold Medal ]</div>
+                <div class="space-y-1 pt-1">
+                    <label class="block text-[11px] text-slate-500 font-medium">Margins (mm)</label>
+                    <div class="grid grid-cols-4 gap-1.5 text-center text-xs">
+                        <div>
+                            <span class="text-[9px] text-slate-400 block">Top</span>
+                            <input type="number" value="15" class="w-full py-1 text-center border border-slate-300 rounded text-xs font-semibold">
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block">Right</span>
+                            <input type="number" value="15" class="w-full py-1 text-center border border-slate-300 rounded text-xs font-semibold">
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block">Bottom</span>
+                            <input type="number" value="15" class="w-full py-1 text-center border border-slate-300 rounded text-xs font-semibold">
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block">Left</span>
+                            <input type="number" value="15" class="w-full py-1 text-center border border-slate-300 rounded text-xs font-semibold">
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Footer with Signatures & QR -->
-                <div class="flex items-end justify-between pt-4 border-t border-slate-200 text-[9px] text-slate-500">
-                    <div class="text-left">
-                        <div class="w-20 border-b border-slate-400 mb-1"></div>
-                        <span class="font-bold text-slate-800 block">President / Secretary</span>
-                        <span>TYSA State Committee</span>
+            <!-- Add Field draggable list -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+                <h3 class="text-xs font-bold text-slate-800">Add field</h3>
+                <p class="text-[10px] text-slate-400">Drag a field to the canvas or click to add</p>
+
+                <div class="space-y-1 text-xs">
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Recipient name</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
                     </div>
 
-                    <!-- Verification QR -->
-                    <div class="w-16 h-16 bg-slate-100 rounded-lg p-1 border border-slate-300 flex items-center justify-center">
-                        <i data-lucide="qr-code" class="w-12 h-12 text-slate-800"></i>
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="id-card" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span class="truncate">Permanent athlete ID</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
                     </div>
 
-                    <div class="text-right">
-                        <div class="w-20 border-b border-slate-400 mb-1 ml-auto"></div>
-                        <span class="font-bold text-slate-800 block">Competition Director</span>
-                        <span>Official Certification</span>
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="trophy" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Event</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="users" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Age category</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>District</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Rank</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="hash" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Certificate number</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Issue date</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <div class="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-800 font-medium">
+                            <i data-lucide="qr-code" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Verification QR</span>
+                        </div>
+                        <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-400"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right: Inspector & Layout Properties (4 cols) -->
-        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div class="pb-3 border-b border-slate-100">
-                <h3 class="font-extrabold text-sm text-slate-900">Dynamic Field Inspector</h3>
-                <p class="text-xs text-slate-500">Select canvas element to edit typography and layout parameters.</p>
+        <!-- Center: Interactive Certificate Canvas (6 cols) -->
+        <div class="lg:col-span-6 space-y-2">
+            <!-- Zoom Controls Bar -->
+            <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+                <div class="flex items-center gap-1.5 border border-slate-300 rounded-lg p-1 bg-white">
+                    <button type="button" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="zoom-out" class="w-3.5 h-3.5"></i></button>
+                    <span class="font-semibold px-1 text-slate-700">100%</span>
+                    <button type="button" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="zoom-in" class="w-3.5 h-3.5"></i></button>
+                </div>
+                <span class="font-medium">A4 Landscape (297 × 210 mm)</span>
             </div>
 
-            <form method="POST" class="space-y-4 text-xs">
-                {% csrf_token %}
-                <input type="hidden" name="field_layout" id="field-layout-input" value="{}">
+            <!-- Canvas Container matching edit templete.jpg -->
+            <div class="bg-white rounded-xl border-4 border-[#0d5c58] p-6 shadow-md relative min-h-[500px] flex flex-col justify-between text-center select-none" style="background-image: radial-gradient(#0d5c58 0.5px, transparent 0.5px); background-size: 16px 16px; background-color: #fdfdfd;">
+                
+                <!-- Inner Decorative Border -->
+                <div class="border-2 border-[#14b8a6] rounded-lg p-5 flex flex-col justify-between h-full bg-white/95">
+                    
+                    <!-- Top Logo Dropzone -->
+                    <div class="w-56 mx-auto border-2 border-dashed border-slate-300 rounded-lg p-2.5 text-center bg-slate-50/60 hover:bg-slate-50 cursor-pointer">
+                        <i data-lucide="image" class="w-5 h-5 text-slate-400 mx-auto"></i>
+                        <div class="text-[10px] font-bold text-slate-800">Your Logo</div>
+                        <div class="text-[8px] text-slate-400">Upload organization logo PNG / JPG (Max 2 MB)</div>
+                    </div>
 
-                <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">Canvas Field Element</label>
-                    <select id="field-selector" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none font-bold" onchange="loadFieldProperties(this.value)">
-                        <option value="recipient_name">Recipient Name</option>
-                        <option value="athlete_id">Public Athlete ID</option>
-                        <option value="event_name">Event Name & Category</option>
-                        <option value="district">District of Representation</option>
-                        <option value="rank">Medal / Merit Rank</option>
-                        <option value="cert_number">Official Certificate Number</option>
-                        <option value="issue_date">Issue Date</option>
+                    <!-- Certificate Heading -->
+                    <div class="space-y-1 my-3">
+                        <h2 class="text-xl sm:text-2xl font-serif font-black text-[#002f54] tracking-widest uppercase">
+                            CERTIFICATE OF PARTICIPATION
+                        </h2>
+                        <div class="flex items-center justify-center gap-2 text-[#0d5c58] text-xs">
+                            <span>◇</span><span>◇</span><span>◇</span>
+                        </div>
+                    </div>
+
+                    <!-- Body Dynamic Text Elements -->
+                    <div class="space-y-2.5 text-xs text-slate-700 my-auto">
+                        <div class="italic text-slate-500 font-serif">This is to certify that</div>
+
+                        <!-- Recipient Name Field (Highlighted Canvas Box) -->
+                        <div class="inline-block px-8 py-2 rounded border-2 border-emerald-400 bg-emerald-50/70 font-serif font-black text-xl text-[#0F2940] shadow-xs cursor-move">
+                            &#123;&#123;RecipientName&#125;&#125;
+                        </div>
+
+                        <div class="text-slate-600">has participated in the</div>
+
+                        <!-- Event Pill -->
+                        <div class="inline-block px-4 py-1 rounded border border-emerald-300 bg-emerald-50 text-[#0d5c58] font-bold text-xs cursor-move">
+                            &#123;&#123;Event&#125;&#125;
+                        </div>
+
+                        <div class="text-[11px] text-slate-600 font-medium">
+                            in the <span class="px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50/50 text-[#0d5c58] font-bold">&#123;&#123;AgeCategory&#125;&#125;</span> 
+                            category ( <span class="px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50/50 text-[#0d5c58] font-bold">&#123;&#123;Gender&#125;&#125;</span> )
+                        </div>
+
+                        <div class="text-[11px] text-slate-600 font-medium">
+                            representing <span class="px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50/50 text-[#0d5c58] font-bold">&#123;&#123;District&#125;&#125;</span> District
+                        </div>
+
+                        <div class="text-[11px] font-bold text-slate-800 pt-1">
+                            at the Telangana State Yogasana Championship 2026
+                        </div>
+                    </div>
+
+                    <!-- Bottom Canvas Meta & Signatures -->
+                    <div class="grid grid-cols-3 gap-2 items-end pt-4 border-t border-slate-200 text-left text-[10px]">
+                        <!-- Left: Signatory Box -->
+                        <div class="border border-dashed border-slate-300 rounded p-2 text-center bg-slate-50/60 cursor-pointer">
+                            <i data-lucide="image" class="w-4 h-4 text-slate-400 mx-auto"></i>
+                            <div class="text-[9px] font-bold text-slate-700">Signature / Authorised Signatory</div>
+                            <div class="text-[8px] text-slate-400">Upload image (PNG, max 2 MB)</div>
+                        </div>
+
+                        <!-- Center: Numbers -->
+                        <div class="text-center space-y-1">
+                            <div>Certificate No: <span class="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-[#0d5c58] font-mono font-bold">&#123;&#123;CertificateNumber&#125;&#125;</span></div>
+                            <div>Issued on: <span class="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-[#0d5c58] font-mono font-bold">&#123;&#123;IssueDate&#125;&#125;</span></div>
+                        </div>
+
+                        <!-- Right: QR Code -->
+                        <div class="border border-dashed border-slate-300 rounded p-2 text-center bg-slate-50/60 flex flex-col items-center justify-center">
+                            <i data-lucide="qr-code" class="w-6 h-6 text-slate-700"></i>
+                            <div class="text-[8px] text-slate-500 font-semibold mt-0.5">Verification QR (Auto generated)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Field Properties Inspector (3 cols) -->
+        <div class="lg:col-span-3 bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">Field properties</h2>
+                <button type="button" class="text-rose-500 hover:text-rose-700 p-1">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <!-- Selected field -->
+                <div class="space-y-1">
+                    <label class="block font-bold text-slate-700">Selected field</label>
+                    <select class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-semibold text-slate-800 focus:border-[#0d5c58]">
+                        <option value="recipient_name" selected>Recipient name</option>
+                        <option value="event">Event</option>
                     </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-bold text-slate-700 uppercase mb-1">Font Size (px)</label>
-                        <input type="number" id="prop-font-size" value="28" min="10" max="60" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none font-bold">
+                <!-- Field label -->
+                <div class="space-y-1">
+                    <label class="block font-bold text-slate-700">Field label (for editing)</label>
+                    <input type="text" value="Recipient name" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                </div>
+
+                <!-- Data field mapping -->
+                <div class="space-y-1">
+                    <label class="block font-bold text-slate-700">Data field mapping <span class="text-rose-500">*</span></label>
+                    <select class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-semibold text-slate-800 focus:border-[#0d5c58]">
+                        <option value="RecipientName" selected>RecipientName</option>
+                        <option value="Event">Event</option>
+                        <option value="District">District</option>
+                    </select>
+                </div>
+
+                <!-- Font size & Font style -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="space-y-1">
+                        <label class="block font-bold text-slate-700">Font size (px)</label>
+                        <input type="number" value="20" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
                     </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 uppercase mb-1">Font Weight</label>
-                        <select id="prop-font-weight" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none font-semibold">
-                            <option value="normal">Regular</option>
-                            <option value="bold" selected>Bold</option>
-                            <option value="900">Black</option>
+                    <div class="space-y-1">
+                        <label class="block font-bold text-slate-700">Font style</label>
+                        <select class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                            <option value="Bold" selected>Bold</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Italic">Italic</option>
                         </select>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">Color (Hex)</label>
-                    <input type="color" id="prop-color" value="#0F172A" class="w-full h-9 p-1 border border-slate-200 rounded-xl cursor-pointer">
+                <!-- Text color & Alignment -->
+                <div class="grid grid-cols-2 gap-2 items-center">
+                    <div class="space-y-1">
+                        <label class="block font-bold text-slate-700">Text color</label>
+                        <div class="flex items-center gap-1.5 border border-slate-300 rounded-lg p-1 bg-white">
+                            <span class="w-5 h-5 rounded bg-[#0F2940] shrink-0 border border-slate-200"></span>
+                            <span class="font-mono text-[11px] font-bold text-slate-800">#0F2940</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block font-bold text-slate-700">Alignment</label>
+                        <div class="flex items-center border border-slate-300 rounded-lg overflow-hidden">
+                            <button type="button" class="flex-1 py-1 text-center hover:bg-slate-50 text-slate-500"><i data-lucide="align-left" class="w-3.5 h-3.5 mx-auto"></i></button>
+                            <button type="button" class="flex-1 py-1 text-center bg-[#0d5c58] text-white"><i data-lucide="align-center" class="w-3.5 h-3.5 mx-auto"></i></button>
+                            <button type="button" class="flex-1 py-1 text-center hover:bg-slate-50 text-slate-500"><i data-lucide="align-right" class="w-3.5 h-3.5 mx-auto"></i></button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-900 text-[11px]">
-                    <span class="font-bold">Security Constraint:</span> Private athlete keys are strictly forbidden on certificates and cannot be selected as canvas fields.
+                <!-- Position X & Y -->
+                <div class="space-y-1">
+                    <div class="flex items-center gap-1">
+                        <label class="block font-bold text-slate-700">Position (mm)</label>
+                        <i data-lucide="help-circle" class="w-3 h-3 text-slate-400"></i>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-400 font-bold">X</span>
+                            <input type="number" value="148" class="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg font-medium text-xs">
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-400 font-bold">Y</span>
+                            <input type="number" value="82" class="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg font-medium text-xs">
+                        </div>
+                    </div>
                 </div>
 
-                <button type="submit" class="w-full py-2.5 px-4 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
-                    Save Canvas Configuration
-                </button>
-            </form>
+                <!-- Width & Height -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="space-y-1">
+                        <label class="block text-[11px] text-slate-600 font-medium">Width (mm)</label>
+                        <input type="number" value="120" class="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg font-medium text-xs">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[11px] text-slate-600 font-medium">Height (mm)</label>
+                        <input type="number" value="18" class="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg font-medium text-xs">
+                    </div>
+                </div>
+
+                <!-- Show border toggle -->
+                <div class="flex items-center justify-between pt-1">
+                    <span class="font-medium text-slate-700">Show border (for editing)</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0d5c58]"></div>
+                    </label>
+                </div>
+
+                <!-- Info Alert -->
+                <div class="bg-sky-50 border border-sky-100 rounded-lg p-2.5 flex items-start gap-2 text-[11px] text-sky-900">
+                    <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0 mt-0.5"></i>
+                    <div>
+                        <span class="font-bold block">Preview uses sample data</span>
+                        <span class="text-slate-600 text-[10px]">This preview shows sample data. Actual certificates will be generated with real participant data.</span>
+                    </div>
+                </div>
+            </div>
         </div>
-
     </div>
 </div>
 {% endblock %}

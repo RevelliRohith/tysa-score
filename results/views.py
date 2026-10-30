@@ -2,6 +2,7 @@ from django.shortcuts import render
 from scoring.models import Performance, PerformanceStatus
 from competition.models import StageBatch
 from championships.models import Championship
+from accounts.permissions import get_active_championship
 
 def public_live_display(request):
     """
@@ -10,7 +11,7 @@ def public_live_display(request):
     2. Pinned Top 3 Scores immediately below with rank and tie handling.
     3. All completed released performance scores in a cumulative rotating table.
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     
     # Current performer on stage
     active_batch = StageBatch.objects.filter(status='ACTIVE').first()
@@ -41,7 +42,7 @@ def scoreboard_view(request):
     Implements 28_Certificates_and_Printing.png:
     (Identified as a cumulative scoreboard mode despite its misnamed file label).
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     released_qs = Performance.objects.filter(
         status__in=[PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED]
     ).select_related('event_entry__registration__athlete').order_by('-final_score', '-provisional_score')

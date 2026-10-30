@@ -1,82 +1,279 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Complete Championship Report — TYSA Score{% endblock %}
+{% block title %}Full Championship Report — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #32</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Complete Championship Report Generator</h1>
-            <p class="text-xs text-slate-500 font-medium">Assemble official championship dossier, section compilation, and combined PDF document generation.</p>
-        </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
-        </a>
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Header -->
+    <div class="space-y-1">
+        <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Full championship report</h1>
+        <p class="text-sm text-slate-600">Select the sections to include and generate a complete report for the Telangana State Yogasana Championship 2026.</p>
     </div>
 
-    <!-- Section Selection & Export Card matching 32_Complete_Championship_Report.png -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
-        <div class="pb-4 border-b border-slate-100">
-            <h2 class="font-extrabold text-base text-slate-900">Official Report Sections Checklist</h2>
-            <p class="text-xs text-slate-500">Select chapters to include in the generated championship souvenir and statutory report.</p>
+    <!-- Main Two-Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Column: Report Sections Checklist (5 cols) -->
+        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div>
+                <h2 class="text-base font-black text-slate-900">Report sections</h2>
+                <p class="text-xs text-slate-500">Choose the content to include in the report. Recommended: include all sections.</p>
+            </div>
+
+            <div class="divide-y divide-slate-100 text-xs">
+                <!-- 1. Cover and summary -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Cover and summary</div>
+                        <div class="text-[11px] text-slate-500">Championship details, key highlights and an executive summary.</div>
+                    </div>
+                </label>
+
+                <!-- 2. Unique headcounts -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Unique headcounts</div>
+                        <div class="text-[11px] text-slate-500">Total counts of districts, athletes, coaches, judges and volunteers.</div>
+                    </div>
+                </label>
+
+                <!-- 3. Opening and closing -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Opening and closing</div>
+                        <div class="text-[11px] text-slate-500">Inauguration, closing ceremony and key dignitaries.</div>
+                    </div>
+                </label>
+
+                <!-- 4. Event results and judge panels -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Event results and judge panels</div>
+                        <div class="text-[11px] text-slate-500">Results for all events with judge panels.</div>
+                    </div>
+                </label>
+
+                <!-- 5. Athlete and merit certificate registers -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Athlete and merit certificate registers</div>
+                        <div class="text-[11px] text-slate-500">List of participants and merit certificate details.</div>
+                    </div>
+                </label>
+
+                <!-- 6. Judge and volunteer certificates -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Judge and volunteer certificates</div>
+                        <div class="text-[11px] text-slate-500">Certificate issue register for judges and volunteers.</div>
+                    </div>
+                </label>
+
+                <!-- 7. Overall trophies -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Overall trophies</div>
+                        <div class="text-[11px] text-slate-500">Team and overall championship trophies.</div>
+                    </div>
+                </label>
+
+                <!-- 8. Photos and press coverage -->
+                <label class="py-3 flex items-start gap-3 cursor-pointer">
+                    <div class="w-5 h-5 rounded bg-[#0d5c58] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900">Photos and press coverage</div>
+                        <div class="text-[11px] text-slate-500">Selected photos with captions and links to press coverage.</div>
+                    </div>
+                </label>
+            </div>
         </div>
 
-        <form method="POST" class="space-y-4">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="download_report_pdf">
-
-            <div class="space-y-3">
-                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
-                    <input type="checkbox" checked disabled class="rounded text-brand-600 mr-3 mt-0.5">
-                    <div>
-                        <div class="font-bold text-xs text-slate-900">Official Cover Page & Executive Summary</div>
-                        <div class="text-[11px] text-slate-500">Dates, venue, executive committee, participating districts.</div>
-                    </div>
-                </label>
-
-                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
-                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
-                    <div>
-                        <div class="font-bold text-xs text-slate-900">Deduplicated Participation Statistics & Headcounts</div>
-                        <div class="text-[11px] text-slate-500">Unique athletes, event entries, district quotas, and capacity analysis.</div>
-                    </div>
-                </label>
-
-                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
-                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
-                    <div>
-                        <div class="font-bold text-xs text-slate-900">Official Sporting Results & Event Standings</div>
-                        <div class="text-[11px] text-slate-500">Traditional, Artistic Single, Artistic Pair, Rhythmic Pair final scores.</div>
-                    </div>
-                </label>
-
-                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
-                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
-                    <div>
-                        <div class="font-bold text-xs text-slate-900">Overall District Championship Trophies</div>
-                        <div class="text-[11px] text-slate-500">Gold/Silver/Bronze medals tally and General Championship trophy winner.</div>
-                    </div>
-                </label>
-
-                <label class="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
-                    <input type="checkbox" checked class="rounded text-brand-600 mr-3 mt-0.5">
-                    <div>
-                        <div class="font-bold text-xs text-slate-900">Ceremonies, Press Coverage & Media Clippings</div>
-                        <div class="text-[11px] text-slate-500">Opening/closing protocol transcripts, guest log, newspaper press reports.</div>
-                    </div>
-                </label>
+        <!-- Right Column: Report Preview & Generator (7 cols) -->
+        <div class="lg:col-span-7 space-y-4">
+            <!-- Header for Preview -->
+            <div class="flex items-center justify-between">
+                <h2 class="text-base font-black text-slate-900">Report preview</h2>
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">
+                        Report draft v1
+                    </span>
+                    <span class="text-xs text-slate-400">Last updated: 10 Jan 2026, 11:20 AM</span>
+                </div>
             </div>
 
-            <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
-                <span class="text-xs text-slate-500">Generated under official TYSA reporting standards</span>
-                <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
-                    <i data-lucide="file-down" class="w-4 h-4"></i>
-                    <span>Generate & Download Full PDF Report</span>
+            <!-- Realistic Report Dossier Page Preview -->
+            <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <!-- Top Emblems & Title Banner -->
+                <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+                    <!-- Left Emblem: Govt of Telangana -->
+                    <div class="w-16 h-16 rounded-full border border-slate-300 flex flex-col items-center justify-center p-1 text-center shrink-0">
+                        <i data-lucide="landmark" class="w-6 h-6 text-slate-700"></i>
+                        <span class="text-[7px] font-extrabold text-slate-700 uppercase leading-none mt-0.5">Government of Telangana</span>
+                    </div>
+
+                    <!-- Center Title -->
+                    <div class="text-center px-4">
+                        <h3 class="text-lg font-black text-slate-900 tracking-tight leading-tight">
+                            Telangana State Yogasana Championship 2026
+                        </h3>
+                        <div class="text-xs font-bold text-slate-600 mt-1">Official Report</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">
+                            12 – 15 June 2026 &nbsp;|&nbsp; Gachibowli Indoor Stadium, Hyderabad
+                        </div>
+                    </div>
+
+                    <!-- Right Logo: TYSA -->
+                    <div class="w-16 flex flex-col items-center justify-center text-center shrink-0">
+                        <span class="text-2xl text-[#0d5c58]">☯</span>
+                        <span class="text-[10px] font-black text-slate-900 tracking-tighter leading-none mt-0.5">TYSA</span>
+                        <span class="text-[6px] text-slate-500 font-bold uppercase leading-none">Telangana Yogasana Sports Association</span>
+                    </div>
+                </div>
+
+                <!-- Contents & Information Columns -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                    <!-- Left: Contents -->
+                    <div class="space-y-2">
+                        <div class="font-black text-slate-900 uppercase tracking-wider text-[11px]">Contents</div>
+                        <div class="space-y-1.5 text-slate-700 font-medium">
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>1. &nbsp;Cover and summary</span>
+                                <span class="font-bold text-slate-900">1</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>2. &nbsp;Unique headcounts</span>
+                                <span class="font-bold text-slate-900">3</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>3. &nbsp;Opening and closing</span>
+                                <span class="font-bold text-slate-900">5</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>4. &nbsp;Event results and judge panels</span>
+                                <span class="font-bold text-slate-900">8</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>5. &nbsp;Athlete and merit certificate registers</span>
+                                <span class="font-bold text-slate-900">24</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>6. &nbsp;Judge and volunteer certificates</span>
+                                <span class="font-bold text-slate-900">36</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>7. &nbsp;Overall trophies</span>
+                                <span class="font-bold text-slate-900">42</span>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-dashed border-slate-200 pb-0.5">
+                                <span>8. &nbsp;Photos and press coverage</span>
+                                <span class="font-bold text-slate-900">46</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Report Information -->
+                    <div class="space-y-2 bg-slate-50/70 p-3.5 rounded-lg border border-slate-200">
+                        <div class="font-black text-slate-900 uppercase tracking-wider text-[11px]">Report information</div>
+                        <div class="space-y-2 text-[11px]">
+                            <div>
+                                <span class="text-slate-400 font-medium block">Championship</span>
+                                <span class="font-bold text-slate-900">Telangana State Yogasana Championship 2026</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 font-medium block">Dates</span>
+                                <span class="font-bold text-slate-900">12 – 15 June 2026</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 font-medium block">Venue</span>
+                                <span class="font-bold text-slate-900">Gachibowli Indoor Stadium, Hyderabad</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 font-medium block">Organised by</span>
+                                <span class="font-bold text-slate-900">Telangana Yogasana Sports Association (TYSA)</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 font-medium block">In association with</span>
+                                <span class="font-bold text-slate-900">Government of Telangana</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-1 border-t border-slate-200">
+                                <div>
+                                    <span class="text-slate-400 font-medium block">Report version</span>
+                                    <span class="font-bold text-slate-900">v1 (Draft)</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-slate-400 font-medium block">Generated on</span>
+                                    <span class="font-bold text-slate-900">10 Jan 2026, 11:20 AM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Missing Material Warning Callout Card -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 font-bold">
+                        !
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-amber-900">Missing material</div>
+                        <div class="text-[11px] text-amber-700">2 photos need captions before generating the final report.</div>
+                    </div>
+                </div>
+
+                <a href="{% url 'report_ceremonies' %}" class="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition shrink-0">
+                    Review photos
+                </a>
+            </div>
+
+            <!-- Bottom Actions Row -->
+            <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <button type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                    <span>Preview PDF</span>
+                </button>
+
+                <button type="button" class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span>Generate report</span>
+                </button>
+
+                <button type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Export supporting registers</span>
                 </button>
             </div>
-        </form>
+        </div>
+    </div>
+
+    <!-- Bottom watermark info -->
+    <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
+        <span>Design preview • Sample data</span>
+        <span>TYSA Score v1.0</span>
     </div>
 </div>
 {% endblock %}

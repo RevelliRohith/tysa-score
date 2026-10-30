@@ -1,89 +1,234 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Statistics & Headcounts — TYSA Score{% endblock %}
+{% block title %}Admin Statistics — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Header -->
+    <div class="space-y-1">
+        <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Admin Statistics</h1>
+        <p class="text-sm text-slate-600">Overview of participation and officials for the selected championship.</p>
+    </div>
+
+    <!-- Filters Bar Card -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <!-- Championship -->
+            <div class="md:col-span-4 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Championship</label>
+                <select name="championship" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    <option value="current" selected>Telangana State Yogasana Championship 2026</option>
+                </select>
+            </div>
+
+            <!-- District -->
+            <div class="md:col-span-2 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">District</label>
+                <select name="district" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    <option value="" selected>All</option>
+                    <option value="Hyderabad">Hyderabad</option>
+                    <option value="Mancherial">Mancherial</option>
+                    <option value="Warangal">Warangal</option>
+                </select>
+            </div>
+
+            <!-- Event -->
+            <div class="md:col-span-2 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Event</label>
+                <select name="event" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    <option value="" selected>All</option>
+                    <option value="traditional">Traditional</option>
+                    <option value="artistic_single">Artistic Single</option>
+                    <option value="artistic_pair">Artistic Pair</option>
+                    <option value="rhythmic_pair">Rhythmic Pair</option>
+                </select>
+            </div>
+
+            <!-- Status -->
+            <div class="md:col-span-2 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Status</label>
+                <select name="status" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    <option value="participated" selected>Participated</option>
+                    <option value="registered">Registered</option>
+                    <option value="verified">Verified</option>
+                </select>
+            </div>
+
+            <!-- Button -->
+            <div class="md:col-span-2">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white text-sm font-bold rounded-lg shadow-xs transition">
+                    <i data-lucide="search" class="w-4 h-4"></i>
+                    <span>Apply Filters</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 6 KPI Metric Cards Grid matching 29_Statistics_and_Headcounts.png -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <!-- Unique athletes -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                <i data-lucide="users" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-slate-500">Unique athletes</div>
+                <div class="text-2xl font-black text-slate-900 leading-tight">248</div>
+            </div>
+        </div>
+
+        <!-- Judges -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="user-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-slate-500">Judges</div>
+                <div class="text-2xl font-black text-slate-900 leading-tight">36</div>
+            </div>
+        </div>
+
+        <!-- Coaches -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="award" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-slate-500">Coaches</div>
+                <div class="text-2xl font-black text-slate-900 leading-tight">18</div>
+            </div>
+        </div>
+
+        <!-- Volunteers -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <i data-lucide="heart-handshake" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-slate-500">Volunteers</div>
+                <div class="text-2xl font-black text-slate-900 leading-tight">24</div>
+            </div>
+        </div>
+
+        <!-- Staff -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                <i data-lucide="shield" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-slate-500">Staff</div>
+                <div class="text-2xl font-black text-slate-900 leading-tight">12</div>
+            </div>
+        </div>
+
+        <!-- Guests -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                <i data-lucide="user" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-slate-500">Guests</div>
+                <div class="text-2xl font-black text-slate-900 leading-tight">8</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Metric Card: Event entries -->
+    <div class="w-full sm:w-72 bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-start gap-3.5">
+        <div class="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+        </div>
         <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #29</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Championship Statistics & Deduplicated Headcounts</h1>
-            <p class="text-xs text-slate-500 font-medium">Distinct count metrics: deduplicated unique athletes, event entries, pair units, and officials.</p>
-        </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
-        </a>
-    </div>
-
-    <!-- 4 Big Summary Cards matching 29_Statistics_and_Headcounts.png -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Unique Athletes</span>
-            <span class="text-3xl font-black text-slate-900 mt-1 block">{{ unique_athletes }}</span>
-            <span class="text-[11px] text-emerald-600 font-semibold mt-1 block">Deduplicated individuals</span>
-        </div>
-
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Event Entries</span>
-            <span class="text-3xl font-black text-brand-700 mt-1 block">{{ total_event_entries }}</span>
-            <span class="text-[11px] text-slate-400 font-medium mt-1 block">Multi-event participations</span>
-        </div>
-
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pair Units</span>
-            <span class="text-3xl font-black text-indigo-700 mt-1 block">{{ total_pairs }}</span>
-            <span class="text-[11px] text-slate-400 font-medium mt-1 block">Counted as single entries</span>
-        </div>
-
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Accredited Officials</span>
-            <span class="text-3xl font-black text-teal-700 mt-1 block">{{ coaches_count|add:volunteers_count|add:guests_count|default:"14" }}</span>
-            <span class="text-[11px] text-teal-600 font-semibold mt-1 block">Coaches, Volunteers, VIPs</span>
+            <div class="text-xs font-medium text-slate-500">Event entries</div>
+            <div class="text-2xl font-black text-slate-900 leading-tight">412</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Not unique people</div>
         </div>
     </div>
 
-    <!-- District Breakdown Table -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs space-y-3">
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <span class="text-xs font-bold text-slate-700">Telangana Districts Representation Breakdown</span>
-            <button class="px-3 py-1 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg">
-                Export CSV Register
-            </button>
+    <!-- Section: Event-wise Participation (Participated) Table -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-base font-black text-slate-900">Event-wise Participation (Participated)</h2>
+                <p class="text-xs text-slate-500">Entries, unique athletes, pairs, performed and officials for each event.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                    Export Excel
+                </button>
+                <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs">
+                    <i data-lucide="file-text" class="w-4 h-4 text-rose-600"></i>
+                    Export PDF
+                </button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="tysa-table">
-                <thead>
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
                     <tr>
-                        <th>District Name</th>
-                        <th>Allocated Quota</th>
-                        <th>Approved Athletes</th>
-                        <th>Quota Utilized</th>
-                        <th>Capacity Status</th>
+                        <th class="py-3 px-4">Event</th>
+                        <th class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1">Entries <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i></span>
+                        </th>
+                        <th class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1">Unique athletes <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i></span>
+                        </th>
+                        <th class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1">Pairs <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i></span>
+                        </th>
+                        <th class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1">Performed <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i></span>
+                        </th>
+                        <th class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1">Officials <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i></span>
+                        </th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for d in districts %}
-                    <tr>
-                        <td class="font-bold text-slate-900">{{ d.district_name }}</td>
-                        <td class="font-mono text-xs text-slate-700">{{ d.quota_limit }}</td>
-                        <td class="font-mono text-xs font-bold text-brand-700">{{ d.quota_used }}</td>
-                        <td>
-                            <div class="w-32 bg-slate-100 h-2 rounded-full overflow-hidden">
-                                <div class="bg-brand-600 h-full" style="width: 25%"></div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                Open for Entries
-                            </span>
-                        </td>
+                <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-4 font-bold text-slate-900 text-sm">Traditional</td>
+                        <td class="py-3 px-4 font-bold">120</td>
+                        <td class="py-3 px-4">120</td>
+                        <td class="py-3 px-4 text-slate-400">0</td>
+                        <td class="py-3 px-4">118</td>
+                        <td class="py-3 px-4">22</td>
                     </tr>
-                    {% endfor %}
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-4 font-bold text-slate-900 text-sm">Artistic Single</td>
+                        <td class="py-3 px-4 font-bold">138</td>
+                        <td class="py-3 px-4">138</td>
+                        <td class="py-3 px-4 text-slate-400">0</td>
+                        <td class="py-3 px-4">135</td>
+                        <td class="py-3 px-4">26</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-4 font-bold text-slate-900 text-sm">Artistic Pair</td>
+                        <td class="py-3 px-4 font-bold">88</td>
+                        <td class="py-3 px-4">176</td>
+                        <td class="py-3 px-4">88</td>
+                        <td class="py-3 px-4">86</td>
+                        <td class="py-3 px-4">24</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="py-3 px-4 font-bold text-slate-900 text-sm">Rhythmic Pair</td>
+                        <td class="py-3 px-4 font-bold">66</td>
+                        <td class="py-3 px-4">132</td>
+                        <td class="py-3 px-4">66</td>
+                        <td class="py-3 px-4">64</td>
+                        <td class="py-3 px-4">20</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- Bottom watermark info -->
+    <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
+        <span>Design preview • Sample data</span>
+        <span>TYSA Score v1.0 | Telangana State Yogasana Championship 2026</span>
     </div>
 </div>
 {% endblock %}

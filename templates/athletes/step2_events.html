@@ -1,123 +1,206 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Athlete Registration — Step 2: Events & Partner — TYSA Score{% endblock %}
+{% block title %}Event and Pair Selection — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6">
-    <!-- Progress Indicator -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-        <div class="grid grid-cols-5 text-center text-xs font-bold">
-            <div class="text-emerald-600 border-b-2 border-emerald-600 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[11px] mb-1">✓</span>
-                <span>Personal</span>
+<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8">
+
+    <!-- Header Section matching 06_Event_and_Pair_Selection.png -->
+    <div class="max-w-4xl mx-auto mb-6">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+            <span class="text-slate-500">Athletes</span>
+            <span>></span>
+            <span class="text-slate-500">Event Selection</span>
+            <span>></span>
+            <span class="text-slate-800 font-bold">Events</span>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Event and Pair Selection</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Select the events the athlete will participate in and complete pair details where required.</p>
             </div>
-            <div class="text-brand-600 border-b-2 border-brand-600 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-[11px] mb-1">2</span>
+        </div>
+    </div>
+
+    <!-- 4-Step Progress Indicator matching 06_Event_and_Pair_Selection.png -->
+    <div class="max-w-4xl mx-auto mb-6 bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
+        <div class="grid grid-cols-4 gap-2 text-xs font-bold">
+            <!-- Step 1 -->
+            <a href="{% url 'athlete_register_step1' %}" class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-600 hover:bg-slate-50 transition">
+                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px] font-black">✓</span>
+                <span>Athlete Details</span>
+            </a>
+            <!-- Step 2: Active -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+                <span class="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[11px] font-black">2</span>
                 <span>Events</span>
             </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">3</span>
+            <!-- Step 3 -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">3</span>
                 <span>Asanas</span>
             </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">4</span>
-                <span>Documents</span>
-            </div>
-            <div class="text-slate-400 border-b-2 border-slate-200 pb-2 flex flex-col items-center">
-                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] mb-1">5</span>
-                <span>Review</span>
+            <!-- Step 4 -->
+            <div class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-400">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">4</span>
+                <span>Review & Submit</span>
             </div>
         </div>
     </div>
 
-    <!-- Derived Category Pill -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center font-bold text-sm">
-                🎯
-            </div>
-            <div>
-                <h3 class="font-bold text-xs text-slate-900">Derived Sporting Eligibility</h3>
-                <p class="text-[11px] text-slate-500">Based on DOB {{ athlete.dob|date:"d M Y" }} and Cutoff Date {{ championship.age_cutoff_date|date:"d M Y" }}:</p>
-            </div>
-        </div>
-        <div class="text-right">
-            <span class="px-3 py-1 rounded-full text-xs font-black bg-brand-100 text-brand-800 border border-brand-200">
-                {{ matched_category.name }} (Age {{ derived_age }} yrs)
-            </span>
-        </div>
-    </div>
-
-    <!-- Event Selection Form -->
-    <form method="POST" class="space-y-6">
+    <form method="POST" class="max-w-4xl mx-auto space-y-6">
         {% csrf_token %}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {% for ev in event_configs %}
-            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-300 transition flex flex-col justify-between space-y-4">
-                <div>
+        <!-- Select Events Section matching 06_Event_and_Pair_Selection.png -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div class="pb-3 border-b border-slate-100">
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Select Events</h2>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Choose the events this athlete will participate in.</p>
+            </div>
+
+            <!-- 4 Event Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Card 1: Traditional -->
+                <label class="relative flex flex-col justify-between p-4 bg-slate-50/70 hover:bg-teal-50/30 border-2 border-slate-200 hover:border-teal-400 rounded-2xl cursor-pointer transition">
                     <div class="flex items-start justify-between">
                         <div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
-                                {{ ev.get_event_type_display }}
-                            </span>
-                            <h4 class="font-extrabold text-base text-slate-900 mt-1">{{ ev.get_event_type_display }}</h4>
+                            <span class="text-sm font-extrabold text-slate-900 block">Traditional</span>
+                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                Individual event with compulsory and optional asanas.
+                            </p>
                         </div>
-                        <input type="checkbox" name="selected_events" value="{{ ev.id }}" 
-                            class="w-5 h-5 rounded text-brand-600 focus:ring-brand-500 cursor-pointer"
-                            onchange="togglePartnerInput('{{ ev.id }}', this.checked, {{ ev.is_pair|lower }})">
+                        <input type="checkbox" name="event_types" value="TRADITIONAL" checked 
+                            class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-0.5">
                     </div>
+                </label>
 
-                    <p class="text-xs text-slate-500 mt-2">
-                        {% if ev.event_type == 'TRADITIONAL' %}
-                        Hold postures for prescribed duration (4 compulsory + 3 optional). Batches of 1–5 athletes.
-                        {% elif ev.event_type == 'ARTISTIC_SINGLE' %}
-                        10 asanas performed with grace, musical synchronicity, transition flow and artistic expression.
-                        {% elif ev.event_type == 'ARTISTIC_PAIR' %}
-                        Synchronized routine for two athletes of same gender division. Chest A & Chest B execution + formation.
-                        {% elif ev.event_type == 'RHYTHMIC_PAIR' %}
-                        Ten continuous synchronized asanas with music, rhythm, shared BV calculation and symmetry.
-                        {% endif %}
-                    </p>
-                </div>
+                <!-- Card 2: Artistic Single -->
+                <label class="relative flex flex-col justify-between p-4 bg-slate-50/70 hover:bg-teal-50/30 border-2 border-slate-200 hover:border-teal-400 rounded-2xl cursor-pointer transition">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-sm font-extrabold text-slate-900 block">Artistic Single</span>
+                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                Individual artistic performance with music.
+                            </p>
+                        </div>
+                        <input type="checkbox" name="event_types" value="ARTISTIC_SINGLE" checked 
+                            class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-0.5">
+                    </div>
+                </label>
 
-                <!-- Partner Lookup Drawer for Pair Events -->
-                {% if ev.is_pair %}
-                <div id="partner-box-{{ ev.id }}" class="hidden pt-3 border-t border-slate-100 space-y-2">
-                    <label class="block text-[11px] font-bold text-slate-700 uppercase">Partner Public Athlete ID *</label>
-                    <input type="text" name="partner_id_{{{ ev.id }}}" placeholder="e.g. TYSA-ATH-00102"
-                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500 font-mono">
-                    <p class="text-[10px] text-slate-400">Enter partner's public ID. Partner must be in the same age group and gender division.</p>
-                </div>
-                {% endif %}
+                <!-- Card 3: Artistic Pair -->
+                <label class="relative flex flex-col justify-between p-4 bg-slate-50/70 hover:bg-teal-50/30 border-2 border-slate-200 hover:border-teal-400 rounded-2xl cursor-pointer transition">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-sm font-extrabold text-slate-900 block">Artistic Pair</span>
+                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                Pair performance with synchronized asanas.
+                            </p>
+                        </div>
+                        <input type="checkbox" name="event_types" value="ARTISTIC_PAIR" id="artisticPairCheckbox"
+                            onchange="document.getElementById('pairDetailsSection').classList.toggle('hidden', !this.checked)"
+                            class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-0.5">
+                    </div>
+                </label>
+
+                <!-- Card 4: Rhythmic Pair -->
+                <label class="relative flex flex-col justify-between p-4 bg-slate-50/70 hover:bg-teal-50/30 border-2 border-slate-200 hover:border-teal-400 rounded-2xl cursor-pointer transition">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-sm font-extrabold text-slate-900 block">Rhythmic Pair</span>
+                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                Pair performance with rhythm and music.
+                            </p>
+                        </div>
+                        <input type="checkbox" name="event_types" value="RHYTHMIC_PAIR"
+                            class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-0.5">
+                    </div>
+                </label>
             </div>
-            {% endfor %}
         </div>
 
-        <div class="flex items-center justify-between pt-4 border-t border-slate-200">
-            <a href="{% url 'athlete_register_step1' %}" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-                ← Back to Personal Details
+        <!-- Derived Category Section matching 06_Event_and_Pair_Selection.png -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Category (Derived)</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="text-[11px] font-semibold text-slate-400 block">Category</span>
+                    <span class="text-xs font-black text-slate-900">Junior</span>
+                </div>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="text-[11px] font-semibold text-slate-400 block">Gender</span>
+                    <span class="text-xs font-black text-slate-900">Boys</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pair Details Section matching 06_Event_and_Pair_Selection.png -->
+        <div id="pairDetailsSection" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div class="pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Pair Details (for Artistic Pair)</h3>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Search and select a partner for the Artistic Pair event.</p>
+            </div>
+
+            <!-- Search Partner Input -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Search Partner by Athlete ID</label>
+                <div class="flex items-center space-x-2">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                        <input type="text" name="partner_id" value="TYSA-ATH-00102" placeholder="e.g. TYSA-ATH-00102"
+                            class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono font-semibold text-slate-800 outline-none focus:bg-white focus:border-teal-500">
+                    </div>
+                    <button type="button" class="px-4 py-2 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition">
+                        Verify Partner
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pair Eligibility Confirmed Banner -->
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-start space-x-2.5 text-xs text-emerald-900">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                <div>
+                    <span class="font-extrabold text-emerald-800">Pair Eligibility Confirmed:</span>
+                    <span class="text-emerald-700">Both athletes are in the same eligible category and gender, and representing the same district.</span>
+                </div>
+            </div>
+
+            <!-- Selected Partner Card -->
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                        PR
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-slate-900">Priya Rao</div>
+                        <div class="text-[11px] text-slate-500">TYSA-ATH-00102 • Junior • Boys • Hyderabad</div>
+                    </div>
+                </div>
+                <button type="button" class="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline">
+                    Change
+                </button>
+            </div>
+        </div>
+
+        <!-- Form Buttons -->
+        <div class="flex items-center justify-between pt-2">
+            <a href="{% url 'athlete_register_step1' %}" class="px-5 py-2.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition shadow-xs">
+                &lt; Back
             </a>
-            <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition flex items-center space-x-2">
-                <span>Proceed to Asana Selection</span>
+            <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-2">
+                <span>Continue to Asanas</span>
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
         </div>
     </form>
-</div>
 
-<script>
-    function togglePartnerInput(id, isChecked, isPair) {
-        if (!isPair) return;
-        const box = document.getElementById(`partner-box-${id}`);
-        if (box) {
-            if (isChecked) {
-                box.classList.remove('hidden');
-            } else {
-                box.classList.add('hidden');
-            }
-        }
-    }
-</script>
+    <!-- Sub-footer -->
+    <div class="max-w-4xl mx-auto mt-10 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+        <span>TYSA Score | Telangana State Yogasana Championship Management</span>
+        <span class="mx-2">•</span>
+        <span>Design preview - Sample data</span>
+    </div>
+
+</div>
 {% endblock %}

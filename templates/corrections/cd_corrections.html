@@ -1,195 +1,400 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}CD Correction & Finalisation Desk — TYSA Score{% endblock %}
+{% block title %}Performance Correction Access — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #26</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Competition Director (CD) Correction & Finalisation Desk</h1>
-            <p class="text-xs text-slate-500 font-medium">Reopen 1 selected judge's entire sheet with recorded reason. All other judges/athletes remain locked.</p>
-        </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
-        </a>
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Header -->
+    <div class="space-y-1">
+        <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Performance Correction Access</h1>
+        <p class="text-sm text-slate-600">Allow a judge to revise their own marks for one athlete's entire performance within the selected championship, event and round.</p>
     </div>
 
-    <!-- Search Chest Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-        <form method="GET" class="flex items-center space-x-3">
-            <label class="text-xs font-bold text-slate-700 uppercase">Search Competitor Chest Number:</label>
-            <input type="text" name="chest" value="{{ chest_query }}" placeholder="e.g. 101, 102..." 
-                class="w-48 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-mono font-bold text-slate-900 focus:bg-white focus:border-brand-500">
-            <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-xs transition">
-                Inspect Performance
-            </button>
+    <!-- 3-Step Wizard Navigation -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+        <div class="flex items-center justify-center max-w-2xl mx-auto">
+            <!-- Step 1 -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-[#0d5c58] text-white flex items-center justify-center font-bold text-sm shadow-xs">1</div>
+                <span class="text-xs font-bold text-[#0d5c58]">Find athlete</span>
+            </div>
+            <!-- Line 1 -->
+            <div class="flex-1 h-0.5 bg-[#0d5c58] mx-4"></div>
+            <!-- Step 2 -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm">2</div>
+                <span class="text-xs font-semibold text-slate-600">Review scores</span>
+            </div>
+            <!-- Line 2 -->
+            <div class="flex-1 h-0.5 bg-slate-200 mx-4"></div>
+            <!-- Step 3 -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm">3</div>
+                <span class="text-xs font-semibold text-slate-600">Grant judge access</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar Card -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <!-- Chest Number -->
+            <div class="md:col-span-3 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Chest Number <span class="text-rose-500">*</span></label>
+                <input type="text" name="chest" value="{{ request.GET.chest|default:'112' }}" placeholder="e.g. 112"
+                       class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-bold text-slate-900 focus:border-[#0d5c58] focus:ring-1 focus:ring-[#0d5c58]">
+            </div>
+
+            <!-- Event -->
+            <div class="md:col-span-4 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Event <span class="text-rose-500">*</span></label>
+                <select name="event" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    <option value="artistic_single_women" selected>Artistic Single (Women)</option>
+                    <option value="artistic_single_men">Artistic Single (Men)</option>
+                    <option value="traditional_women">Traditional (Women)</option>
+                    <option value="rhythmic_pair">Rhythmic Pair</option>
+                </select>
+            </div>
+
+            <!-- Round -->
+            <div class="md:col-span-3 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Round <span class="text-rose-500">*</span></label>
+                <select name="round" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    <option value="semi_final" selected>Semi Final</option>
+                    <option value="final">Final</option>
+                    <option value="preliminary">Preliminary</option>
+                </select>
+            </div>
+
+            <!-- Find Button -->
+            <div class="md:col-span-2">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white text-sm font-bold rounded-lg shadow-xs transition">
+                    <i data-lucide="search" class="w-4 h-4"></i>
+                    <span>Find performance</span>
+                </button>
+            </div>
         </form>
     </div>
 
-    <!-- Active Grants Banner -->
-    {% if active_grants %}
-    <div class="bg-amber-50 rounded-2xl border border-amber-200 p-4 space-y-2">
-        <h3 class="text-xs font-bold text-amber-900 uppercase flex items-center">
-            <i data-lucide="unlock" class="w-4 h-4 mr-1.5 text-amber-600"></i>
-            Active Correction Access Granted (Reopened Desks)
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            {% for g in active_grants %}
-            <div class="bg-white p-3 rounded-xl border border-amber-200 flex items-center justify-between shadow-xs">
-                <div>
-                    <span class="font-bold text-slate-900">Grant #{{ g.id }}: {{ g.judge_submission.get_judge_role_display }}</span>
-                    <div class="text-[11px] text-slate-500">Chest #{{ g.performance.chest_number }} • Reason: {{ g.reason }}</div>
-                </div>
-                <form method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="revoke_grant">
-                    <input type="hidden" name="grant_id" value="{{ g.id }}">
-                    <button type="submit" class="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg">
-                        Revoke Access
-                    </button>
-                </form>
-            </div>
-            {% endfor %}
-        </div>
+    <!-- Metadata Banner Strip -->
+    <div class="bg-white rounded-xl border border-slate-200 px-6 py-4 shadow-xs flex flex-wrap items-center gap-6 divide-x divide-slate-200">
+        <div class="font-black text-slate-900 text-lg">Chest 112</div>
+        <div class="pl-6 font-bold text-slate-800 text-sm">Artistic Single (Women)</div>
+        <div class="pl-6 font-bold text-slate-800 text-sm">Semi Final</div>
+        <div class="pl-6 font-bold text-slate-800 text-sm">10 asanas</div>
     </div>
-    {% endif %}
 
-    <!-- Selected Performance Inspection & Judge Grants -->
-    {% if selected_perf %}
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-        <!-- Performance Overview Banner -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+    <!-- Main Two-Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Panel: Judge Submissions (Read-Only) -->
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-5">
             <div>
-                <div class="flex items-center space-x-2">
-                    <span class="px-3 py-1 rounded-md bg-slate-900 text-white font-mono font-black text-sm">
-                        Chest #{{ selected_perf.chest_number }}
-                    </span>
-                    <h2 class="text-lg font-black text-slate-900">{{ selected_perf.event_entry.display_names }}</h2>
-                </div>
-                <p class="text-xs text-slate-500 mt-1">
-                    {{ selected_perf.event_entry.event_config.get_event_type_display }} • {{ selected_perf.event_entry.district }} • {{ selected_perf.round_type }}
-                </p>
+                <h2 class="text-base font-black text-slate-900">Judge submissions — read-only</h2>
+                <p class="text-xs text-slate-500">All judges' submitted performance totals for this athlete, event and round.</p>
             </div>
 
-            <div class="flex items-center space-x-3">
-                <div class="text-right">
-                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Finalized Score</span>
-                    <span class="font-mono text-xl font-black text-brand-700">
-                        {{ selected_perf.final_score|default:selected_perf.provisional_score|default:"16.450" }}
-                    </span>
-                </div>
-
-                <form method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="cd_finalise">
-                    <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
-                    <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition flex items-center space-x-1.5">
-                        <i data-lucide="lock" class="w-4 h-4"></i>
-                        <span>Finalise & Lock Score</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Per-Judge Submissions Table matching Image 26 -->
-        <div>
-            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Panel Judges Submissions Breakdown</h3>
-            <div class="overflow-x-auto">
-                <table class="tysa-table">
-                    <thead>
+            <!-- Submissions Summary Table -->
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
                         <tr>
-                            <th>Judge Role</th>
-                            <th>Judge Official</th>
-                            <th>Total Raw Marks</th>
-                            <th>Effective Total</th>
-                            <th>Sheet Lock State</th>
-                            <th class="text-right">CD Reopening Action</th>
+                            <th class="py-2.5 px-3 text-center w-12">Select</th>
+                            <th class="py-2.5 px-3">Judge</th>
+                            <th class="py-2.5 px-3 text-center">Performance total</th>
+                            <th class="py-2.5 px-3 text-right">Access status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for sub in selected_perf.submissions.all %}
-                        <tr>
-                            <td class="font-bold text-xs text-slate-900">{{ sub.get_judge_role_display }}</td>
-                            <td class="text-xs text-slate-600">{{ sub.judge.full_name|default:sub.judge.email }}</td>
-                            <td class="font-mono text-xs font-bold text-slate-800">{{ sub.raw_total }}</td>
-                            <td class="font-mono text-xs font-black text-brand-700">{{ sub.effective_total }}</td>
-                            <td>
-                                {% if sub.is_locked %}
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                    Locked (v{{ sub.version }})
-                                </span>
-                                {% else %}
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 animate-pulse">
-                                    Reopened for Revision
-                                </span>
-                                {% endif %}
+                    <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="py-2.5 px-3 text-center">
+                                <input type="radio" name="selected_judge_desk" value="D1" class="text-[#0d5c58] focus:ring-[#0d5c58]">
                             </td>
-                            <td class="text-right">
-                                {% if sub.is_locked %}
-                                <button type="button" onclick="openGrantModal('{{ selected_perf.id }}', '{{ sub.id }}', '{{ sub.get_judge_role_display }}')" 
-                                    class="px-3 py-1 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition">
-                                    Grant Correction Access
-                                </button>
-                                {% else %}
-                                <span class="text-xs text-amber-600 font-bold">Access Open</span>
-                                {% endif %}
+                            <td class="py-2.5 px-3 font-bold text-slate-900">D1</td>
+                            <td class="py-2.5 px-3 text-center font-bold">62.00</td>
+                            <td class="py-2.5 px-3 text-right">
+                                <span class="inline-flex items-center gap-1 text-slate-500 font-bold">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> Locked
+                                </span>
                             </td>
                         </tr>
-                        {% empty %}
-                        <tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">No judge submissions recorded for this performance yet.</td></tr>
-                        {% endfor %}
+                        <tr class="bg-teal-50/50 hover:bg-teal-50">
+                            <td class="py-2.5 px-3 text-center">
+                                <input type="radio" name="selected_judge_desk" value="D2" checked class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            </td>
+                            <td class="py-2.5 px-3 font-bold text-[#0d5c58]">D2</td>
+                            <td class="py-2.5 px-3 text-center font-black text-slate-900">64.00</td>
+                            <td class="py-2.5 px-3 text-right">
+                                <span class="inline-flex items-center gap-1 text-slate-500 font-bold">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> Locked
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="py-2.5 px-3 text-center">
+                                <input type="radio" name="selected_judge_desk" value="D3" class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            </td>
+                            <td class="py-2.5 px-3 font-bold text-slate-900">D3</td>
+                            <td class="py-2.5 px-3 text-center font-bold">63.00</td>
+                            <td class="py-2.5 px-3 text-right">
+                                <span class="inline-flex items-center gap-1 text-slate-500 font-bold">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> Locked
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="py-2.5 px-3 text-center">
+                                <input type="radio" name="selected_judge_desk" value="D4" class="text-[#0d5c58] focus:ring-[#0d5c58]">
+                            </td>
+                            <td class="py-2.5 px-3 font-bold text-slate-900">D4</td>
+                            <td class="py-2.5 px-3 text-center font-bold">65.00</td>
+                            <td class="py-2.5 px-3 text-right">
+                                <span class="inline-flex items-center gap-1 text-slate-500 font-bold">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> Locked
+                                </span>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
+
+            <!-- Breakdown for Selected Judge -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-black text-slate-900">Selected judge: D2 • Performance breakdown</h3>
+                
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                            <tr>
+                                <th class="py-2 px-3 w-10 text-center">#</th>
+                                <th class="py-2 px-3">Asana Code</th>
+                                <th class="py-2 px-3">Asana Name</th>
+                                <th class="py-2 px-3 text-right">Original Mark</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">1</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A1</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 1</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">6.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">2</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A2</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 2</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">6.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">3</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A3</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 3</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">6.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">4</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A4</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 4</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">6.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">5</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A5</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 5</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">6.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">6</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A6</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 6</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">6.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">7</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A7</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 7</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">7.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">8</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A8</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 8</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">7.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">9</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A9</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 9</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">7.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 px-3 text-center font-bold text-slate-500">10</td>
+                                <td class="py-1.5 px-3 font-mono font-semibold">A10</td>
+                                <td class="py-1.5 px-3 font-medium">Asana 10</td>
+                                <td class="py-1.5 px-3 text-right font-bold text-slate-900">7.00</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="bg-[#f0f9f8] border-t border-slate-200">
+                            <tr>
+                                <th colspan="3" class="py-2.5 px-3 text-slate-900 font-extrabold text-sm">Total (D2)</th>
+                                <th class="py-2.5 px-3 text-right text-slate-900 font-black text-sm">64.00</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Grant Correction Access -->
+        <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div>
+                <h2 class="text-base font-black text-slate-900">Grant correction access</h2>
+                <p class="text-xs text-slate-500">Allow the selected judge to revise their own marks for the athlete's entire performance.</p>
+            </div>
+
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="grant_access">
+                <input type="hidden" name="chest" value="112">
+
+                <!-- Judge Selector -->
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">Judge <span class="text-rose-500">*</span></label>
+                    <select name="judge_id" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none font-semibold text-slate-800 focus:border-[#0d5c58]">
+                        <option value="D2" selected>D2 (Judge J027)</option>
+                        <option value="D1">D1 (Judge J015)</option>
+                        <option value="D3">D3 (Judge J041)</option>
+                        <option value="D4">D4 (Judge J053)</option>
+                    </select>
+                </div>
+
+                <!-- Access Scope Callout Card -->
+                <div class="bg-[#f0f9ff] border border-sky-200 rounded-xl p-4 space-y-3">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-sky-100 text-[#0284c7] flex items-center justify-center shrink-0">
+                            <i data-lucide="target" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <div class="text-[11px] font-bold text-sky-700">Access scope (fixed)</div>
+                            <div class="text-base font-black text-[#0369a1] tracking-tight">
+                                Chest 112 &rarr; D2 &rarr; ENTIRE PERFORMANCE
+                            </div>
+                            <div class="text-xs text-slate-600 mt-0.5">
+                                All 10 asanas • Artistic Single (Women) • Semi Final
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/80 rounded-lg p-2.5 text-xs text-sky-900 border border-sky-100 flex items-start gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0 mt-0.5"></i>
+                        <span>This judge can revise their own marks across the athlete's entire performance. Other judges, athletes, events and rounds remain locked.</span>
+                    </div>
+                </div>
+
+                <!-- Reason / Manual Request Details -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-slate-700">Reason / Manual request details <span class="text-rose-500">*</span></label>
+                        <span class="text-[11px] text-slate-400">54 / 500</span>
+                    </div>
+                    <textarea name="reason" rows="3" class="w-full p-3 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">Manual request: review marks for the complete performance.</textarea>
+                </div>
+
+                <!-- Currently Locked Banner -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center shrink-0">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">Currently locked</div>
+                        <div class="text-[11px] text-slate-500">The selected judge does not have correction access for this performance.</div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold rounded-lg shadow-xs transition">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        <span>Grant full-performance access</span>
+                    </button>
+                    <a href="{% url 'admin_dashboard' %}" class="px-5 py-2.5 bg-white hover:bg-rose-50 border border-rose-300 text-rose-600 text-xs font-bold rounded-lg transition text-center">
+                        Cancel
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
-    {% endif %}
-</div>
 
-<!-- Modal: Grant CD Correction Access -->
-<div id="grant-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center drawer-backdrop p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="font-bold text-slate-900 text-base">Grant Correction Access</h3>
-            <button onclick="document.getElementById('grant-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+    <!-- Workflow After Granting Access (4-Step Flow) -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Workflow after granting access</h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Step 1 -->
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <div class="w-7 h-7 rounded-full bg-[#0d5c58] text-white flex items-center justify-center shrink-0 text-xs font-bold">
+                    <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">1 Grant access</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">CD allows judge to revise.</div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <div class="w-7 h-7 rounded-full bg-[#0d5c58] text-white flex items-center justify-center shrink-0 text-xs font-bold">
+                    <i data-lucide="file-edit" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">2 Judge resubmits complete performance</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">Judge updates and resubmits all 10 asanas.</div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <div class="w-7 h-7 rounded-full bg-[#0d5c58] text-white flex items-center justify-center shrink-0 text-xs font-bold">
+                    <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">3 Relock</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">Access is automatically revoked.</div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <div class="w-7 h-7 rounded-full bg-[#0d5c58] text-white flex items-center justify-center shrink-0 text-xs font-bold">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">4 Review & finalise</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">CD reviews changes and finalises the result.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Warning and Finalise Result Bar -->
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 font-bold">
+                !
+            </div>
+            <div>
+                <div class="text-xs font-bold text-amber-900">Finalisation disabled until reviews complete</div>
+                <div class="text-[11px] text-amber-700">The final result cannot be approved until all correction access is revoked and the revised submission is reviewed.</div>
+            </div>
         </div>
 
-        <form method="POST" action="{% url 'cd_corrections' %}" class="space-y-4">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="grant_correction">
-            <input type="hidden" name="performance_id" id="grant-perf-id">
-            <input type="hidden" name="submission_id" id="grant-sub-id">
-
-            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
-                <span class="font-bold">Scoped Access Rule:</span> Reopening will unlock this judge's entire sheet (all 7/10 items) for this specific performance only. All other judges remain locked.
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Reopening Judge Desk</label>
-                <input type="text" id="grant-role-display" readonly class="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-800">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Official Reason for Reopening *</label>
-                <textarea name="reason" required rows="3" placeholder="e.g. Inadvertent key entry on Pose 4 reported by judge, verified by CD." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-brand-500"></textarea>
-            </div>
-
-            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-                <button type="button" onclick="document.getElementById('grant-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
-                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs">Grant Access</button>
-            </div>
-        </form>
+        <div class="text-right shrink-0">
+            <button type="button" disabled class="px-5 py-2.5 bg-slate-300 text-slate-500 text-xs font-bold rounded-lg cursor-not-allowed inline-flex items-center gap-1.5">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Finalise result</span>
+            </button>
+            <div class="text-[10px] text-slate-400 mt-1">Disabled until all corrections are completed.</div>
+        </div>
     </div>
 </div>
-
-<script>
-    function openGrantModal(perfId, subId, roleDisplay) {
-        document.getElementById('grant-perf-id').value = perfId;
-        document.getElementById('grant-sub-id').value = subId;
-        document.getElementById('grant-role-display').value = roleDisplay;
-        document.getElementById('grant-modal').classList.remove('hidden');
-    }
-</script>
 {% endblock %}

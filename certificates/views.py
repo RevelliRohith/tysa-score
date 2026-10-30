@@ -21,6 +21,7 @@ from registrations.models import ChampionshipRegistration, EventEntry
 from scoring.models import Performance, PerformanceStatus
 from scoring.services import calculate_event_division_standings, TiePolicy
 from accounts.models import Coach, Volunteer, Guest
+from accounts.permissions import get_active_championship
 
 PAGE_WIDTH = 792.0
 PAGE_HEIGHT = 612.0
@@ -236,7 +237,7 @@ def certificate_generate(request):
     - Transaction-safe atomic numbering
     - Downloads: Combined PDF, Individual ZIP, CSV, XLSX
     """
-    championship = Championship.objects.first()
+    championship = get_active_championship(request)
     if not _user_can_manage_certificates(request.user, championship=championship):
         return HttpResponseForbidden("Access restricted: Only Championship Director or Admin can generate certificates.")
 

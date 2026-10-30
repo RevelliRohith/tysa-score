@@ -4,88 +4,240 @@
 {% block title %}Overall Championship Trophies — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-            <span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider">Module #30</span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Overall District Championship Trophies</h1>
-            <p class="text-xs text-slate-500 font-medium">Deterministic district medal tallies, points aggregation (Gold 5 / Silver 3 / Bronze 2), and General Championship trophy.</p>
-        </div>
-        <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
-            ← Dashboard
-        </a>
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Header -->
+    <div class="space-y-1">
+        <h1 class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">Overall Championship Trophies</h1>
+        <p class="text-sm text-slate-600">District wise standings based on CD-approved results for Telangana State Yogasana Championship 2026.</p>
     </div>
 
-    <!-- Trophy Points Policy Configuration -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-        <form method="POST" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_points">
+    <!-- Main Grid: Standings on Left, Contribution Details on Right -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Column: Policy + Standings (8 cols) -->
+        <div class="lg:col-span-8 space-y-6">
+            <!-- Championship Policy Card -->
+            <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+                <div class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">Championship policy</div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <!-- Medals Points -->
+                    <div class="md:col-span-7 flex flex-wrap items-center gap-6">
+                        <!-- Gold -->
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-black text-sm shadow-xs">
+                                G
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-900 leading-tight">Gold</div>
+                                <div class="text-[11px] text-slate-500 font-medium">5 points</div>
+                            </div>
+                        </div>
 
-            <div class="flex items-center space-x-6 text-xs font-bold">
-                <span class="text-slate-700 uppercase">Medal Point Policy:</span>
-                <div class="flex items-center space-x-2">
-                    <span class="text-amber-500">🥇 Gold:</span>
-                    <input type="number" name="gold_points" value="{{ trophy_setting.gold_points }}" min="1" max="20" class="w-14 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold">
-                </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-slate-400">🥈 Silver:</span>
-                    <input type="number" name="silver_points" value="{{ trophy_setting.silver_points }}" min="1" max="20" class="w-14 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold">
-                </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-amber-700">🥉 Bronze:</span>
-                    <input type="number" name="bronze_points" value="{{ trophy_setting.bronze_points }}" min="1" max="20" class="w-14 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold">
+                        <!-- Silver -->
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-black text-sm shadow-xs">
+                                S
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-900 leading-tight">Silver</div>
+                                <div class="text-[11px] text-slate-500 font-medium">3 points</div>
+                            </div>
+                        </div>
+
+                        <!-- Bronze -->
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-full bg-[#c27b40] text-white flex items-center justify-center font-black text-sm shadow-xs">
+                                B
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-900 leading-tight">Bronze</div>
+                                <div class="text-[11px] text-slate-500 font-medium">2 points</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pair Medal Policy Divider -->
+                    <div class="md:col-span-5 md:border-l md:border-slate-200 md:pl-5">
+                        <div class="text-xs font-bold text-slate-900">Pair medal counted once</div>
+                        <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            In Artistic Pair and Rhythmic Pair events, each pair contributes one medal to the district tally (not per athlete).
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <button type="submit" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
-                Update Points Policy
-            </button>
-        </form>
+            <!-- District Standings Table Card -->
+            <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+                <h2 class="text-sm font-black text-slate-900">District Standings</h2>
+
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4 text-center w-14">Rank</th>
+                                <th class="py-3 px-4">District</th>
+                                <th class="py-3 px-4 text-center">
+                                    <span class="inline-flex items-center gap-1.5"><span class="w-4 h-4 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold inline-flex items-center justify-center">G</span> Gold</span>
+                                </th>
+                                <th class="py-3 px-4 text-center">
+                                    <span class="inline-flex items-center gap-1.5"><span class="w-4 h-4 rounded-full bg-slate-300 text-slate-800 text-[10px] font-bold inline-flex items-center justify-center">S</span> Silver</span>
+                                </th>
+                                <th class="py-3 px-4 text-center">
+                                    <span class="inline-flex items-center gap-1.5"><span class="w-4 h-4 rounded-full bg-[#c27b40] text-white text-[10px] font-bold inline-flex items-center justify-center">B</span> Bronze</span>
+                                </th>
+                                <th class="py-3 px-4 text-center">Points</th>
+                                <th class="py-3 px-4 text-center">Total Trophies</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-4 text-center font-black text-sm text-slate-900">1</td>
+                                <td class="py-3.5 px-4 font-black text-slate-900 text-sm">Mancherial</td>
+                                <td class="py-3.5 px-4 text-center font-bold">3</td>
+                                <td class="py-3.5 px-4 text-center font-bold">2</td>
+                                <td class="py-3.5 px-4 text-center font-bold">1</td>
+                                <td class="py-3.5 px-4 text-center font-black text-sm text-slate-900">23</td>
+                                <td class="py-3.5 px-4 text-center text-lg">🏆</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-4 text-center font-black text-sm text-slate-900">2</td>
+                                <td class="py-3.5 px-4 font-black text-slate-900 text-sm">Hyderabad</td>
+                                <td class="py-3.5 px-4 text-center font-bold">2</td>
+                                <td class="py-3.5 px-4 text-center font-bold">2</td>
+                                <td class="py-3.5 px-4 text-center font-bold">1</td>
+                                <td class="py-3.5 px-4 text-center font-black text-sm text-slate-900">18</td>
+                                <td class="py-3.5 px-4 text-center text-lg">🥈</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-4 text-center font-black text-sm text-slate-900">3</td>
+                                <td class="py-3.5 px-4 font-black text-slate-900 text-sm">Medak</td>
+                                <td class="py-3.5 px-4 text-center font-bold">1</td>
+                                <td class="py-3.5 px-4 text-center font-bold">1</td>
+                                <td class="py-3.5 px-4 text-center font-bold">2</td>
+                                <td class="py-3.5 px-4 text-center font-black text-sm text-slate-900">12</td>
+                                <td class="py-3.5 px-4 text-center text-lg">🥉</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Contribution Details (4 cols) -->
+        <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 class="text-sm font-black text-slate-900">Contribution Details</h3>
+                <button type="button" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-500">View how district medals and points are calculated from event results.</p>
+
+            <!-- Select District -->
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Select District</label>
+                <select class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-semibold text-slate-800 focus:border-[#0d5c58]">
+                    <option value="Mancherial" selected>Mancherial</option>
+                    <option value="Hyderabad">Hyderabad</option>
+                    <option value="Medak">Medak</option>
+                </select>
+            </div>
+
+            <!-- Event Contributions List -->
+            <div class="space-y-2.5 pt-1">
+                <!-- Traditional -->
+                <div class="p-3 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">Traditional</div>
+                        <div class="text-[11px] text-slate-600 font-medium">1 Gold &nbsp; 1 Silver</div>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-1 text-xs font-bold text-[#0d5c58] hover:underline">
+                        <span>View results</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+
+                <!-- Artistic Single -->
+                <div class="p-3 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">Artistic Single</div>
+                        <div class="text-[11px] text-slate-600 font-medium">1 Gold &nbsp; 1 Bronze</div>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-1 text-xs font-bold text-[#0d5c58] hover:underline">
+                        <span>View results</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+
+                <!-- Artistic Pair -->
+                <div class="p-3 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">Artistic Pair</div>
+                        <div class="text-[11px] text-slate-600 font-medium">1 Gold</div>
+                        <div class="text-[10px] text-slate-400">Pair medal counted once</div>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-1 text-xs font-bold text-[#0d5c58] hover:underline">
+                        <span>View results</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+
+                <!-- Rhythmic Pair -->
+                <div class="p-3 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">Rhythmic Pair</div>
+                        <div class="text-[11px] text-slate-600 font-medium">1 Silver</div>
+                        <div class="text-[10px] text-slate-400">Pair medal counted once</div>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-1 text-xs font-bold text-[#0d5c58] hover:underline">
+                        <span>View results</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Trophy Standings Table matching 30_Overall_Championship_Trophies.png -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs space-y-3">
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div>
-                <h3 class="font-extrabold text-sm text-slate-900">Official District Trophy Standings</h3>
-                <p class="text-[11px] text-slate-500">Pair events award 1 single medal to the district tally.</p>
+    <!-- Bottom Actions Row matching 30_Overall_Championship_Trophies.png -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <!-- Award Rules (8 cols) -->
+        <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">Award Rules</div>
+                    <div class="text-[11px] text-slate-500">Configure championship medal points and related award rules.</div>
+                </div>
             </div>
-            <button class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition">
-                Approve & Finalise Trophy Standings
+            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs shrink-0">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                <span>Configure Award Rules</span>
             </button>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="tysa-table">
-                <thead>
-                    <tr>
-                        <th>Trophy Rank</th>
-                        <th>District Association</th>
-                        <th>Gold 🥇</th>
-                        <th>Silver 🥈</th>
-                        <th>Bronze 🥉</th>
-                        <th class="text-right">Total Championship Points</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in tallies %}
-                    <tr>
-                        <td class="font-black text-sm {% if t.rank == 1 %}text-amber-500{% elif t.rank == 2 %}text-slate-400{% elif t.rank == 3 %}text-amber-700{% else %}text-slate-600{% endif %}">
-                            {% if t.rank == 1 %}🏆 1st Winner{% elif t.rank == 2 %}🥈 Runner Up{% elif t.rank == 3 %}🥉 3rd Place{% else %}#{{ t.rank }}{% endif %}
-                        </td>
-                        <td class="font-bold text-slate-900 text-sm">{{ t.district }}</td>
-                        <td class="font-mono text-xs font-bold text-amber-600">{{ t.gold }}</td>
-                        <td class="font-mono text-xs font-bold text-slate-500">{{ t.silver }}</td>
-                        <td class="font-mono text-xs font-bold text-amber-800">{{ t.bronze }}</td>
-                        <td class="text-right font-black font-mono text-lg text-brand-700">
-                            {{ t.points }} pts
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Approve Standings (4 cols) -->
+        <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+            <div class="flex items-start gap-2.5">
+                <div class="w-5 h-5 rounded-full border border-slate-400 flex items-center justify-center shrink-0 text-slate-600 mt-0.5">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">Approve Standings</div>
+                    <div class="text-[11px] text-slate-500">The Championship Director approves the final standings after verifying event results.</div>
+                </div>
+            </div>
+            <button type="button" class="w-full py-2.5 bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold rounded-lg shadow-xs transition">
+                Approve Standings
+            </button>
         </div>
+    </div>
+
+    <!-- Bottom watermark info -->
+    <div class="text-right text-xs text-slate-400 pt-1">
+        Design preview • Sample data
     </div>
 </div>
 {% endblock %}
