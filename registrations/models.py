@@ -26,6 +26,14 @@ class ChampionshipRegistration(models.Model):
     venue_cleared_at = models.DateTimeField(null=True, blank=True)
     venue_notes = models.TextField(blank=True)
     
+    # Venue Desk Exception Tracking
+    has_venue_exception = models.BooleanField(default=False)
+    exception_reason = models.TextField(blank=True)
+    exception_accepted_by_role = models.CharField(max_length=50, blank=True, help_text="CD, Admin, Organizer")
+    exception_authorizer_name = models.CharField(max_length=150, blank=True)
+    exception_authorizer_mobile = models.CharField(max_length=20, blank=True)
+    exception_granted_at = models.DateTimeField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Master Roll — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto space-y-6 py-2">
+
+    <!-- Top Action Bar (Hidden on print) -->
+    <div class="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+                <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition">Dashboard</a>
+                <span>/</span>
+                <span class="text-slate-500">Competition Management</span>
+                <span>/</span>
+                <span class="text-slate-800 font-bold">Official Master Roll</span>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Official Master Roll Generation & Printing</h1>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">
+                Generate and print competition performance rolls ordered strictly by the universal championship district draw.
+            </p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <!-- View Mode: Without Signature vs With Signature -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                <a href="?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}&view_mode=without_sig" 
+                    class="px-3.5 py-1.5 rounded-lg transition {% if view_mode != 'with_sig' %}bg-white text-teal-800 shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    Without Signature
+                </a>
+                <a href="?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}&view_mode=with_sig" 
+                    class="px-3.5 py-1.5 rounded-lg transition {% if view_mode == 'with_sig' %}bg-white text-teal-800 shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    With Signature
+                </a>
+            </div>
+
+            <a href="?export=pdf&event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}&view_mode={{ view_mode }}" 
+               class="px-4 py-2 text-xs font-bold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                <i data-lucide="file-down" class="w-4 h-4 text-rose-600"></i>
+                <span>Download PDF</span>
+            </a>
+            <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print Master Roll</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Bar for Event, Category, Gender, Round (Hidden on print) -->
+    <div class="print:hidden bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+        <form method="GET" class="flex flex-wrap items-center justify-between gap-4">
+            <input type="hidden" name="view_mode" value="{{ view_mode }}">
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Event</label>
+                    <select name="event_id" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                        {% for cfg in event_configs %}
+                        <option value="{{ cfg.id }}" {% if cfg.id == current_event.id %}selected{% endif %}>{{ cfg.get_event_type_display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Age Category</label>
+                    <select name="cat_id" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if cat.id == current_cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Gender Division</label>
+                    <select name="gender" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                        <option value="M" {% if gender == 'M' %}selected{% endif %}>Male / Boys</option>
+                        <option value="F" {% if gender == 'F' %}selected{% endif %}>Female / Girls</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Round</label>
+                    <select name="round_type" onchange="this.form.submit()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                        <option value="PRELIMINARY" {% if round_type == 'PRELIMINARY' %}selected{% endif %}>Preliminary</option>
+                        <option value="SEMI_FINAL" {% if round_type == 'SEMI_FINAL' %}selected{% endif %}>Semi-Final</option>
+                        <option value="FINAL" {% if round_type == 'FINAL' %}selected{% endif %}>Final</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Status Badges & Cross-linking -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Judge Panel Cross-Link Badge -->
+                {% if assigned_panel and assigned_panel.chief_judge %}
+                    <a href="{% url 'panel_assignments' %}?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}" 
+                       class="px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition flex items-center space-x-1.5"
+                       title="Judge panel configured for this division">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-teal-700"></i>
+                        <span>Panel Assigned: {{ assigned_panel.chief_judge.full_name|default:assigned_panel.chief_judge.email }} (CJ)</span>
+                    </a>
+                {% else %}
+                    <a href="{% url 'panel_assignments' %}?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}" 
+                       class="px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition flex items-center space-x-1.5"
+                       title="Click to assign judges for this division">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+                        <span>Judge Panel Pending (Click to Assign)</span>
+                    </a>
+                {% endif %}
+
+                <!-- Universal Draw Link -->
+                <a href="{% url 'district_draw' %}" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition flex items-center space-x-1">
+                    <i data-lucide="shuffle" class="w-3.5 h-3.5 text-slate-500"></i>
+                    <span>Championship Draw ({{ draw.draw_seed|default:"Active" }})</span>
+                </a>
+            </div>
+        </form>
+
+        <!-- Generation & Lock Controls -->
+        <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="generate_roll">
+                    <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span>Generate / Refresh from Universal Draw</span>
+                    </button>
+                </form>
+
+                {% if master_roll and master_roll.is_locked %}
+                    <span class="px-3 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center space-x-1">
+                        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                        <span>Roll Locked ({{ master_roll.locked_at|date:"M d, H:i" }})</span>
+                    </span>
+                {% else %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="lock_roll">
+                        <button type="submit" onclick="return confirm('Locking the Master Roll freezes declarations and establishes the official competition order. Proceed?')" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl transition flex items-center space-x-1">
+                            <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Lock Master Roll</span>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+
+            <div class="text-xs text-slate-500 font-medium">
+                Total Athletes in Division: <strong class="text-slate-900 font-black">{{ roll_entries|length }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Official Minimal Printable Master Roll Sheet -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-8 shadow-xs space-y-4 print:border-0 print:p-0 print:shadow-none print:w-full">
+        
+        <!-- Minimal Official Header with Logos & Snippet -->
+        {% include "includes/printable_header.html" %}
+
+        <!-- Category & Division Subheader -->
+        <div class="flex items-center justify-between border-y-2 border-slate-900 py-2.5 text-xs font-bold text-slate-900 uppercase tracking-wider">
+            <div class="flex items-center space-x-4">
+                <span>Event: <strong>{{ current_event.get_event_type_display|default:"Traditional Yogasana" }}</strong></span>
+                <span>•</span>
+                <span>Category: <strong>{{ current_cat.name|default:"Sub-Junior" }}</strong></span>
+                <span>•</span>
+                <span>Division: <strong>{% if gender == 'M' %}Boys / Men{% else %}Girls / Women{% endif %}</strong></span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span>Round: <strong>{{ round_type }}</strong></span>
+                <span>•</span>
+                <span>Total Competitors: <strong>{{ roll_entries|length }}</strong></span>
+            </div>
+        </div>
+
+        <!-- Master Roll Table: Minimal, Neat Borders, Clean Alignment -->
+        <div class="overflow-x-auto pt-2">
+            <table class="w-full text-left border-collapse border border-slate-900 text-xs font-medium">
+                <thead>
+                    <tr class="bg-slate-100 border-b-2 border-slate-900 text-[11px] font-black uppercase tracking-wider text-slate-900">
+                        <th class="py-2.5 px-3 border-r border-slate-900 text-center w-14">Order</th>
+                        <th class="py-2.5 px-3 border-r border-slate-900 text-center w-24">Chest No</th>
+                        <th class="py-2.5 px-4 border-r border-slate-900">Athlete Name</th>
+                        <th class="py-2.5 px-4 border-r border-slate-900">District</th>
+                        <th class="py-2.5 px-3 border-r border-slate-900 text-center w-28">Mobile</th>
+                        {% if view_mode == 'with_sig' %}
+                        <th class="py-2.5 px-4 text-center w-40">Athlete Signature</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-300">
+                    {% for entry in roll_entries %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-2.5 px-3 border-r border-slate-300 text-center font-bold text-slate-900">
+                            {{ entry.performance_order }}
+                        </td>
+                        <td class="py-2.5 px-3 border-r border-slate-300 text-center font-mono font-black text-teal-900 text-sm">
+                            {{ entry.event_entry.chest_number|default:entry.performance_order|stringformat:"03d" }}
+                        </td>
+                        <td class="py-2.5 px-4 border-r border-slate-300 font-bold text-slate-950">
+                            {{ entry.event_entry.display_names }}
+                        </td>
+                        <td class="py-2.5 px-4 border-r border-slate-300 text-slate-800 font-semibold">
+                            {{ entry.event_entry.district }}
+                        </td>
+                        <td class="py-2.5 px-3 border-r border-slate-300 text-center font-mono text-slate-600 text-[11px]">
+                            {{ entry.event_entry.registration.athlete.mobile|default:"—" }}
+                        </td>
+                        {% if view_mode == 'with_sig' %}
+                        <td class="py-2.5 px-4 text-center text-slate-400">
+                            <div class="border-b border-dotted border-slate-400 w-32 mx-auto h-5"></div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if view_mode == 'with_sig' %}6{% else %}5{% endif %}" class="py-12 text-center text-slate-400">
+                            <i data-lucide="list-ordered" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+                            <p class="font-bold text-slate-700">No master roll entries generated yet for this division.</p>
+                            <p class="text-[11px] mt-0.5">Click "Generate / Refresh from Universal Draw" above to populate the performance roll.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Authorized Signatures Block (Only shown when With Signature mode is selected) -->
+        {% if view_mode == 'with_sig' %}
+        <div class="pt-12 grid grid-cols-4 gap-4 text-xs text-slate-900 font-bold text-center">
+            <div>
+                <div class="w-36 border-b border-slate-900 mx-auto mb-1.5 h-6"></div>
+                <span class="text-[10px] uppercase text-slate-700 block">{{ championship.master_roll_signatory_1|default:"Stage Manager" }}</span>
+                <span class="text-[9px] text-slate-400 font-normal">Signature & Date</span>
+            </div>
+            <div>
+                <div class="w-36 border-b border-slate-900 mx-auto mb-1.5 h-6"></div>
+                <span class="text-[10px] uppercase text-slate-700 block">{{ championship.master_roll_signatory_2|default:"Chief Judge" }}</span>
+                <span class="text-[9px] text-slate-400 font-normal">Signature & Date</span>
+            </div>
+            <div>
+                <div class="w-36 border-b border-slate-900 mx-auto mb-1.5 h-6"></div>
+                <span class="text-[10px] uppercase text-slate-700 block">{{ championship.master_roll_signatory_3|default:"Competition Director (CD)" }}</span>
+                <span class="text-[9px] text-slate-400 font-normal">Signature & Date</span>
+            </div>
+            <div>
+                <div class="w-36 border-b border-slate-900 mx-auto mb-1.5 h-6"></div>
+                <span class="text-[10px] uppercase text-slate-700 block">{{ championship.master_roll_signatory_4|default:"General Secretary" }}</span>
+                <span class="text-[9px] text-slate-400 font-normal">Signature & Date</span>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<style>
+@media print {
+    body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    nav, header, sidebar, .print\:hidden {
+        display: none !important;
+    }
+    table {
+        border: 2px solid #0f172a !important;
+    }
+    th, td {
+        border-color: #334155 !important;
+    }
+}
+</style>
+{% endblock %}

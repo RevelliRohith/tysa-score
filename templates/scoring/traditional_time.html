@@ -1,375 +1,177 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Traditional Time Judge — Semi Final — TYSA Score{% endblock %}
+{% block title %}Traditional Time Judge — TYSA Score{% endblock %}
 
 {% block content %}
 <div class="max-w-[1600px] mx-auto space-y-6 py-2">
     <!-- Top Metadata Card matching 33_Traditional_Time_Judge.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Traditional Time Judge</h1>
-            <p class="text-sm font-bold text-slate-600 mt-0.5">Semi Final</p>
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+            <span class="text-xl font-black text-slate-900 tracking-tight">Traditional Time Judge</span>
+            <span class="text-slate-300">|</span>
+            <span class="text-base font-bold text-slate-700">Batch #{{ batch.batch_number|default:"1" }}</span>
         </div>
 
-        <div class="flex items-center space-x-6 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+        <div class="flex flex-wrap items-center gap-6 text-xs">
             <div>
                 <span class="text-slate-400 block font-medium">Event</span>
-                <span class="font-bold text-slate-900 text-sm">Traditional Yoga</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Category</span>
-                <span class="font-bold text-slate-900 text-sm">Junior Boys</span>
+                <span class="font-bold text-slate-900 text-sm">{{ batch.panel.event_config.get_event_type_display|default:"Traditional Yogasana" }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Round</span>
-                <span class="font-bold text-slate-900 text-sm">Semi Final</span>
+                <span class="font-bold text-slate-900 text-sm">{{ batch.panel.get_round_type_display|default:"Preliminary" }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-medium">Hold Requirement</span>
+                <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono font-bold">15 Seconds Min</span>
             </div>
         </div>
     </div>
 
     <!-- Sequence & Pose Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center space-x-3">
-            <span class="text-xs font-bold text-slate-700">Asana Sequence</span>
+            <span class="text-sm font-bold text-slate-900">Round Sequence <span class="text-slate-500 font-normal">(7 asanas)</span></span>
             <div class="flex items-center space-x-2">
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">1</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">2</span>
-                <span class="w-8 h-8 rounded-full bg-teal-800 text-white font-bold flex items-center justify-center text-xs shadow-xs">3</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">4</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">5</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">6</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">7</span>
-            </div>
-        </div>
-
-        <div class="flex items-center space-x-6 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-6">
-            <div>
-                <span class="text-slate-400 text-[10px] block font-medium">Current Asana</span>
-                <span class="text-2xl font-black text-slate-900">3 of 7</span>
-            </div>
-            <div>
-                <span class="text-slate-400 text-[10px] block font-medium">Asana Code</span>
-                <span class="text-sm font-bold font-mono text-slate-900">SAMPLE-003</span>
-            </div>
-            <div>
-                <span class="text-slate-400 text-[10px] block font-medium">Asana Name</span>
-                <span class="text-sm font-bold text-slate-900">Vrikshasana</span>
-                <span class="text-xs text-slate-500 block">Tree Pose</span>
-            </div>
-            <div class="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-2xl shrink-0">
-                🧘
-            </div>
-        </div>
-    </div>
-
-    <!-- 5 Stopwatch Cards matching 33_Traditional_Time_Judge.png -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <!-- Chest 101 (Active) -->
-        <div class="bg-white rounded-2xl border-2 border-teal-600 p-4 shadow-sm space-y-4">
-            <span class="text-xs text-slate-400 block font-medium">Chest</span>
-            <div class="text-2xl font-black text-teal-900 font-mono -mt-3">101</div>
-
-            <div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <div class="text-2xl">🧘</div>
-                <div class="min-w-0">
-                    <span class="text-[9px] text-slate-400 font-mono block">SAMPLE-003</span>
-                    <div class="text-xs font-bold text-slate-900 truncate">Vrikshasana</div>
-                    <div class="text-[10px] text-slate-500 truncate">Tree Pose</div>
-                </div>
-            </div>
-
-            <div class="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 text-center">
-                <div class="text-3xl font-black text-teal-950 font-mono">00:45</div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-1">
-                <button type="button" class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="square" class="w-3 h-3"></i><span>Stop</span>
-                </button>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Recorded Time</span>
-                    <span class="font-mono font-bold text-slate-900">00:45</span>
-                </div>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <i data-lucide="check" class="w-3 h-3 mr-1"></i> Accepted
-                </span>
-            </div>
-        </div>
-
-        <!-- Chest 102 -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
-            <span class="text-xs text-slate-400 block font-medium">Chest</span>
-            <div class="text-2xl font-black text-slate-900 font-mono -mt-3">102</div>
-
-            <div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <div class="text-2xl">🧘</div>
-                <div class="min-w-0">
-                    <span class="text-[9px] text-slate-400 font-mono block">SAMPLE-003</span>
-                    <div class="text-xs font-bold text-slate-900 truncate">Vrikshasana</div>
-                    <div class="text-[10px] text-slate-500 truncate">Tree Pose</div>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                <div class="text-3xl font-black text-slate-700 font-mono">00:00</div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-1">
-                <button type="button" class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="square" class="w-3 h-3"></i><span>Stop</span>
-                </button>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Recorded Time</span>
-                    <span class="font-mono font-bold text-slate-900">-</span>
-                </div>
-                <span class="text-[10px] text-slate-400 font-medium">Not Started</span>
-            </div>
-        </div>
-
-        <!-- Chest 103 -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
-            <span class="text-xs text-slate-400 block font-medium">Chest</span>
-            <div class="text-2xl font-black text-slate-900 font-mono -mt-3">103</div>
-
-            <div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <div class="text-2xl">🧘</div>
-                <div class="min-w-0">
-                    <span class="text-[9px] text-slate-400 font-mono block">SAMPLE-003</span>
-                    <div class="text-xs font-bold text-slate-900 truncate">Vrikshasana</div>
-                    <div class="text-[10px] text-slate-500 truncate">Tree Pose</div>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                <div class="text-3xl font-black text-slate-700 font-mono">00:00</div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-1">
-                <button type="button" class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="square" class="w-3 h-3"></i><span>Stop</span>
-                </button>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Recorded Time</span>
-                    <span class="font-mono font-bold text-slate-900">-</span>
-                </div>
-                <span class="text-[10px] text-slate-400 font-medium">Not Started</span>
-            </div>
-        </div>
-
-        <!-- Chest 104 -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
-            <span class="text-xs text-slate-400 block font-medium">Chest</span>
-            <div class="text-2xl font-black text-slate-900 font-mono -mt-3">104</div>
-
-            <div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <div class="text-2xl">🧘</div>
-                <div class="min-w-0">
-                    <span class="text-[9px] text-slate-400 font-mono block">SAMPLE-003</span>
-                    <div class="text-xs font-bold text-slate-900 truncate">Vrikshasana</div>
-                    <div class="text-[10px] text-slate-500 truncate">Tree Pose</div>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                <div class="text-3xl font-black text-slate-700 font-mono">00:00</div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-1">
-                <button type="button" class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="square" class="w-3 h-3"></i><span>Stop</span>
-                </button>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Recorded Time</span>
-                    <span class="font-mono font-bold text-slate-900">-</span>
-                </div>
-                <span class="text-[10px] text-slate-400 font-medium">Not Started</span>
-            </div>
-        </div>
-
-        <!-- Chest 105 -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
-            <span class="text-xs text-slate-400 block font-medium">Chest</span>
-            <div class="text-2xl font-black text-slate-900 font-mono -mt-3">105</div>
-
-            <div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <div class="text-2xl">🧘</div>
-                <div class="min-w-0">
-                    <span class="text-[9px] text-slate-400 font-mono block">SAMPLE-003</span>
-                    <div class="text-xs font-bold text-slate-900 truncate">Vrikshasana</div>
-                    <div class="text-[10px] text-slate-500 truncate">Tree Pose</div>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                <div class="text-3xl font-black text-slate-700 font-mono">00:00</div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-1">
-                <button type="button" class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
-                </button>
-                <button type="button" class="py-1.5 px-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center space-x-1">
-                    <i data-lucide="square" class="w-3 h-3"></i><span>Stop</span>
-                </button>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Recorded Time</span>
-                    <span class="font-mono font-bold text-slate-900">-</span>
-                </div>
-                <span class="text-[10px] text-slate-400 font-medium">Not Started</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Batch Hold Log (Current Round) Table -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-            <h2 class="text-sm font-bold text-slate-900">Batch Hold Log (Current Round)</h2>
-            <span class="text-xs text-slate-500">Asana 3 of 7 — SAMPLE-003 Vrikshasana (Tree Pose)</span>
-        </div>
-
-        <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="w-full text-left text-xs">
-                <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
-                        <th class="py-2.5 px-3 w-16">Asana No.</th>
-                        <th class="py-2.5 px-3">Asana Code – Name</th>
-                        <th class="py-2.5 px-3 text-center">Chest 101</th>
-                        <th class="py-2.5 px-3 text-center">Chest 102</th>
-                        <th class="py-2.5 px-3 text-center">Chest 103</th>
-                        <th class="py-2.5 px-3 text-center">Chest 104</th>
-                        <th class="py-2.5 px-3 text-center">Chest 105</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-700">
-                    <tr>
-                        <td class="py-2.5 px-3 font-bold text-slate-400">1</td>
-                        <td class="py-2.5 px-3 text-slate-500">SAMPLE-001 – Asana 1</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                    <tr>
-                        <td class="py-2.5 px-3 font-bold text-slate-400">2</td>
-                        <td class="py-2.5 px-3 text-slate-500">SAMPLE-002 – Asana 2</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                    <tr class="bg-emerald-50/60 font-semibold text-emerald-950">
-                        <td class="py-2.5 px-3 font-bold">3</td>
-                        <td class="py-2.5 px-3 font-bold">SAMPLE-003 – Vrikshasana</td>
-                        <td class="py-2.5 px-3 text-center font-bold font-mono text-emerald-800">00:45</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                    <tr>
-                        <td class="py-2.5 px-3 font-bold text-slate-400">4</td>
-                        <td class="py-2.5 px-3 text-slate-500">SAMPLE-004 – Asana 4</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                    <tr>
-                        <td class="py-2.5 px-3 font-bold text-slate-400">5</td>
-                        <td class="py-2.5 px-3 text-slate-500">SAMPLE-005 – Asana 5</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                    <tr>
-                        <td class="py-2.5 px-3 font-bold text-slate-400">6</td>
-                        <td class="py-2.5 px-3 text-slate-500">SAMPLE-006 – Asana 6</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                    <tr>
-                        <td class="py-2.5 px-3 font-bold text-slate-400">7</td>
-                        <td class="py-2.5 px-3 text-slate-500">SAMPLE-007 – Asana 7</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                        <td class="py-2.5 px-3 text-center text-slate-400">-</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Bottom Actions -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-3 text-xs text-amber-900">
-            <i data-lucide="file-text" class="w-4 h-4 text-amber-700 shrink-0"></i>
-            <div>
-                <span class="font-bold">Note:</span>
-                <span>Final: maximum 3 simultaneous athletes. Timing limits from round preset.</span>
+                {% for seq_num in "1234567"|make_list %}
+                <a href="?seq={{ seq_num }}" class="w-8 h-8 rounded-full {% if current_seq|stringformat:'s' == seq_num %}bg-teal-800 text-white shadow-xs{% else %}border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %} font-bold flex items-center justify-center text-xs transition">
+                    {{ seq_num }}
+                </a>
+                {% endfor %}
             </div>
         </div>
 
         <div class="flex items-center space-x-3">
-            <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition">
-                Save draft
-            </button>
-            <button type="button" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold shadow-xs transition">
-                Submit batch timing
-            </button>
+            <span class="text-xs font-bold text-slate-500">Active Scoring Asana:</span>
+            <span class="px-3 py-1 bg-amber-50 border border-amber-200 text-amber-900 font-bold rounded-lg text-xs">
+                Asana {{ current_seq }} of 7
+            </span>
         </div>
     </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <!-- Athlete Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ entries|length|default:1 }} gap-4">
+            {% for s in submissions.values %}
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs text-slate-400 block font-medium">Chest</span>
+                        <span class="text-2xl font-black text-slate-900 font-mono">{{ s.entry.chest_number }}</span>
+                    </div>
+                    {% if s.sub.is_locked %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Locked</span>
+                    {% else %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Draft</span>
+                    {% endif %}
+                </div>
+
+                <!-- Live Timer Display -->
+                <div class="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+                    <span class="text-3xl font-black text-emerald-400 font-mono" id="display_{{ s.entry.id }}">
+                        {{ s.item.hold_duration_seconds|stringformat:"05.2f" }}s
+                    </span>
+                </div>
+
+                <!-- Stopwatch Controls -->
+                <div class="grid grid-cols-3 gap-1">
+                    <button type="button" onclick="startTimer('{{ s.entry.id }}')" 
+                            class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
+                        <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
+                    </button>
+                    <button type="button" onclick="pauseTimer('{{ s.entry.id }}')" 
+                            class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
+                        <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
+                    </button>
+                    <button type="button" onclick="resetTimer('{{ s.entry.id }}')" 
+                            class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i><span>Reset</span>
+                    </button>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 space-y-2 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-medium">Hold Seconds:</span>
+                        <input type="number" step="0.1" min="0" max="60" 
+                               name="hold_{{ s.entry.id }}" id="input_{{ s.entry.id }}" 
+                               value="{{ s.item.hold_duration_seconds }}" 
+                               oninput="updateDisplayFromInput('{{ s.entry.id }}')"
+                               class="w-20 text-right px-2 py-1 border border-slate-300 rounded font-bold font-mono outline-none focus:ring-1 focus:ring-teal-700">
+                    </div>
+
+                    <div class="flex items-center justify-between bg-teal-50/70 p-2 rounded-lg text-teal-900 font-bold">
+                        <span>Contribution:</span>
+                        <span class="font-mono">{{ s.item.timing_contribution }} / 2.0</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                No active competitor batch on stage.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Action Bar -->
+        <div class="flex items-center justify-between pt-6">
+            <a href="{% url 'judge_portal' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900">
+                ← Back to Portal
+            </a>
+
+            <div class="flex items-center space-x-3">
+                <button type="submit" name="action" value="save_draft"
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Draft (Item {{ current_seq }})</span>
+                </button>
+
+                <button type="submit" name="action" value="submit_timing"
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit & Lock Timing</span>
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
+
+<script>
+const timers = {};
+
+function startTimer(id) {
+    if (timers[id] && timers[id].interval) return;
+    const input = document.getElementById('input_' + id);
+    let seconds = parseFloat(input.value) || 0;
+    
+    timers[id] = {
+        startTime: performance.now() - (seconds * 1000),
+        interval: setInterval(() => {
+            const elapsed = (performance.now() - timers[id].startTime) / 1000;
+            input.value = elapsed.toFixed(1);
+            document.getElementById('display_' + id).textContent = elapsed.toFixed(2) + 's';
+        }, 50)
+    };
+}
+
+function pauseTimer(id) {
+    if (timers[id] && timers[id].interval) {
+        clearInterval(timers[id].interval);
+        timers[id].interval = null;
+    }
+}
+
+function resetTimer(id) {
+    pauseTimer(id);
+    const input = document.getElementById('input_' + id);
+    input.value = '0.0';
+    document.getElementById('display_' + id).textContent = '00.00s';
+}
+
+function updateDisplayFromInput(id) {
+    const val = parseFloat(document.getElementById('input_' + id).value) || 0;
+    document.getElementById('display_' + id).textContent = val.toFixed(2) + 's';
+}
+</script>
 {% endblock %}

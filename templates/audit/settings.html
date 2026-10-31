@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}System & Championship Settings — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6 py-2 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">System & Championship Settings</h1>
+            <p class="text-xs text-slate-500 mt-1">Configure sporting rules editions, appeal policies, stage batch parameters, and authorized signatories.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1"></i> RBAC Enforced
+            </span>
+            <a href="{% url 'audit_list' %}" class="inline-flex items-center px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+                <i data-lucide="history" class="w-3.5 h-3.5 mr-1.5"></i>
+                <span>Audit Trail</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Security & Privacy Notice -->
+    <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex items-center justify-between text-xs text-blue-900">
+        <div class="flex items-center space-x-3">
+            <i data-lucide="lock" class="w-5 h-5 text-blue-600 shrink-0"></i>
+            <div>
+                <span class="font-bold block">Production Environment Boundary</span>
+                <span>Database connection secrets, Neon credentials, and Django secret keys are isolated and never exposed.</span>
+            </div>
+        </div>
+        <span class="text-[11px] font-mono font-bold text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded">ENV: PROTECTED</span>
+    </div>
+
+    <!-- Card 1: Official Code of Points (COP) & Rules Preset Certification -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-slate-900">Official Code of Points & Rules Preset Certification</h2>
+                <p class="text-xs text-slate-500">Score release is strictly blocked until the rules preset is certified against official COP circulars.</p>
+            </div>
+            {% if championship.is_rules_preset_verified %}
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center space-x-1">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1"></i> Rules Certified
+            </span>
+            {% else %}
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center space-x-1">
+                <i data-lucide="alert-circle" class="w-3.5 h-3.5 mr-1"></i> Certification Pending
+            </span>
+            {% endif %}
+        </div>
+
+        <form method="POST" class="space-y-4 pt-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_rules">
+            
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Official Rules Edition</label>
+                <input type="text" name="rules_edition" value="{{ championship.rules_edition|default:'Yogasana Bharat COP & Circular 2024–2026' }}" 
+                       class="w-full px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 font-medium">
+            </div>
+
+            <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-start space-x-3">
+                <input type="checkbox" name="is_rules_preset_verified" id="is_rules_preset_verified" 
+                       {% if championship.is_rules_preset_verified %}checked{% endif %}
+                       class="mt-0.5 rounded border-slate-300 text-teal-800 focus:ring-teal-700 w-4 h-4">
+                <label for="is_rules_preset_verified" class="text-xs text-slate-800 cursor-pointer">
+                    <span class="font-bold block">Certify Rules Preset for Official Score Publication</span>
+                    <span class="text-slate-500 text-[11px]">By checking this, you certify that the event configurations, difficulty Base Values (0.80–2.20), and 7/10 pose sequence presets strictly match the published federation COP.</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition">
+                    Save & Certify Rules
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Card 2: Appeal Window & Deposit Policy -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div>
+            <h2 class="text-base font-bold text-slate-900">Appeals & Protests Policy</h2>
+            <p class="text-xs text-slate-500">Statutory protest deposit fee and appeal filing window from first provisional score release.</p>
+        </div>
+
+        <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_appeals">
+
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Appeal Statutory Fee (₹ INR)</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                    <input type="number" step="100" min="0" name="appeal_fee" value="1000" 
+                           class="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700 font-bold font-mono">
+                </div>
+                <span class="text-[11px] text-slate-400">Refundable in full if the appeal is upheld by the Jury.</span>
+            </div>
+
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Appeal Window (Minutes)</label>
+                <div class="relative">
+                    <input type="number" min="5" max="120" name="appeal_window_minutes" value="30" 
+                           class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700 font-bold font-mono">
+                </div>
+                <span class="text-[11px] text-slate-400">Standard COP rule: 30 minutes from provisional score display.</span>
+            </div>
+
+            <div class="md:col-span-2 flex justify-end pt-2">
+                <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition">
+                    Update Appeal Policy
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Card 3: Stage Batch Sizes -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div>
+            <h2 class="text-base font-bold text-slate-900">Stage Logistics & Batch Sizing</h2>
+            <p class="text-xs text-slate-500">Configure simultaneous athlete staging limits for earlier rounds vs finals.</p>
+        </div>
+
+        <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_batches">
+
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Preliminary / Semi-Final Batch Limit</label>
+                <input type="number" min="1" max="5" name="max_batch_size" value="5" 
+                       class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700 font-bold font-mono">
+                <span class="text-[11px] text-slate-400">Standard: 1 to 5 athletes on stage simultaneously.</span>
+            </div>
+
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Final Round Batch Limit</label>
+                <input type="number" min="1" max="3" value="3" disabled 
+                       class="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-bold font-mono">
+                <span class="text-[11px] text-slate-400">Locked at max 3 simultaneous athletes per COP final round rules.</span>
+            </div>
+
+            <div class="md:col-span-2 flex justify-end pt-2">
+                <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition">
+                    Update Batch Parameters
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Card 4: Authorized Signatories -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div>
+            <h2 class="text-base font-bold text-slate-900">Master Roll & Result Signatory Roles</h2>
+            <p class="text-xs text-slate-500">Titles printed on official Master Rolls, District Draws and Result Declarations.</p>
+        </div>
+
+        <form method="POST" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_signatories">
+
+            <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase">Signatory 1</label>
+                <input type="text" name="master_roll_signatory_1" value="{{ championship.master_roll_signatory_1|default:'Competition Director' }}" 
+                       class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase">Signatory 2</label>
+                <input type="text" name="master_roll_signatory_2" value="{{ championship.master_roll_signatory_2|default:'Stage Manager' }}" 
+                       class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase">Signatory 3</label>
+                <input type="text" name="master_roll_signatory_3" value="{{ championship.master_roll_signatory_3|default:'Chief Judge' }}" 
+                       class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase">Signatory 4</label>
+                <input type="text" name="master_roll_signatory_4" value="{{ championship.master_roll_signatory_4|default:'General Secretary' }}" 
+                       class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none font-semibold">
+            </div>
+
+            <div class="sm:col-span-2 md:col-span-4 flex justify-end pt-2">
+                <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition">
+                    Save Signatory Roles
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

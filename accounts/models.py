@@ -121,3 +121,44 @@ class Guest(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.designation}"
+
+class PersonType(models.TextChoices):
+    VOLUNTEER = 'VOLUNTEER', 'Volunteer'
+    STAFF = 'STAFF', 'Staff / Official'
+    COACH = 'COACH', 'Coach'
+    GUEST = 'GUEST', 'Guest / Dignitary'
+
+class DutyStatus(models.TextChoices):
+    ASSIGNED = 'ASSIGNED', 'Assigned'
+    PRESENT = 'PRESENT', 'Present & On Duty'
+    COMPLETED = 'COMPLETED', 'Duty Completed'
+    ABSENT = 'ABSENT', 'Absent'
+
+class DutyAssignment(models.Model):
+    championship = models.ForeignKey('championships.Championship', on_delete=models.CASCADE, related_name='duty_assignments')
+    person_name = models.CharField(max_length=150)
+    person_type = models.CharField(max_length=20, choices=PersonType.choices, default=PersonType.VOLUNTEER)
+    mobile = models.CharField(max_length=20, blank=True)
+    district = models.CharField(max_length=100, blank=True)
+    
+    duty_title = models.CharField(max_length=150, help_text="e.g. Stage 1 Marshall, Warmup Area Coordinator, VIP Reception")
+    assigned_stage = models.CharField(max_length=100, blank=True, help_text="e.g. Stage 1, Stage 2, Main Arena, Registration Desk")
+    assigned_ceremony = models.CharField(max_length=100, blank=True, help_text="e.g. Opening Ceremony, Victory Ceremony, Closing")
+    
+    duty_date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    supervisor = models.CharField(max_length=150, blank=True, help_text="Name of reporting officer / supervisor")
+    
+    status = models.CharField(max_length=20, choices=DutyStatus.choices, default=DutyStatus.ASSIGNED)
+    notes = models.TextField(blank=True)
+    service_certificate_eligible = models.BooleanField(default=True, help_text="Eligible for Official Certificate of Service / Appreciation")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['duty_date', 'start_time', 'person_name']
+
+    def __str__(self):
+        return f"{self.person_name} - {self.duty_title} [{self.status}]"

@@ -4,250 +4,141 @@
 {% block title %}Time Judge — Music Event — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6 py-2">
+<div class="max-w-6xl mx-auto space-y-6 py-2">
     <!-- Top Metadata Card matching 21_Music_Event_Time_Judge.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h1 class="text-xl font-bold text-slate-900">Current Performance</h1>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-800 mt-1">Asana 3 of 10</span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Time Judge — Music Event</h1>
+            <p class="text-xs text-slate-500 mt-1">Independent timing desk: whole routine stopwatch with overtime penalty tracking.</p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-4 text-xs">
+        <div class="flex items-center space-x-6 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
             <div>
                 <span class="text-slate-400 block font-medium">Event</span>
-                <div class="font-bold text-slate-900 border border-slate-200 px-3 py-1.5 rounded-lg bg-slate-50">Artistic Single</div>
+                <span class="font-bold text-slate-900 text-sm">{{ entry.event_config.get_event_type_display|default:"Artistic Yogasana" }}</span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Round</span>
-                <div class="font-bold text-slate-900 border border-slate-200 px-3 py-1.5 rounded-lg bg-slate-50">Final</div>
+                <span class="text-slate-400 block font-medium">Chest No.</span>
+                <span class="font-bold text-slate-900 text-base font-mono">{{ entry.chest_number|default:"--" }}</span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Stage</span>
-                <div class="font-bold text-slate-900 border border-slate-200 px-3 py-1.5 rounded-lg bg-slate-50">Judge (T1)</div>
-            </div>
-            <div class="bg-sky-50 border border-sky-200 px-4 py-1.5 rounded-xl text-center">
-                <span class="text-slate-400 text-[10px] block font-medium">Chest No.</span>
-                <span class="text-2xl font-black text-slate-900 font-mono">112</span>
+                <span class="text-slate-400 block font-medium">Target Window</span>
+                <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono font-bold">120s – 150s</span>
             </div>
         </div>
     </div>
 
-    <!-- Sequence Pill Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex items-center justify-center space-x-3 sm:space-x-4 overflow-x-auto">
-        <span class="w-8 h-8 rounded-full bg-teal-800 text-white font-bold flex items-center justify-center text-xs shrink-0"><i data-lucide="check" class="w-4 h-4"></i></span>
-        <span class="w-8 h-8 rounded-full bg-teal-800 text-white font-bold flex items-center justify-center text-xs shrink-0"><i data-lucide="check" class="w-4 h-4"></i></span>
-        <span class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">3</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">4</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">5</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">6</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">7</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">8</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">9</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">10</span>
-    </div>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-8 shadow-xs space-y-8">
+            <!-- Whole Routine Stopwatch -->
+            <div class="text-center space-y-4">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Whole Routine Monotonic Timer</span>
+                
+                <div class="inline-block bg-slate-950 px-12 py-6 rounded-3xl border-4 border-slate-800 shadow-inner">
+                    <span class="text-6xl sm:text-7xl font-black text-emerald-400 font-mono tracking-wider" id="routine_display">
+                        {{ sub.raw_total|default:"0.0" }}s
+                    </span>
+                </div>
 
-    <!-- 3 Stopwatch/Pose Cards matching 21_Music_Event_Time_Judge.png -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Pose Info -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex items-center space-x-4">
-            <div class="w-16 h-16 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-3xl shrink-0">🧘</div>
-            <div>
-                <span class="text-xs text-slate-400 block font-medium">Performed asana</span>
-                <span class="text-xl font-black text-slate-900 block">Vrikshasana</span>
-                <span class="text-xs font-mono text-slate-400 block mt-0.5">SAMPLE-003</span>
-                <span class="text-xs text-slate-500">Tree Pose</span>
+                <div class="flex items-center justify-center space-x-3 pt-2">
+                    <button type="button" onclick="startRoutineTimer()"
+                            class="px-6 py-3 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-sm font-bold flex items-center space-x-2 shadow-xs transition">
+                        <i data-lucide="play" class="w-4 h-4"></i><span>Start Clock</span>
+                    </button>
+                    <button type="button" onclick="pauseRoutineTimer()"
+                            class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center space-x-2 transition">
+                        <i data-lucide="pause" class="w-4 h-4"></i><span>Pause</span>
+                    </button>
+                    <button type="button" onclick="resetRoutineTimer()"
+                            class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center space-x-2 transition">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i><span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Manual Override & Rules -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+                <div class="space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">Elapsed Routine Duration (Seconds)</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" step="0.1" min="0" max="300" 
+                               name="routine_duration" id="routine_duration"
+                               value="{{ sub.raw_total|default:'145.0' }}"
+                               oninput="updateDurationDisplay()"
+                               class="w-full text-xl font-bold px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 font-mono">
+                        <span class="text-sm font-bold text-slate-500">Sec</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Timer syncs live to field. Exact wall-clock elapsed time recorded.</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2 text-xs">
+                    <span class="font-bold text-slate-900 block">COP Music Timing Rules:</span>
+                    <ul class="list-disc pl-4 space-y-1 text-slate-600">
+                        <li>Standard duration: <strong>120 to 150 seconds</strong>.</li>
+                        <li>Overtime penalty: <strong>-0.5 points per 5 seconds</strong> beyond 150s.</li>
+                        <li>Base Timing mark is <strong>10.00</strong> minus overtime penalties.</li>
+                    </ul>
+                </div>
             </div>
         </div>
 
-        <!-- Whole Performance Timer -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4 text-center">
-            <span class="text-xs font-bold text-slate-500 uppercase">Whole performance</span>
-            <div class="text-4xl sm:text-5xl font-black text-teal-800 font-mono tracking-wider">
-                02:45
-            </div>
-            <div class="flex items-center justify-center space-x-2">
-                <button type="button" class="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                    <span>Start</span>
-                </button>
-                <button type="button" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i data-lucide="pause" class="w-3.5 h-3.5"></i>
-                    <span>Pause</span>
-                </button>
-                <button type="button" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
-                    <span>Stop</span>
-                </button>
-            </div>
-        </div>
+        <!-- Action Bar -->
+        <div class="flex items-center justify-between pt-4">
+            <a href="{% url 'judge_portal' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900">
+                ← Back to Portal
+            </a>
 
-        <!-- Asana Hold Timer -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4 text-center">
-            <span class="text-xs font-bold text-slate-500 uppercase">Asana hold</span>
-            <div class="text-4xl sm:text-5xl font-black text-teal-800 font-mono tracking-wider">
-                00:05
-            </div>
-            <div class="flex items-center justify-center space-x-2">
-                <button type="button" class="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                    <span>Start</span>
+            <div class="flex items-center space-x-3">
+                <button type="submit" name="action" value="save_draft"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Draft</span>
                 </button>
-                <button type="button" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i data-lucide="pause" class="w-3.5 h-3.5"></i>
-                    <span>Pause</span>
-                </button>
-                <button type="button" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
-                    <span>Stop</span>
+                <button type="submit" name="action" value="submit_sheet"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit & Lock Timing</span>
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Holding Table (All 10 asanas) -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900">Holding table (All 10 asanas)</h2>
-            <span class="text-xs text-slate-500">Showing 10 of 10 asanas; timing summary pending all records.</span>
-        </div>
-
-        <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="w-full text-left text-xs">
-                <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
-                        <th class="py-2.5 px-4 w-10">#</th>
-                        <th class="py-2.5 px-4">Asana name</th>
-                        <th class="py-2.5 px-4">Code</th>
-                        <th class="py-2.5 px-4 text-center">Reference</th>
-                        <th class="py-2.5 px-4 text-center">Raw (D)</th>
-                        <th class="py-2.5 px-4 text-center">Accepted (D)</th>
-                        <th class="py-2.5 px-4 text-center">TA (T1)</th>
-                        <th class="py-2.5 px-4 text-center">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-800">
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">1</td>
-                        <td class="py-2.5 px-4 font-bold">Tadasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-001</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">5.3</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">5</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.50</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">2</td>
-                        <td class="py-2.5 px-4 font-bold">Utkatasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-002</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">6.0</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">6</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.50</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="bg-blue-50/50 border-y-2 border-blue-500">
-                        <td class="py-2.5 px-4 font-bold text-blue-900">3</td>
-                        <td class="py-2.5 px-4 font-bold text-blue-900">Vrikshasana</td>
-                        <td class="py-2.5 px-4 font-mono text-blue-800">SAMPLE-003</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono font-bold text-blue-900">6.7</td>
-                        <td class="py-2.5 px-4 text-center font-black font-mono text-blue-900">7</td>
-                        <td class="py-2.5 px-4 text-center font-mono font-bold text-blue-900">0.50</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">4</td>
-                        <td class="py-2.5 px-4 font-bold">Garudasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-004</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">5.5</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">5</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">5</td>
-                        <td class="py-2.5 px-4 font-bold">Natarajasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-005</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">6.2</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">6</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">6</td>
-                        <td class="py-2.5 px-4 font-bold">Bhujangasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-006</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">5.0</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">5</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">7</td>
-                        <td class="py-2.5 px-4 font-bold">Dhanurasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-007</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">5.8</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">6</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">8</td>
-                        <td class="py-2.5 px-4 font-bold">Paschimottanasana</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-008</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">4.9</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">5</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Valid</span></td>
-                    </tr>
-                    <!-- 9 Invalid -->
-                    <tr class="hover:bg-slate-50/50 bg-rose-50/20">
-                        <td class="py-2.5 px-4 font-bold text-rose-900">9</td>
-                        <td class="py-2.5 px-4 font-bold text-rose-900">Sarvangasana</td>
-                        <td class="py-2.5 px-4 font-mono text-rose-700">SAMPLE-009</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">4.5</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">4</td>
-                        <td class="py-2.5 px-4 text-center font-mono text-rose-600">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Invalid</span></td>
-                    </tr>
-                    <!-- 10 Invalid -->
-                    <tr class="hover:bg-slate-50/50 bg-rose-50/20">
-                        <td class="py-2.5 px-4 font-bold text-rose-900">10</td>
-                        <td class="py-2.5 px-4 font-bold text-rose-900">Savasana</td>
-                        <td class="py-2.5 px-4 font-mono text-rose-700">SAMPLE-010</td>
-                        <td class="py-2.5 px-4 text-center">🧘</td>
-                        <td class="py-2.5 px-4 text-center font-mono">0.0</td>
-                        <td class="py-2.5 px-4 text-center font-bold font-mono">0</td>
-                        <td class="py-2.5 px-4 text-center font-mono text-rose-600">0.00</td>
-                        <td class="py-2.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Invalid</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Bottom Actions -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div class="flex items-center space-x-2 text-xs text-slate-500 bg-sky-50 border border-sky-100 p-2.5 rounded-lg">
-            <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0"></i>
-            <span>Invalid hold makes complete item zero for every D-JUDGE.</span>
-        </div>
-
-        <div class="flex items-center space-x-3">
-            <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition">
-                Save draft
-            </button>
-            <button type="button" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold shadow-xs transition">
-                Submit time record
-            </button>
-        </div>
-    </div>
+    </form>
 </div>
+
+<script>
+let routineTimer = null;
+
+function startRoutineTimer() {
+    if (routineTimer) return;
+    const input = document.getElementById('routine_duration');
+    let secs = parseFloat(input.value) || 0;
+    const startTime = performance.now() - (secs * 1000);
+
+    routineTimer = setInterval(() => {
+        const elapsed = (performance.now() - startTime) / 1000;
+        input.value = elapsed.toFixed(1);
+        document.getElementById('routine_display').textContent = elapsed.toFixed(1) + 's';
+    }, 100);
+}
+
+function pauseRoutineTimer() {
+    if (routineTimer) {
+        clearInterval(routineTimer);
+        routineTimer = null;
+    }
+}
+
+function resetRoutineTimer() {
+    pauseRoutineTimer();
+    document.getElementById('routine_duration').value = '0.0';
+    document.getElementById('routine_display').textContent = '0.0s';
+}
+
+function updateDurationDisplay() {
+    const val = parseFloat(document.getElementById('routine_duration').value) || 0;
+    document.getElementById('routine_display').textContent = val.toFixed(1) + 's';
+}
+</script>
 {% endblock %}

@@ -16,6 +16,7 @@ import corrections.views as corr_views
 import results.views as result_views
 import certificates.views as cert_views
 import reports.views as report_views
+import audit.views as audit_views
 
 def root_router(request):
     if request.user.is_authenticated:
@@ -37,6 +38,7 @@ urlpatterns = [
     path('accounts/users/', accounts_views.users_and_permissions, name='users_and_permissions'),
     path('accounts/users-and-permissions/', accounts_views.users_and_permissions, name='users_and_permissions_dash'),
     path('registers/', accounts_views.registers_view, name='registers_view'),
+    path('registers/attendance/', accounts_views.attendance_and_duties, name='attendance_and_duties'),
 
     # Championships (Multi-Championship Architecture)
     path('championships/', champ_views.championship_list, name='championship_list'),
@@ -49,6 +51,8 @@ urlpatterns = [
     path('catalogue/', cat_views.catalogue_view, name='catalogue_view'),
 
     # Athlete Registration Flow (5 Steps) & ID Card
+    path('athletes/', athlete_views.athletes_list, name='athletes_list'),
+    path('athletes/directory/', athlete_views.athletes_list, name='athletes_directory'),
     path('athletes/entries/', athlete_views.athlete_entries_list, name='athlete_entries_list'),
     path('register/athlete/step-1/', athlete_views.athlete_register_step1, name='athlete_register_step1'),
     path('register/athlete/step-2/', athlete_views.athlete_register_step2, name='athlete_register_step2'),
@@ -57,14 +61,17 @@ urlpatterns = [
     path('register/athlete/step-5/', athlete_views.athlete_register_step5, name='athlete_register_step5'),
     path('athletes/id-card/<str:athlete_id>/', athlete_views.athlete_id_card, name='athlete_id_card'),
     path('athletes/id-cards/batch/', athlete_views.athlete_id_cards_batch_print, name='athlete_id_cards_batch_print'),
+    path('athletes/id-cards/batch/print/', athlete_views.athlete_id_cards_batch_print, name='athlete_id_cards_batch'),
     path('register/athlete/returning/', athlete_views.athlete_returning, name='athlete_returning'),
 
     # Universal Judges
+    path('judges/', judge_views.judge_approval_queue, name='judge_list'),
     path('judges/apply/', judge_views.universal_judge_register, name='universal_judge_register'),
     path('judges/portal/', judge_views.judge_portal, name='judge_portal'),
     path('judges/<int:judge_id>/', judge_views.judge_profile, name='judge_profile'),
     path('judges/<int:judge_id>/id-card/', judge_views.judge_id_card, name='judge_id_card'),
     path('judges/id-cards/batch/', judge_views.judge_id_cards_batch_print, name='judge_id_cards_batch_print'),
+    path('judges/id-cards/batch/print/', judge_views.judge_id_cards_batch_print, name='judge_id_cards_batch'),
     path('judges/approval-queue/', judge_views.judge_approval_queue, name='judge_approval_queue'),
 
     # District & Venue
@@ -73,6 +80,7 @@ urlpatterns = [
 
     # Competition Operations
     path('competition/draw/', comp_views.district_draw, name='district_draw'),
+    path('competition/master-roll/', comp_views.master_roll, name='master_roll'),
     path('competition/panels/', comp_views.panel_assignments, name='panel_assignments'),
     path('competition/stage/', comp_views.stage_manager, name='stage_manager'),
     path('display/second-screen/', comp_views.second_screen, name='second_screen'),
@@ -89,9 +97,12 @@ urlpatterns = [
     path('scoring/evaluator/', scoring_views.scoring_evaluator, name='scoring_evaluator'),
     path('scoring/chief-judge/', scoring_views.scoring_chief_judge, name='scoring_chief_judge'),
 
-    # CD Corrections & Jury
+    # CD Corrections & Jury & Appeals
     path('cd/corrections/', corr_views.cd_corrections, name='cd_corrections'),
     path('jury/', corr_views.jury_view, name='jury_view'),
+    path('appeals/', corr_views.appeal_list, name='appeal_list'),
+    path('appeals/create/', corr_views.appeal_create, name='appeal_create'),
+    path('appeals/<int:appeal_id>/', corr_views.appeal_detail, name='appeal_detail'),
 
     # Live Audience & Results
     path('display/live/', result_views.public_live_display, name='public_live_display'),
@@ -108,6 +119,12 @@ urlpatterns = [
     path('reports/trophies/', report_views.report_trophies, name='report_trophies'),
     path('reports/ceremonies/', report_views.report_ceremonies, name='report_ceremonies'),
     path('reports/championship/', report_views.report_complete, name='report_complete'),
+    path('reports/complete/', report_views.report_complete, name='report_complete_alt'),
+
+    # Settings & Audit
+    path('settings/', audit_views.system_settings_view, name='system_settings'),
+    path('settings/association/', audit_views.system_settings_view, name='association_settings'),
+    path('audit/', audit_views.audit_log_list, name='audit_list'),
 ]
 
 if settings.DEBUG:

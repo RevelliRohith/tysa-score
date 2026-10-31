@@ -1,6 +1,11 @@
 from decimal import Decimal
 from django.db import models
 
+class AsanaStatus(models.TextChoices):
+    PUBLISHED = 'PUBLISHED', 'Published'
+    DRAFT = 'DRAFT', 'Draft'
+    ARCHIVED = 'ARCHIVED', 'Archived'
+
 class Asana(models.Model):
     source_id = models.IntegerField(unique=True, help_text="Original source dataset ID")
     sno = models.IntegerField(help_text="Serial number from official catalogue")
@@ -18,6 +23,7 @@ class Asana(models.Model):
     
     is_reference_record = models.BooleanField(default=False, help_text="True for BAC-A..BAC-E base difficulty scales")
     is_published = models.BooleanField(default=True, help_text="Only published poses are selectable by athletes")
+    status = models.CharField(max_length=20, choices=AsanaStatus.choices, default=AsanaStatus.PUBLISHED, db_index=True)
     version = models.PositiveIntegerField(default=1)
     
     created_at = models.DateTimeField(auto_now_add=True)

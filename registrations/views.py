@@ -36,6 +36,10 @@ def district_approvals(request):
         selected_district = assigned_district
         districts = DistrictQuota.objects.filter(championship=championship, district_name__iexact=assigned_district) if championship else DistrictQuota.objects.none()
 
+    tab = request.GET.get('tab', 'queue').strip().lower()
+    if tab not in ['queue', 'consolidated']:
+        tab = 'queue'
+
     selected_event = request.GET.get('event', '').strip()
     selected_cat = request.GET.get('cat', '').strip()
 
@@ -49,6 +53,12 @@ def district_approvals(request):
         registrations = registrations.filter(event_entries__event_config__event_type=selected_event).distinct()
     if selected_cat:
         registrations = registrations.filter(event_entries__age_category_id=selected_cat).distinct()
+
+    approved_count = registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]).count()
+    pending_count = registrations.filter(status=RegistrationStatus.SUBMITTED).count()
+
+    if tab == 'consolidated':
+        registrations = registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED])
 
     quota_info = None
     if selected_district and championship:
@@ -103,6 +113,9 @@ def district_approvals(request):
 
     return render(request, 'registrations/district_approvals.html', {
         'championship': championship,
+        'tab': tab,
+        'approved_count': approved_count,
+        'pending_count': pending_count,
         'districts': districts,
         'selected_district': selected_district,
         'assigned_district': assigned_district,
@@ -241,13 +254,38 @@ def venue_verification(request):
             return redirect(f"/venue/verification/?select_id={reg.id}&mode={mode}")
 
         elif action == 'log_exception':
-            notes = request.POST.get('exception_notes', '').strip()
-            if notes:
-                existing = reg.venue_notes or ""
+            reason = request.POST.get('exception_reason', '').strip()
+            accepted_by_role = request.POST.get('exception_accepted_by_role', 'Competition Director').strip()
+            authorizer_name = request.POST.get('exception_authorizer_name', '').strip()
+            authorizer_mobile = request.POST.get('exception_authorizer_mobile', '').strip()
+            clear_venue_too = (request.POST.get('clear_venue_too') == '1')
+
+            if reason:
+                reg.has_venue_exception = True
+                reg.exception_reason = reason
+                reg.exception_accepted_by_role = accepted_by_role
+                reg.exception_authorizer_name = authorizer_name
+                reg.exception_authorizer_mobile = authorizer_mobile
+                reg.exception_granted_at = timezone.now()
+
                 timestamp_str = timezone.now().strftime("%d-%m-%Y %H:%M")
-                reg.venue_notes = f"{existing}\n[{timestamp_str}] EXCEPTION: {notes}".strip()
-                reg.save(update_fields=['venue_notes'])
-                messages.warning(request, f"Exception logged for {reg.athlete.full_name}: {notes}")
+                auth_info = f"{authorizer_name} ({accepted_by_role}, {authorizer_mobile})" if authorizer_name else accepted_by_role
+                existing = reg.venue_notes or ""
+                reg.venue_notes = f"{existing}\n[{timestamp_str}] EXCEPTION AUTHORIZED by {auth_info}: {reason}".strip()
+
+                if clear_venue_too:
+                    reg.status = RegistrationStatus.VENUE_CLEARED
+                    reg.venue_cleared = True
+                    reg.venue_cleared_by = request.user
+                    reg.venue_cleared_at = timezone.now()
+
+                reg.save()
+                messages.warning(
+                    request, 
+                    f"Official exception accepted for {reg.athlete.full_name}! Authorized by {authorizer_name or accepted_by_role} ({authorizer_mobile})."
+                )
+            else:
+                messages.error(request, "Please provide a clear reason for the venue exception.")
             return redirect(f"/venue/verification/?select_id={reg.id}&mode={mode}")
 
     return render(request, 'registrations/venue_verification.html', {

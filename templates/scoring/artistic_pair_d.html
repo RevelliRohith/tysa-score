@@ -9,121 +9,150 @@
     <div class="flex items-center justify-between pb-3 border-b border-slate-200">
         <div class="flex items-center space-x-3">
             <span class="text-xl font-black text-slate-900 tracking-tight">Artistic Pair — D Judge</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 font-bold border border-teal-200">
+                Desk D1
+            </span>
         </div>
         <div class="flex items-center space-x-4 text-sm font-semibold text-slate-700">
-            <span>Final</span>
+            <span>{{ perf.get_round_type_display|default:"Final" }}</span>
             <span class="text-slate-300">|</span>
-            <span class="font-mono text-base font-bold text-slate-900">Chest 121 / 122</span>
+            <span class="font-mono text-base font-bold text-slate-900">
+                Chest {{ entry.chest_number|default:"--" }}
+                {% if entry.partner_athlete %}
+                (Pair: {{ entry.registration.athlete.chest_number|default:"A" }} / {{ entry.partner_athlete.chest_number|default:"B" }})
+                {% endif %}
+            </span>
         </div>
     </div>
 
     <!-- Title & Asana Sequence -->
     <div class="space-y-4">
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Score the submitted asana</h1>
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Score the Submitted Asana</h1>
+            {% if sub.is_locked %}
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                ✓ Locked & Submitted
+            </span>
+            {% endif %}
+        </div>
 
         <div class="flex items-center space-x-4">
-            <span class="text-base font-bold text-slate-900">Asana 3 of 10</span>
+            <span class="text-base font-bold text-slate-900">Asana {{ current_seq }} of 10</span>
             <div class="flex items-center space-x-2">
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">1</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">2</span>
-                <span class="w-8 h-8 rounded-full bg-teal-800 text-white font-bold flex items-center justify-center text-xs shadow-xs">3</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">4</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">5</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">6</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">7</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">8</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">9</span>
-                <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">10</span>
+                {% for seq_num in "1234567890"|make_list %}
+                {% with n=forloop.counter %}
+                <a href="?seq={{ n }}&perf_id={{ perf.id|default:'' }}" 
+                   class="w-8 h-8 rounded-full font-bold flex items-center justify-center text-xs transition
+                   {% if current_seq == n %}bg-teal-800 text-white shadow-xs{% else %}border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %}">
+                    {{ n }}
+                </a>
+                {% endwith %}
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- Main Card matching 19_Artistic_Pair_D_Judge.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-8">
-        <!-- 3 Columns for Athletes & Formation -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Col 1: Chest 121 -->
-            <div class="space-y-4">
-                <h3 class="text-xl font-black text-slate-900 font-mono">Chest 121</h3>
-                <div class="bg-sky-50/50 rounded-2xl border border-sky-100 p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
-                    <div class="text-6xl mb-3">🧘</div>
-                    <div class="text-xs text-slate-400 font-medium">Submitted asana</div>
-                    <div class="text-lg font-bold text-slate-900">Vrikshasana</div>
-                    <div class="text-xs font-mono text-slate-400">SAMPLE003</div>
-                </div>
-            </div>
-
-            <!-- Col 2: Chest 122 -->
-            <div class="space-y-4">
-                <h3 class="text-xl font-black text-slate-900 font-mono">Chest 122</h3>
-                <div class="bg-sky-50/50 rounded-2xl border border-sky-100 p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
-                    <div class="text-6xl mb-3">🧘</div>
-                    <div class="text-xs text-slate-400 font-medium">Submitted asana</div>
-                    <div class="text-lg font-bold text-slate-900">Vrikshasana</div>
-                    <div class="text-xs font-mono text-slate-400">SAMPLE003</div>
-                </div>
-            </div>
-
-            <!-- Col 3: Formation -->
-            <div class="space-y-4">
-                <h3 class="text-xl font-black text-slate-900">Formation</h3>
-                <div class="bg-sky-50/50 rounded-2xl border border-sky-100 p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
-                    <div class="text-6xl mb-3">🧘🧘</div>
-                    <div class="text-xs text-slate-400 font-medium">Pair Formation</div>
-                    <div class="text-lg font-bold text-slate-900">Synchronized Mirror</div>
-                    <div class="text-xs text-slate-500">Tree Pose Duet</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="border-t border-slate-100 pt-6">
-            <!-- 3 Input Fields -->
+    <form method="POST">
+        {% csrf_token %}
+        <!-- Main Card matching 19_Artistic_Pair_D_Judge.png -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-8">
+            <!-- 3 Columns for Athletes & Formation -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Chest 121 — Execution / 10</label>
-                    <input type="number" step="0.25" value="8.00" class="w-full text-xl font-black px-4 py-3 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 text-slate-900">
+                <!-- Col 1: Chest A -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-black text-slate-900 font-mono">Chest {{ entry.chest_number|default:"A" }}</h3>
+                    <div class="bg-sky-50/50 rounded-2xl border border-sky-100 p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
+                        <div class="text-5xl mb-3">
+                            {% if pose_a.image_url %}
+                            <img src="{{ pose_a.image_url }}" alt="Pose" class="w-16 h-16 rounded-xl object-cover">
+                            {% else %}🧘{% endif %}
+                        </div>
+                        <div class="text-xs text-slate-400 font-medium">Submitted asana</div>
+                        <div class="text-lg font-bold text-slate-900">{{ pose_a.declared_name|default:"Vrikshasana" }}</div>
+                        <div class="text-xs font-mono text-slate-400">{{ pose_a.declared_code|default:"PAIR-A" }}</div>
+                        <div class="text-[11px] font-semibold text-teal-800 mt-1">BV: {{ pose_a.declared_bv|default:"0.80" }}</div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Chest 122 — Execution / 10</label>
-                    <input type="number" step="0.25" value="7.00" class="w-full text-xl font-black px-4 py-3 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 text-slate-900">
+                <!-- Col 2: Chest B -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-black text-slate-900 font-mono">Chest {{ entry.partner_athlete.chest_number|default:"B" }}</h3>
+                    <div class="bg-sky-50/50 rounded-2xl border border-sky-100 p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
+                        <div class="text-5xl mb-3">
+                            {% if pose_b.image_url %}
+                            <img src="{{ pose_b.image_url }}" alt="Pose" class="w-16 h-16 rounded-xl object-cover">
+                            {% else %}🧘{% endif %}
+                        </div>
+                        <div class="text-xs text-slate-400 font-medium">Submitted asana</div>
+                        <div class="text-lg font-bold text-slate-900">{{ pose_b.declared_name|default:"Vrikshasana" }}</div>
+                        <div class="text-xs font-mono text-slate-400">{{ pose_b.declared_code|default:"PAIR-B" }}</div>
+                        <div class="text-[11px] font-semibold text-teal-800 mt-1">BV: {{ pose_b.declared_bv|default:"0.80" }}</div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Formation — Execution / 10</label>
-                    <input type="number" step="0.25" value="8.00" class="w-full text-xl font-black px-4 py-3 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 text-slate-900">
+                <!-- Col 3: Formation -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-black text-slate-900">Pair Formation</h3>
+                    <div class="bg-sky-50/50 rounded-2xl border border-sky-100 p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
+                        <div class="text-5xl mb-3">🧘🧘</div>
+                        <div class="text-xs text-slate-400 font-medium">Prescribed Formation</div>
+                        <div class="text-lg font-bold text-slate-900">Synchronized Mirror</div>
+                        <div class="text-xs text-slate-500">Duet Symmetry & Balance</div>
+                        <div class="text-[11px] font-semibold text-slate-600 mt-1">Item #{{ current_seq }} of 10</div>
+                    </div>
                 </div>
             </div>
-            <p class="text-xs text-slate-400 mt-2">Enter the marks for this asana.</p>
-        </div>
-    </div>
 
-    <!-- Bottom Actions matching 19_Artistic_Pair_D_Judge.png -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div class="flex items-center space-x-3">
-            <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 transition">
-                <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                <span>Previous asana</span>
-            </button>
-            <button type="button" class="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 transition">
-                <span>Next asana</span>
-                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-        </div>
+            <div class="border-t border-slate-100 pt-6">
+                <!-- 3 Input Fields -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Chest {{ entry.chest_number|default:"A" }} — Execution / 10</label>
+                        <input type="number" step="0.25" min="0" max="10" name="chest_a_exec" value="{{ score_item.chest_a_execution|default:'8.00' }}" 
+                               class="w-full text-xl font-black px-4 py-3 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 text-slate-900"
+                               {% if sub.is_locked %}disabled{% endif %}>
+                    </div>
 
-        <div class="flex items-center space-x-4">
-            <div class="inline-flex items-center text-xs font-semibold text-emerald-700">
-                <i data-lucide="check-circle" class="w-4 h-4 mr-1 text-emerald-600"></i>
-                <span>Saved draft</span>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Chest {{ entry.partner_athlete.chest_number|default:"B" }} — Execution / 10</label>
+                        <input type="number" step="0.25" min="0" max="10" name="chest_b_exec" value="{{ score_item.chest_b_execution|default:'7.00' }}" 
+                               class="w-full text-xl font-black px-4 py-3 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 text-slate-900"
+                               {% if sub.is_locked %}disabled{% endif %}>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Formation — Execution / 10</label>
+                        <input type="number" step="0.25" min="0" max="10" name="formation_exec" value="{{ score_item.formation_score|default:'8.00' }}" 
+                               class="w-full text-xl font-black px-4 py-3 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 text-slate-900"
+                               {% if sub.is_locked %}disabled{% endif %}>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2">Enter execution marks for both athletes and their synchronized formation.</p>
             </div>
-            <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition">
-                Save draft
-            </button>
-            <button type="button" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold shadow-xs transition">
-                Submit marks
-            </button>
         </div>
-    </div>
-    <div class="text-right text-[11px] text-slate-400 mt-2">Illustrative asana and scores</div>
+
+        <!-- Action Bar -->
+        <div class="flex items-center justify-between pt-4">
+            <a href="{% url 'judge_portal' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900">
+                ← Back to Portal
+            </a>
+
+            <div class="flex items-center space-x-3">
+                <button type="submit" name="action" value="save_draft"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Draft (Item {{ current_seq }})</span>
+                </button>
+
+                <button type="submit" name="action" value="submit_sheet"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit & Lock Sheet</span>
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
 {% endblock %}

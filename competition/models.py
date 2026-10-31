@@ -3,7 +3,7 @@ from django.conf import settings
 
 class DistrictDraw(models.Model):
     championship = models.ForeignKey('championships.Championship', on_delete=models.CASCADE, related_name='draws')
-    event_config = models.ForeignKey('championships.EventConfiguration', on_delete=models.CASCADE, related_name='draws')
+    event_config = models.ForeignKey('championships.EventConfiguration', on_delete=models.CASCADE, related_name='draws', null=True, blank=True)
     draw_seed = models.CharField(max_length=50, blank=True)
     draw_order = models.JSONField(help_text="Ordered list of district names determined by auditable lottery")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
@@ -86,7 +86,54 @@ class JudgePanel(models.Model):
     d_judges_count = models.PositiveIntegerField(default=4, help_text="Configurable D-seats: typically 4 for Traditional")
 
     is_active = models.BooleanField(default=True)
+    is_closed = models.BooleanField(default=False, help_text="Once closed, assigned judges are freed to be assigned to other events")
+    closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='closed_panels')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    SEAT_FIELDS = [
+        'chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge',
+        'time_judge', 'time_judge_2', 'evaluator', 'evaluator_2',
+        'artistry_judge', 'artistry_judge_2', 'stage_manager', 'jury_member'
+    ]
+
+    SEAT_LABELS = {
+        'chief_judge': 'Chief Judge',
+        'd1_judge': 'D1 Judge',
+        'd2_judge': 'D2 Judge',
+        'd3_judge': 'D3 Judge',
+        'd4_judge': 'D4 Judge',
+        'time_judge': 'Time Judge',
+        'time_judge_2': 'Time Judge 2',
+        'evaluator': 'Evaluator',
+        'evaluator_2': 'Evaluator 2',
+        'artistry_judge': 'Artistry Judge',
+        'artistry_judge_2': 'Artistry Judge 2',
+        'stage_manager': 'Stage Manager',
+        'jury_member': 'Jury Member',
+    }
+
+    def get_assigned_judge_ids(self):
+        ids = set()
+        for field in self.SEAT_FIELDS:
+            uid = getattr(self, f"{field}_id", None)
+            if uid:
+                ids.add(uid)
+        return ids
+
+    def get_assigned_judges_dict(self):
+        result = {}
+        for field in self.SEAT_FIELDS:
+            user = getattr(self, field, None)
+            if user:
+                result[field] = user
+        return result
+
+    @property
+    def status_display(self):
+        if self.is_closed:
+            return "CLOSED"
+        return "OPEN"
 
     def __str__(self):
         cat_str = f" - {self.age_category.name}" if self.age_category else ""

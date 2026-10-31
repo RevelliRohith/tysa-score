@@ -109,12 +109,13 @@ def role_select_view(request):
 @admin_required
 def admin_dashboard(request):
     """
-    System Admin All-Modules Dashboard:
-    Strictly restricted to System Admin.
-    Calculates REAL, scoped metrics for the active championship without mock fallbacks.
-    Returns real zero counts if no records exist.
+    Operational Admin Dashboard:
+    Displays running active championships, live competition metrics,
+    direct operational control links, and recent audit activity.
+    Redundant static module cards removed as requested.
     """
     championship = get_active_championship(request)
+    running_championships = Championship.objects.all().order_by('-year', '-start_date')
 
     if championship:
         total_athletes = Athlete.objects.filter(registrations__championship=championship).distinct().count()
@@ -128,19 +129,24 @@ def admin_dashboard(request):
             status__in=['PROVISIONAL_RELEASED', 'CD_FINALIZED']
         ).count()
     else:
-        total_athletes = 0
-        total_registrations = 0
-        total_entries = 0
-        venue_cleared = 0
-        pending_approvals = 0
-        active_panels = 0
-        scored_performances = 0
+        total_athletes = Athlete.objects.count()
+        total_registrations = ChampionshipRegistration.objects.count()
+        total_entries = EventEntry.objects.count()
+        venue_cleared = ChampionshipRegistration.objects.filter(venue_cleared=True).count()
+        pending_approvals = ChampionshipRegistration.objects.filter(status='SUBMITTED').count()
+        active_panels = JudgePanel.objects.filter(is_active=True).count()
+        scored_performances = Performance.objects.filter(status__in=['PROVISIONAL_RELEASED', 'CD_FINALIZED']).count()
 
     approved_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.APPROVED).count()
     pending_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.PENDING).count()
+    
+    from audit.models import AuditLog
+    recent_logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:8]
 
     return render(request, 'accounts/dashboard.html', {
         'championship': championship,
+        'running_championships': running_championships,
+        'recent_logs': recent_logs,
         'stats': {
             'total_athletes': total_athletes,
             'total_registrations': total_registrations,
@@ -151,7 +157,6 @@ def admin_dashboard(request):
             'scored_performances': scored_performances,
             'pending_approvals': pending_approvals,
             'pending_judges': pending_judges,
-            'pending_exceptions': 0,
         }
     })
 
@@ -355,6 +360,174 @@ def registers_view(request):
         'coaches': coaches,
         'volunteers': volunteers,
         'guests': guests,
+    })
+
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
+def attendance_and_duties(request):
+    """
+    Dedicated Attendance & Duty Management Module:
+    Manages operational duties, ceremony staffing, stage coordinators, volunteers, and officials.
+    Provides attendance marking, duty completion tracking, service certificate eligibility,
+    filters, search, pagination, and Excel export.
+    """
+    from .models import DutyAssignment, PersonType, DutyStatus
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+    championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected.")
+        return redirect('admin_dashboard')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'create_assignment':
+            person_name = request.POST.get('person_name', '').strip()
+            person_type = request.POST.get('person_type', PersonType.VOLUNTEER)
+            contact = request.POST.get('contact_number', '').strip() or request.POST.get('mobile', '').strip()
+            duty_title = request.POST.get('duty_title', '').strip()
+            stage = request.POST.get('stage_assigned', '').strip() or request.POST.get('assigned_stage', '').strip()
+            ceremony = request.POST.get('ceremony_assigned', '').strip() or request.POST.get('assigned_ceremony', '').strip()
+            supervisor = request.POST.get('supervisor_name', '').strip() or request.POST.get('supervisor', '').strip()
+            duty_date = request.POST.get('duty_date')
+            start_time = request.POST.get('start_time') or None
+            end_time = request.POST.get('end_time') or None
+
+            DutyAssignment.objects.create(
+                championship=championship,
+                person_name=person_name,
+                person_type=person_type,
+                mobile=contact,
+                duty_title=duty_title,
+                assigned_stage=stage,
+                assigned_ceremony=ceremony,
+                supervisor=supervisor,
+                duty_date=duty_date or datetime.date.today(),
+                start_time=start_time,
+                end_time=end_time
+            )
+            messages.success(request, f"Duty assignment created for {person_name} ({duty_title}).")
+            return redirect('attendance_and_duties')
+
+        elif action == 'update_status':
+            duty_id = request.POST.get('duty_id')
+            duty = get_object_or_404(DutyAssignment, id=duty_id, championship=championship)
+            att_status = request.POST.get('status') or request.POST.get('attendance_status')
+            cert_ok = request.POST.get('is_certificate_eligible') == '1' or request.POST.get('service_certificate_eligible') == '1'
+
+            if att_status in DutyStatus.values:
+                duty.status = att_status
+            duty.service_certificate_eligible = cert_ok
+            duty.save()
+
+            messages.success(request, f"Updated attendance and duty status for {duty.person_name}.")
+            return redirect(request.get_full_path())
+
+    q = request.GET.get('q', '').strip()
+    type_filter = request.GET.get('person_type', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    cert_filter = request.GET.get('cert_eligible', '').strip()
+
+    duties_qs = DutyAssignment.objects.filter(championship=championship).order_by('-duty_date', 'person_type', 'person_name')
+
+    if q:
+        duties_qs = duties_qs.filter(
+            Q(person_name__icontains=q) |
+            Q(mobile__icontains=q) |
+            Q(duty_title__icontains=q) |
+            Q(supervisor__icontains=q) |
+            Q(assigned_stage__icontains=q) |
+            Q(assigned_ceremony__icontains=q)
+        )
+
+    if type_filter:
+        duties_qs = duties_qs.filter(person_type=type_filter)
+
+    if status_filter:
+        duties_qs = duties_qs.filter(status=status_filter)
+
+    if cert_filter == 'yes':
+        duties_qs = duties_qs.filter(service_certificate_eligible=True)
+    elif cert_filter == 'no':
+        duties_qs = duties_qs.filter(service_certificate_eligible=False)
+
+    total_count = duties_qs.count()
+    present_count = DutyAssignment.objects.filter(championship=championship, status__in=[DutyStatus.PRESENT, DutyStatus.COMPLETED]).count()
+    completed_count = DutyAssignment.objects.filter(championship=championship, status=DutyStatus.COMPLETED).count()
+    eligible_count = DutyAssignment.objects.filter(championship=championship, service_certificate_eligible=True).count()
+
+    # Excel export
+    if request.GET.get('export') == 'excel':
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Attendance & Duties"
+
+        ws.merge_cells('A1:J1')
+        title_cell = ws['A1']
+        title_cell.value = f"TELANGANA YOGASANA SPORTS ASSOCIATION — {championship.name.upper()} ATTENDANCE REGISTER"
+        title_cell.font = Font(name='Arial', size=13, bold=True, color='FFFFFF')
+        title_cell.fill = PatternFill(start_color='00838F', end_color='00838F', fill_type='solid')
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 28
+
+        headers = ['S.No', 'Person Name', 'Role Type', 'Contact', 'Duty Title', 'Stage / Ceremony', 'Supervisor', 'Attendance Status', 'Certificate Eligible']
+        ws.append(headers)
+        ws.row_dimensions[2].height = 22
+
+        header_font = Font(name='Arial', size=10, bold=True, color='FFFFFF')
+        header_fill = PatternFill(start_color='1A365D', end_color='1A365D', fill_type='solid')
+        for col_idx in range(1, len(headers) + 1):
+            c = ws.cell(row=2, column=col_idx)
+            c.font = header_font
+            c.fill = header_fill
+            c.alignment = Alignment(horizontal='center', vertical='center')
+
+        for idx, d in enumerate(duties_qs, start=1):
+            row_data = [
+                idx,
+                d.person_name,
+                d.get_person_type_display(),
+                d.mobile or "—",
+                d.duty_title,
+                f"{d.assigned_stage or ''} {d.assigned_ceremony or ''}".strip() or "General",
+                d.supervisor or "—",
+                d.get_status_display(),
+                "Eligible" if d.service_certificate_eligible else "Not Eligible"
+            ]
+            ws.append(row_data)
+
+        from openpyxl.utils import get_column_letter
+        for col_idx in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col_idx)].width = 18
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="Attendance_and_Duties_{championship.code}.xlsx"'
+        wb.save(response)
+        return response
+
+    paginator = Paginator(duties_qs, 20)
+    page_num = request.GET.get('page', 1)
+    try:
+        duties = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        duties = paginator.page(1)
+
+    return render(request, 'accounts/attendance_duties.html', {
+        'championship': championship,
+        'duties': duties,
+        'total_count': total_count,
+        'present_count': present_count,
+        'completed_count': completed_count,
+        'eligible_count': eligible_count,
+        'q': q,
+        'type_filter': type_filter,
+        'status_filter': status_filter,
+        'cert_filter': cert_filter,
+        'person_types': PersonType.choices,
+        'duty_statuses': DutyStatus.choices,
     })
 
 @login_required

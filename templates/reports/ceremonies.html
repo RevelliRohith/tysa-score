@@ -14,72 +14,95 @@
             <div>
                 <div class="flex items-center gap-2.5">
                     <h1 class="text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
-                        Telangana State Yogasana Championship 2026
+                        {{ championship.name|default:"Telangana State Yogasana Championship 2026" }}
                     </h1>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         Active
                     </span>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5">Manage ceremony details, photos and press coverage for this championship.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Manage protocol ceremonies, dignitaries, photos and media coverage for this championship.</p>
             </div>
         </div>
 
-        <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+        <a href="{% if championship %}{% url 'championship_setup' championship.id %}{% else %}{% url 'championship_create' %}{% endif %}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
             <span>Edit Championship</span>
-        </button>
+        </a>
     </div>
 
     <!-- Navigation Tabs -->
     <div class="border-b border-slate-200 flex items-center gap-8 text-sm font-bold text-slate-500">
-        <a href="#" class="pb-3 text-[#0d5c58] border-b-2 border-[#0d5c58]">
-            Opening ceremony
+        <a href="?tab=opening" class="pb-3 transition {% if active_tab == 'opening' %}text-[#0d5c58] border-b-2 border-[#0d5c58]{% else %}hover:text-slate-900{% endif %}">
+            Opening Ceremony
         </a>
-        <a href="#" class="pb-3 hover:text-slate-900 transition">
-            Closing ceremony
+        <a href="?tab=closing" class="pb-3 transition {% if active_tab == 'closing' %}text-[#0d5c58] border-b-2 border-[#0d5c58]{% else %}hover:text-slate-900{% endif %}">
+            Closing Ceremony
         </a>
-        <a href="#" class="pb-3 hover:text-slate-900 transition">
-            Photos
+        <a href="?tab=photos" class="pb-3 transition {% if active_tab == 'photos' %}text-[#0d5c58] border-b-2 border-[#0d5c58]{% else %}hover:text-slate-900{% endif %}">
+            Photos ({{ photos.count }})
         </a>
-        <a href="#" class="pb-3 hover:text-slate-900 transition">
-            Press coverage
+        <a href="?tab=press" class="pb-3 transition {% if active_tab == 'press' %}text-[#0d5c58] border-b-2 border-[#0d5c58]{% else %}hover:text-slate-900{% endif %}">
+            Press Coverage ({{ press.count }})
         </a>
     </div>
 
-    <!-- Card 1: Opening Ceremony Details -->
+    {% if active_tab == 'opening' or active_tab == 'closing' %}
+    <!-- Card 1: Ceremony Details Form -->
     <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
-        <h2 class="text-sm font-black text-slate-900">Opening Ceremony Details</h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-1">
-                <label class="block text-xs font-bold text-slate-700">Ceremony Date</label>
-                <div class="relative">
-                    <i data-lucide="calendar" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                    <input type="text" value="12 Jan 2026" class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
-                </div>
-            </div>
-
-            <div class="space-y-1">
-                <label class="block text-xs font-bold text-slate-700">Venue</label>
-                <div class="relative">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                    <input type="text" value="Gachibowli Indoor Stadium, Hyderabad" class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
-                </div>
-            </div>
+        <div class="flex items-center justify-between">
+            <h2 class="text-sm font-black text-slate-900">{{ current_ceremony.get_ceremony_type_display }} Details</h2>
+            <span class="text-xs text-slate-400">Scattered across official championship publications</span>
         </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_ceremony">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">Ceremony Date</label>
+                    <div class="relative">
+                        <i data-lucide="calendar" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                        <input type="date" name="date" value="{{ current_ceremony.date|date:'Y-m-d' }}" 
+                               class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">Venue / Stage Location</label>
+                    <div class="relative">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" name="venue" value="{{ current_ceremony.venue }}" 
+                               class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">
+                    </div>
+                </div>
+
+                <div class="space-y-1 md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700">Official Protocol Summary / Proceedings</label>
+                    <textarea name="summary" rows="2" 
+                              class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none font-medium text-slate-800 focus:border-[#0d5c58]">{{ current_ceremony.summary }}</textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-3">
+                <button type="submit" class="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition">
+                    Save Ceremony Details
+                </button>
+            </div>
+        </form>
     </div>
 
-    <!-- Card 2: Chief Guests -->
+    <!-- Card 2: Dignitaries & Chief Guests -->
     <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-sm font-black text-slate-900">Chief Guests</h2>
-                <p class="text-xs text-slate-500">List of guests invited for the opening ceremony.</p>
+                <h2 class="text-sm font-black text-slate-900">Chief Guests & Dignitaries</h2>
+                <p class="text-xs text-slate-500">Official guest list and presiding dignitaries for this ceremony.</p>
             </div>
-            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
+            <button type="button" onclick="document.getElementById('add_guest_modal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                <span>Add Guest</span>
+                <span>Add Dignitary</span>
             </button>
         </div>
 
@@ -90,125 +113,187 @@
                         <th class="py-2.5 px-3 text-center w-12">#</th>
                         <th class="py-2.5 px-3">Name</th>
                         <th class="py-2.5 px-3">Designation</th>
-                        <th class="py-2.5 px-3">Role</th>
+                        <th class="py-2.5 px-3">Organization</th>
                         <th class="py-2.5 px-3 text-center w-28">Attendance</th>
                         <th class="py-2.5 px-3 text-right w-24">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                    {% for d in dignitaries %}
                     <tr class="hover:bg-slate-50/70">
-                        <td class="py-3 px-3 text-center font-bold text-slate-500">1</td>
-                        <td class="py-3 px-3 font-bold text-slate-900">Dr. S. Raghavendra</td>
-                        <td class="py-3 px-3 text-slate-600">Principal Secretary, Youth Affairs & Sports, Government of Telangana</td>
-                        <td class="py-3 px-3 text-slate-700">Chief Guest</td>
+                        <td class="py-3 px-3 text-center font-bold text-slate-500">{{ forloop.counter }}</td>
+                        <td class="py-3 px-3 font-bold text-slate-900">{{ d.name }}</td>
+                        <td class="py-3 px-3 text-slate-600">{{ d.designation }}</td>
+                        <td class="py-3 px-3 text-slate-700">{{ d.organization|default:"-" }}</td>
                         <td class="py-3 px-3 text-center">
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Present
-                            </span>
+                            <form method="POST" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_dignitary_attendance">
+                                <input type="hidden" name="dignitary_id" value="{{ d.id }}">
+                                <button type="submit" class="cursor-pointer px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition
+                                    {% if d.attended %}bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100{% else %}bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100{% endif %}">
+                                    {% if d.attended %}Present{% else %}Absent{% endif %}
+                                </button>
+                            </form>
                         </td>
                         <td class="py-3 px-3 text-right">
-                            <div class="flex items-center justify-end gap-2 text-slate-400">
-                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                            </div>
+                            <form method="POST" class="inline" onsubmit="return confirm('Remove dignitary {{ d.name }}?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_dignitary">
+                                <input type="hidden" name="dignitary_id" value="{{ d.id }}">
+                                <button type="submit" class="hover:text-rose-600 text-slate-400 p-1 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </form>
                         </td>
                     </tr>
-                    <tr class="hover:bg-slate-50/70">
-                        <td class="py-3 px-3 text-center font-bold text-slate-500">2</td>
-                        <td class="py-3 px-3 font-bold text-slate-900">Ms. Anitha Reddy</td>
-                        <td class="py-3 px-3 text-slate-600">Chairperson, Telangana State Yogasana Association</td>
-                        <td class="py-3 px-3 text-slate-700">Guest of Honour</td>
-                        <td class="py-3 px-3 text-center">
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Present
-                            </span>
-                        </td>
-                        <td class="py-3 px-3 text-right">
-                            <div class="flex items-center justify-end gap-2 text-slate-400">
-                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                            </div>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-400 italic">
+                            No dignitaries recorded yet. Click "Add Dignitary" to record guests for this ceremony.
                         </td>
                     </tr>
-                    <tr class="hover:bg-slate-50/70">
-                        <td class="py-3 px-3 text-center font-bold text-slate-500">3</td>
-                        <td class="py-3 px-3 font-bold text-slate-900">Sri K. Murali Krishna</td>
-                        <td class="py-3 px-3 text-slate-600">Director, Sports Authority of Telangana</td>
-                        <td class="py-3 px-3 text-slate-700">Special Invitee</td>
-                        <td class="py-3 px-3 text-center">
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                Absent
-                            </span>
-                        </td>
-                        <td class="py-3 px-3 text-right">
-                            <div class="flex items-center justify-end gap-2 text-slate-400">
-                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                            </div>
-                        </td>
-                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Card 3: Opening Ceremony Photos -->
-    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="text-sm font-black text-slate-900">Opening Ceremony Photos</h2>
-                <p class="text-xs text-slate-500">Upload and manage photos from the opening ceremony.</p>
+    <!-- Add Guest Modal -->
+    <div id="add_guest_modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Add Protocol Dignitary</h3>
+                <button type="button" onclick="document.getElementById('add_guest_modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
             </div>
-            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
-                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                <span>Add Photos</span>
-            </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <!-- Photo 1 -->
-            <div class="space-y-2">
-                <div class="relative bg-slate-100 rounded-lg h-36 flex items-center justify-center border border-slate-200 overflow-hidden">
-                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
-                    <button type="button" class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-slate-600 hover:text-slate-900 flex items-center justify-center shadow-xs">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
+            <form method="POST" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_dignitary">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                    <input type="text" name="name" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
                 </div>
-                <input type="text" value="Lighting of the lamp" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-medium">
-            </div>
-
-            <!-- Photo 2 -->
-            <div class="space-y-2">
-                <div class="relative bg-slate-100 rounded-lg h-36 flex items-center justify-center border border-slate-200 overflow-hidden">
-                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
-                    <button type="button" class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-slate-600 hover:text-slate-900 flex items-center justify-center shadow-xs">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Designation *</label>
+                    <input type="text" name="designation" required placeholder="e.g. Principal Secretary, Sports" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
                 </div>
-                <input type="text" value="Chief Guest address" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-medium">
-            </div>
-
-            <!-- Photo 3 -->
-            <div class="space-y-2">
-                <div class="relative bg-slate-100 rounded-lg h-36 flex items-center justify-center border border-slate-200 overflow-hidden">
-                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
-                    <button type="button" class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-slate-600 hover:text-slate-900 flex items-center justify-center shadow-xs">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Organization</label>
+                    <input type="text" name="organization" placeholder="e.g. Government of Telangana" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
                 </div>
-                <input type="text" value="Dignitaries on stage" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-medium">
-            </div>
+                <div class="flex items-center space-x-2 pt-2">
+                    <input type="checkbox" name="attended" id="modal_attended" checked class="rounded border-slate-300 text-teal-700 focus:ring-teal-700">
+                    <label for="modal_attended" class="text-xs text-slate-700 font-medium">Marked Present / Attended Ceremony</label>
+                </div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" onclick="document.getElementById('add_guest_modal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold">Add Guest</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Card 4: Recent Press Coverage -->
+    {% elif active_tab == 'photos' %}
+    <!-- Photos Tab -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-black text-slate-900">Competition & Protocol Photo Gallery</h2>
+                <p class="text-xs text-slate-500">Official gallery for ceremonies, stage performances, and podium presentations.</p>
+            </div>
+            <button type="button" onclick="document.getElementById('upload_photo_modal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                <span>Upload Photo</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {% for p in photos %}
+            <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50 space-y-2 group">
+                <div class="h-44 bg-slate-200 relative overflow-hidden flex items-center justify-center">
+                    {% if p.image_file %}
+                    <img src="{{ p.image_file.url }}" alt="{{ p.title }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <i data-lucide="image" class="w-10 h-10 text-slate-400"></i>
+                    {% endif %}
+                    <span class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-xs">
+                        {{ p.get_category_display }}
+                    </span>
+                    <form method="POST" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition" onsubmit="return confirm('Delete photo?')">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_photo">
+                        <input type="hidden" name="photo_id" value="{{ p.id }}">
+                        <button type="submit" class="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="p-3 space-y-1">
+                    <span class="font-bold text-xs text-slate-900 block truncate">{{ p.title }}</span>
+                    {% if p.caption %}
+                    <p class="text-[11px] text-slate-500 line-clamp-2">{{ p.caption }}</p>
+                    {% endif %}
+                    <span class="text-[10px] text-slate-400 block pt-1">{{ p.uploaded_at|date:"d M Y, H:i" }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+                <i data-lucide="camera" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+                <p class="text-xs font-medium">No photos uploaded yet for this championship.</p>
+                <button type="button" onclick="document.getElementById('upload_photo_modal').classList.remove('hidden')" class="mt-2 text-xs font-bold text-teal-800 hover:underline">Click to upload the first photo</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Upload Photo Modal -->
+    <div id="upload_photo_modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Upload Championship Photo</h3>
+                <button type="button" onclick="document.getElementById('upload_photo_modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="upload_photo">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Title *</label>
+                    <input type="text" name="title" required placeholder="e.g. Lamp Lighting by Chief Guest" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Category</label>
+                    <select name="category" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+                        <option value="CEREMONY">Ceremonies & Protocols</option>
+                        <option value="STAGE">Competition Stage Action</option>
+                        <option value="PODIUM">Medal Ceremony / Podium</option>
+                        <option value="PRESS">Press & Dignitaries</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Caption / Notes</label>
+                    <textarea name="caption" rows="2" placeholder="Optional context or description..." class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Image File *</label>
+                    <input type="file" name="image_file" accept="image/*" required class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-800 hover:file:bg-teal-100">
+                </div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" onclick="document.getElementById('upload_photo_modal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% elif active_tab == 'press' %}
+    <!-- Press Tab -->
     <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-sm font-black text-slate-900">Recent Press Coverage</h2>
-                <p class="text-xs text-slate-500">Latest media coverage related to the opening ceremony.</p>
+                <h2 class="text-sm font-black text-slate-900">Media & Press Coverage</h2>
+                <p class="text-xs text-slate-500">Newspaper clippings, TV broadcasts and online press reports.</p>
             </div>
-            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition">
+            <button type="button" onclick="document.getElementById('add_press_modal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold shadow-xs transition">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 <span>Add Press Item</span>
             </button>
@@ -222,30 +307,84 @@
                         <th class="py-2.5 px-4 w-44">Media Outlet</th>
                         <th class="py-2.5 px-4">Headline</th>
                         <th class="py-2.5 px-4 w-32">Date</th>
-                        <th class="py-2.5 px-3 text-right w-24">Actions</th>
+                        <th class="py-2.5 px-4 w-32">Link</th>
+                        <th class="py-2.5 px-3 text-right w-20">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-800 font-medium">
+                    {% for pr in press %}
                     <tr class="hover:bg-slate-50/70">
-                        <td class="py-3 px-3 text-center font-bold text-slate-500">1</td>
-                        <td class="py-3 px-4 font-bold text-slate-900">The Hindu</td>
-                        <td class="py-3 px-4 text-slate-700">Telangana hosts State Yogasana Championship 2026 with grand opening</td>
-                        <td class="py-3 px-4 text-slate-600 font-medium">12 Jan 2026</td>
+                        <td class="py-3 px-3 text-center font-bold text-slate-500">{{ forloop.counter }}</td>
+                        <td class="py-3 px-4 font-bold text-slate-900">{{ pr.publication_name }}</td>
+                        <td class="py-3 px-4 text-slate-800">{{ pr.headline }}</td>
+                        <td class="py-3 px-4 text-slate-600">{{ pr.published_date|date:"d M Y" }}</td>
+                        <td class="py-3 px-4">
+                            {% if pr.url %}
+                            <a href="{{ pr.url }}" target="_blank" class="text-teal-700 hover:underline flex items-center gap-1">
+                                <span>Article</span> <i data-lucide="external-link" class="w-3 h-3"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-slate-400">-</span>
+                            {% endif %}
+                        </td>
                         <td class="py-3 px-3 text-right">
-                            <div class="flex items-center justify-end gap-2 text-slate-400">
-                                <button type="button" class="hover:text-slate-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                                <button type="button" class="hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                            </div>
+                            <form method="POST" class="inline" onsubmit="return confirm('Delete this press clipping?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_press">
+                                <input type="hidden" name="press_id" value="{{ pr.id }}">
+                                <button type="submit" class="hover:text-rose-600 text-slate-400 p-1 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </form>
                         </td>
                     </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-400 italic">
+                            No press coverage records added yet. Click "Add Press Item" to document media articles.
+                        </td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Bottom watermark info -->
-    <div class="text-right text-xs text-slate-400 pt-1">
-        Design preview • Sample data
+    <!-- Add Press Modal -->
+    <div id="add_press_modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Add Media Coverage Item</h3>
+                <button type="button" onclick="document.getElementById('add_press_modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_press">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Media Outlet / Publication *</label>
+                    <input type="text" name="publication_name" required placeholder="e.g. The Hindu, Eenadu" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Headline *</label>
+                    <input type="text" name="headline" required placeholder="Article title / headline" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Published Date</label>
+                    <input type="date" name="published_date" value="{% now 'Y-m-d' %}" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Online Article URL (optional)</label>
+                    <input type="url" name="url" placeholder="https://..." class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Clipping Image (optional)</label>
+                    <input type="file" name="clipping_image" accept="image/*" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-800 hover:file:bg-teal-100">
+                </div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" onclick="document.getElementById('add_press_modal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold">Add Item</button>
+                </div>
+            </form>
+        </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

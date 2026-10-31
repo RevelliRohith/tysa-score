@@ -4,7 +4,27 @@
 {% block title %}District Athlete Approvals & Quota — TYSA Score{% endblock %}
 
 {% block content %}
+<style>
+    @media print {
+        body { background: white !important; font-size: 10pt !important; }
+        .no-print, header, nav, aside, footer, form, .filter-card, .metric-card { display: none !important; }
+        .print-only { display: block !important; }
+        table { width: 100% !important; border: 1px solid #333 !important; }
+        th, td { border: 1px solid #666 !important; padding: 4px 6px !important; }
+        @page { size: landscape; margin: 12mm; }
+    }
+    .print-only { display: none; }
+</style>
+
 <div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8 space-y-6">
+
+    <!-- Official Header for Print & PDF -->
+    <div class="print-only mb-6">
+        {% include "includes/printable_header.html" %}
+        <div class="text-center font-bold text-sm tracking-wide uppercase py-1 border-y border-slate-400 mb-4">
+            Consolidated District Approved Athlete Entries Register — {{ selected_district|default:"All Districts" }}
+        </div>
+    </div>
 
     <!-- Header Section -->
     <div class="max-w-7xl mx-auto">
@@ -66,6 +86,37 @@
                 <span>Active District Queue</span>
             </span>
         </div>
+    </div>
+
+    <!-- View Tabs: Queue vs Consolidated Approved Register -->
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 no-print">
+        <div class="flex items-center space-x-2">
+            <a href="?tab=queue&district={{ selected_district }}&event={{ selected_event }}&cat={{ selected_cat }}" 
+               class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 {% if tab == 'queue' %}bg-[#00838f] text-white shadow-2xs{% else %}bg-white text-slate-600 hover:bg-slate-50 border border-slate-200{% endif %}">
+                <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+                <span>Applications Queue</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] {% if tab == 'queue' %}bg-[#006978] text-white{% else %}bg-slate-100 text-slate-600{% endif %}">{{ pending_count }}</span>
+            </a>
+            <a href="?tab=consolidated&district={{ selected_district }}&event={{ selected_event }}&cat={{ selected_cat }}" 
+               class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 {% if tab == 'consolidated' %}bg-[#00838f] text-white shadow-2xs{% else %}bg-white text-slate-600 hover:bg-slate-50 border border-slate-200{% endif %}">
+                <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
+                <span>Consolidated Approved Register</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] {% if tab == 'consolidated' %}bg-[#006978] text-white{% else %}bg-slate-100 text-slate-600{% endif %}">{{ approved_count }}</span>
+            </a>
+        </div>
+
+        {% if tab == 'consolidated' %}
+        <div class="flex items-center space-x-2">
+            <button onclick="window.print()" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                <i data-lucide="printer" class="w-4 h-4 text-slate-600"></i>
+                <span>Print Consolidated Register</span>
+            </button>
+            <button onclick="window.print()" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                <i data-lucide="file-down" class="w-4 h-4 text-rose-600"></i>
+                <span>Download PDF</span>
+            </button>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Main Grid: Table & Inspection Drawer -->
@@ -187,6 +238,28 @@
                         </tbody>
                     </table>
                 </div>
+                {% if tab == 'consolidated' %}
+                <!-- Printable Signatures Footer -->
+                <div class="print-only pt-8 mt-6 border-t border-slate-400">
+                    <div class="grid grid-cols-3 gap-8 text-center text-xs">
+                        <div>
+                            <div class="h-12 border-b border-dashed border-slate-500 mb-1"></div>
+                            <div class="font-bold text-slate-900">District Association Secretary</div>
+                            <div class="text-[10px] text-slate-500">{{ selected_district|default:"Telangana" }} District Association</div>
+                        </div>
+                        <div>
+                            <div class="h-12 border-b border-dashed border-slate-500 mb-1"></div>
+                            <div class="font-bold text-slate-900">Competition Director</div>
+                            <div class="text-[10px] text-slate-500">{{ championship.name }}</div>
+                        </div>
+                        <div>
+                            <div class="h-12 border-b border-dashed border-slate-500 mb-1"></div>
+                            <div class="font-bold text-slate-900">General Secretary / President</div>
+                            <div class="text-[10px] text-slate-500">Telangana Yogasana Sports Association</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
         </div>

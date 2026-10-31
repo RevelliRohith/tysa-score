@@ -1,185 +1,186 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Artistry Judge — Rhythmic Pair — TYSA Score{% endblock %}
+{% block title %}Artistry Judge — TYSA Score{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6 py-2">
     <!-- Top Metadata Card matching 22_Artistry_Judge.png -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <div class="text-xs text-slate-400 font-medium">Event / Round / Stage</div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">Artistry Judge – Rhythmic Pair</h1>
+            <div class="text-xs text-slate-400 font-medium">Performance Evaluation Desk</div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">Artistry Judge</h1>
         </div>
 
         <div class="flex items-center space-x-6 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
             <div>
                 <span class="text-slate-400 block font-medium">Event</span>
-                <span class="font-bold text-slate-900 text-sm">Rhythmic Pair</span>
+                <span class="font-bold text-slate-900 text-sm">{{ entry.event_config.get_event_type_display|default:"Artistic Event" }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Round</span>
-                <span class="font-bold text-slate-900 text-sm">Final</span>
+                <span class="font-bold text-slate-900 text-sm">{{ perf.get_round_type_display|default:"Final" }}</span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Stage</span>
-                <span class="font-bold text-teal-800 text-sm">Stage A</span>
+                <span class="text-slate-400 block font-medium">Chest No.</span>
+                <span class="font-bold text-teal-800 text-sm font-mono">{{ entry.chest_number|default:"--" }}</span>
             </div>
+            {% if sub.is_locked %}
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                ✓ Locked
+            </span>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Performance Sequence (10 Asanas) Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
-            <span class="text-xs font-bold text-slate-700 whitespace-nowrap mr-2">Performance Sequence (10 Asanas)</span>
-            <button type="button" class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">1</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">2</span>
-            <span class="w-8 h-8 rounded-full bg-teal-800 text-white font-bold flex items-center justify-center text-xs shadow-xs">3</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">4</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">5</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">6</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">7</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">8</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">9</span>
-            <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs">10</span>
-            <button type="button" class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-        </div>
-
-        <div class="text-right border-t sm:border-t-0 sm:border-l border-slate-100 pt-2 sm:pt-0 sm:pl-4">
-            <span class="text-[10px] text-slate-400 block font-medium">Current Asana</span>
-            <span class="text-xl font-black text-slate-900">3 of 10</span>
-        </div>
-    </div>
-
-    <!-- Pose Visuals Card -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Left 2 athletes -->
-            <div class="lg:col-span-8 space-y-3">
-                <span class="text-xs font-bold text-slate-700">Current Performed Asana <span class="text-slate-400 font-normal">(observed during performance)</span></span>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="border border-slate-200 rounded-xl p-4 flex items-center space-x-4 bg-slate-50/50">
-                        <div class="text-5xl">🧘</div>
-                        <div>
-                            <div class="text-xs font-bold text-slate-900">Chest No. 121</div>
-                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">SAMPLE-003</div>
-                            <div class="text-sm font-bold text-slate-900">Vrikshasana</div>
-                            <div class="text-xs text-slate-500">Tree Pose (Rhythmic Pair – Mirror)</div>
-                        </div>
-                    </div>
-
-                    <div class="border border-slate-200 rounded-xl p-4 flex items-center space-x-4 bg-slate-50/50">
-                        <div class="text-5xl">🧘</div>
-                        <div>
-                            <div class="text-xs font-bold text-slate-900">Chest No. 122</div>
-                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">SAMPLE-003</div>
-                            <div class="text-sm font-bold text-slate-900">Vrikshasana</div>
-                            <div class="text-xs text-slate-500">Tree Pose (Rhythmic Pair – Mirror)</div>
-                        </div>
-                    </div>
+    <form method="POST">
+        {% csrf_token %}
+        <!-- Artistry Score Sheet (20-point COP breakdown) -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Artistry Criteria Breakdown</h2>
+                    <p class="text-xs text-slate-500">Official 20-point aesthetic scoring breakdown per Yogasana Bharat COP.</p>
                 </div>
+                <span class="text-xs font-bold text-slate-500">Max 20.00 Marks</span>
             </div>
 
-            <!-- Right Formation -->
-            <div class="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6 space-y-3">
-                <span class="text-xs font-bold text-slate-700">Pair Formation <span class="text-slate-400 font-normal">(Both athletes)</span></span>
-                <div class="border border-slate-200 rounded-xl p-4 flex items-center justify-center text-center bg-slate-50/50 min-h-[110px]">
-                    <div class="text-5xl">🧘🧘</div>
-                </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
+                            <th class="py-3 px-4">Artistry Criterion</th>
+                            <th class="py-3 px-4 text-center w-36">Max Marks</th>
+                            <th class="py-3 px-4 text-right w-48">Score Awarded</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-800">
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-slate-900 block">Presentation & Poise</span>
+                                <span class="text-slate-500 text-[11px]">Stage presence, body line posture, elegance</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-right">
+                                <input type="number" step="0.25" min="0" max="4" name="presentation" id="presentation" 
+                                       value="{{ art_score.presentation }}" oninput="calcArtistryTotal()"
+                                       class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
+                                       {% if sub.is_locked %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-slate-900 block">Synchronization & Uniformity</span>
+                                <span class="text-slate-500 text-[11px]">Movement tempo, symmetry, unison breathing</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-right">
+                                <input type="number" step="0.25" min="0" max="4" name="synchronization" id="synchronization" 
+                                       value="{{ art_score.synchronization }}" oninput="calcArtistryTotal()"
+                                       class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
+                                       {% if sub.is_locked %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-slate-900 block">Choreography & Musicality</span>
+                                <span class="text-slate-500 text-[11px]">Routine structure, theme alignment, timing accents</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-right">
+                                <input type="number" step="0.25" min="0" max="4" name="choreography" id="choreography" 
+                                       value="{{ art_score.choreography }}" oninput="calcArtistryTotal()"
+                                       class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
+                                       {% if sub.is_locked %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-slate-900 block">Transition Flow & Continuity</span>
+                                <span class="text-slate-500 text-[11px]">Seamless movement linking asanas, floor coverage</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-right">
+                                <input type="number" step="0.25" min="0" max="4" name="transition_flow" id="transition_flow" 
+                                       value="{{ art_score.transition_flow }}" oninput="calcArtistryTotal()"
+                                       class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
+                                       {% if sub.is_locked %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-slate-900 block">Costume, Grace & Expression</span>
+                                <span class="text-slate-500 text-[11px]">Uniform adherence, facial poise, Yogic grace</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-right">
+                                <input type="number" step="0.25" min="0" max="4" name="costume_grace" id="costume_grace" 
+                                       value="{{ art_score.costume_grace }}" oninput="calcArtistryTotal()"
+                                       class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
+                                       {% if sub.is_locked %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-rose-50/30">
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-rose-800 block">Artistry Deductions</span>
+                                <span class="text-slate-500 text-[11px]">Costume violation, pause infraction, line step-out</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-rose-700">-</td>
+                            <td class="py-3 px-4 text-right">
+                                <input type="number" step="0.25" min="0" max="10" name="deductions" id="deductions" 
+                                       value="{{ art_score.deductions }}" oninput="calcArtistryTotal()"
+                                       class="w-24 text-right py-1 px-2 border border-rose-300 rounded-lg font-bold text-rose-700 outline-none focus:ring-1 focus:ring-rose-700"
+                                       {% if sub.is_locked %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        <!-- Total Highlight Row -->
+                        <tr class="bg-emerald-50/70 border-t-2 border-emerald-300 text-emerald-950 font-bold">
+                            <td class="py-3.5 px-4 text-sm font-extrabold">Total Artistry Marks</td>
+                            <td class="py-3.5 px-4 text-center text-sm font-black">20.00</td>
+                            <td class="py-3.5 px-4 text-right text-xl font-black text-emerald-900 font-mono" id="total_artistry_display">
+                                {{ art_score.total_artistry }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
 
-    <!-- Artistry Score Sheet (for entire performance) Table -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <h2 class="text-base font-bold text-slate-900">Artistry Score Sheet <span class="text-slate-500 font-normal text-xs">(for entire performance)</span></h2>
+        <!-- Bottom Actions -->
+        <div class="flex items-center justify-between pt-4">
+            <a href="{% url 'judge_portal' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900">
+                ← Back to Portal
+            </a>
 
-        <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="w-full text-left text-xs">
-                <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
-                        <th class="py-3 px-4">Criterion</th>
-                        <th class="py-3 px-4 text-center w-36">Max Marks</th>
-                        <th class="py-3 px-4 text-right w-48">Score</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-800">
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-3 px-4 font-medium">Costume</td>
-                        <td class="py-3 px-4 text-center font-bold">1</td>
-                        <td class="py-3 px-4 text-right"><input type="number" step="0.25" value="0.50" class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold"></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-3 px-4 font-medium">Theme and Music</td>
-                        <td class="py-3 px-4 text-center font-bold">1</td>
-                        <td class="py-3 px-4 text-right"><input type="number" step="0.25" value="0.50" class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold"></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-3 px-4 font-medium">Character and Expression</td>
-                        <td class="py-3 px-4 text-center font-bold">3</td>
-                        <td class="py-3 px-4 text-right"><input type="number" step="0.25" value="2.50" class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold"></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-3 px-4 font-medium">Rhythm and Steps</td>
-                        <td class="py-3 px-4 text-center font-bold">10</td>
-                        <td class="py-3 px-4 text-right"><input type="number" step="0.25" value="8.00" class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold"></td>
-                    </tr>
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-3 px-4 font-medium">Floor Use</td>
-                        <td class="py-3 px-4 text-center font-bold">5</td>
-                        <td class="py-3 px-4 text-right"><input type="number" step="0.25" value="4.50" class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold"></td>
-                    </tr>
-                    <!-- Total Highlight Row -->
-                    <tr class="bg-emerald-50/70 border-t-2 border-emerald-300 text-emerald-950 font-bold">
-                        <td class="py-3.5 px-4 text-sm font-extrabold">Total Artistry Marks (Performance)</td>
-                        <td class="py-3.5 px-4 text-center text-sm font-black">20</td>
-                        <td class="py-3.5 px-4 text-right text-lg font-black text-emerald-900">16.00</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Deductions (if any) -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <h2 class="text-base font-bold text-slate-900">Deductions (if any)</h2>
-
-        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                <div class="sm:col-span-8">
-                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Reason</label>
-                    <select class="w-full text-xs font-semibold py-2 px-3 border border-slate-300 rounded-lg bg-white">
-                        <option selected>Costume not as per rules</option>
-                        <option>Music exceeding allotted time</option>
-                        <option>Boundary violation</option>
-                    </select>
-                </div>
-                <div class="sm:col-span-3">
-                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Amount</label>
-                    <input type="number" step="0.25" value="0.50" class="w-full text-xs font-bold py-2 px-3 border border-slate-300 rounded-lg bg-white">
-                </div>
-                <div class="sm:col-span-1 pt-5 flex justify-center">
-                    <button type="button" class="text-slate-400 hover:text-rose-600 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </div>
+            <div class="flex items-center space-x-3">
+                <button type="submit" name="action" value="save_draft"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Draft</span>
+                </button>
+                <button type="submit" name="action" value="submit_sheet"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit & Lock Artistry</span>
+                </button>
             </div>
-
-            <button type="button" class="px-3.5 py-1.5 border border-slate-300 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition text-slate-700">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                <span>Add Deduction</span>
-            </button>
         </div>
-    </div>
-
-    <!-- Bottom Actions -->
-    <div class="flex items-center justify-end space-x-3 pt-2">
-        <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition">
-            Save Draft
-        </button>
-        <button type="button" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold shadow-xs transition">
-            Submit Artistry Score
-        </button>
-    </div>
-    <div class="text-right text-[11px] text-slate-400 mt-2">Illustrative sample</div>
+    </form>
 </div>
+
+<script>
+function calcArtistryTotal() {
+    const p = parseFloat(document.getElementById('presentation').value) || 0;
+    const s = parseFloat(document.getElementById('synchronization').value) || 0;
+    const c = parseFloat(document.getElementById('choreography').value) || 0;
+    const t = parseFloat(document.getElementById('transition_flow').value) || 0;
+    const cg = parseFloat(document.getElementById('costume_grace').value) || 0;
+    const d = parseFloat(document.getElementById('deductions').value) || 0;
+    const subtotal = p + s + c + t + cg;
+    const total = Math.max(0, subtotal - d);
+    document.getElementById('total_artistry_display').textContent = total.toFixed(2);
+}
+</script>
 {% endblock %}

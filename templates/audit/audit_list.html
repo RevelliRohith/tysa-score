@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}System Audit Trail — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6 py-2 pb-12">
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">System Audit Trail</h1>
+            <p class="text-xs text-slate-500 mt-1">Immutable tamper-evident log of official scoring actions, CD corrections, rule certifications and appeals.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                Total Logs: <strong class="ml-1 text-slate-900">{{ total_count }}</strong>
+            </span>
+            <a href="?export=csv{% if query %}&q={{ query }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}" 
+               class="inline-flex items-center px-3.5 py-2 rounded-lg bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold shadow-xs transition">
+                <i data-lucide="download" class="w-3.5 h-3.5 mr-1.5"></i>
+                <span>Export CSV</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center text-xs">
+            <div class="sm:col-span-5 relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by actor, action, resource, ID..."
+                       class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+            </div>
+
+            <div class="sm:col-span-3">
+                <select name="action" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700 font-medium text-slate-700">
+                    <option value="">All Action Types</option>
+                    {% for act in distinct_actions %}
+                    <option value="{{ act }}" {% if action_filter == act %}selected{% endif %}>{{ act }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="sm:col-span-2">
+                <input type="date" name="date" value="{{ date_filter }}" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-700">
+            </div>
+
+            <div class="sm:col-span-2 flex items-center space-x-2">
+                <button type="submit" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold transition">
+                    Filter
+                </button>
+                {% if query or action_filter or date_filter %}
+                <a href="{% url 'audit_list' %}" class="px-2 py-2 text-slate-400 hover:text-slate-600">✕</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Audit Log Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                    <tr>
+                        <th class="py-3 px-4 w-40">Timestamp</th>
+                        <th class="py-3 px-4">Actor</th>
+                        <th class="py-3 px-4">Action</th>
+                        <th class="py-3 px-4">Resource</th>
+                        <th class="py-3 px-4">IP Address</th>
+                        <th class="py-3 px-4 text-right w-24">Details</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800">
+                    {% for log in page_obj %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3 px-4 font-mono text-slate-500 whitespace-nowrap">
+                            {{ log.timestamp|date:"Y-m-d H:i:s" }}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="font-bold text-slate-900 block">{{ log.user.get_full_name|default:log.user.email|default:"System" }}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ log.user.email|default:"system@tysa.internal" }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono
+                                {% if 'RELEASE' in log.action or 'APPROV' in log.action or 'CERTIF' in log.action %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                {% elif 'GRANT' in log.action or 'CORRECTION' in log.action %}bg-purple-50 text-purple-700 border border-purple-200
+                                {% elif 'APPEAL' in log.action %}bg-amber-50 text-amber-700 border border-amber-200
+                                {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                                {{ log.action }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 font-mono text-[11px] text-slate-700">
+                            <strong>{{ log.resource_type }}</strong>{% if log.resource_id %}: #{{ log.resource_id }}{% endif %}
+                        </td>
+                        <td class="py-3 px-4 font-mono text-[10px] text-slate-400">
+                            {{ log.ip_address|default:"-" }}
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <button type="button" onclick="showAuditModal('{{ log.id }}', '{{ log.action|escapejs }}', '{{ log.timestamp|date:"Y-m-d H:i:s" }}', '{{ log.user.email|escapejs }}', {{ log.details|default:'{}' }})"
+                                    class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold transition">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400 italic">
+                            No audit log events found matching the search criteria.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="p-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <div class="flex items-center space-x-1 font-semibold">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}" 
+                   class="px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-100">Previous</a>
+                {% endif %}
+                <span class="px-3 py-1.5 rounded bg-teal-800 text-white font-bold">{{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}" 
+                   class="px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-100">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Audit Details Modal -->
+    <div id="audit_details_modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900" id="modal_action">Action Details</h3>
+                    <span class="text-[10px] text-slate-400 font-mono" id="modal_meta"></span>
+                </div>
+                <button type="button" onclick="document.getElementById('audit_details_modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            
+            <div class="space-y-2">
+                <span class="text-xs font-bold text-slate-700 block">Payload Details (JSON Diff)</span>
+                <pre id="modal_json" class="bg-slate-950 text-emerald-400 p-4 rounded-xl text-xs font-mono overflow-x-auto max-h-72"></pre>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button type="button" onclick="document.getElementById('audit_details_modal').classList.add('hidden')" 
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAuditModal(id, action, timestamp, actor, details) {
+    document.getElementById('modal_action').textContent = action;
+    document.getElementById('modal_meta').textContent = `${timestamp} • ${actor}`;
+    document.getElementById('modal_json').textContent = JSON.stringify(details, null, 2);
+    document.getElementById('audit_details_modal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

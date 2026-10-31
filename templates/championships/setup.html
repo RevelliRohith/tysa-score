@@ -38,42 +38,49 @@
         </div>
     </div>
 
-    <!-- 5-Step Wizard Navigation Bar -->
+    <!-- 6-Step Wizard Navigation Bar -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-2xs">
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-bold">
+        <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs font-bold">
             <!-- Step 1: Basics -->
-            <a href="{% url 'championship_create' %}?edit_id={{ championship.id }}" 
-               class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-slate-600 hover:bg-slate-50 transition">
-                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px] font-black">✓</span>
-                <span>1 Basics</span>
+            <a href="{% if is_create %}#{% else %}{{ setup_url_base }}?step=basics{% endif %}" 
+               class="flex items-center justify-center space-x-2 py-2 px-2.5 rounded-xl transition {% if step == 'basics' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="w-5 h-5 rounded-full {% if step == 'basics' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black shrink-0">1</span>
+                <span class="truncate">1 Basics</span>
             </a>
 
-            <!-- Step 2: Categories & Gender -->
-            <a href="{% url 'championship_setup' champ_id=championship.id %}?step=categories" 
-               class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl transition {% if step == 'categories' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
-                <span class="w-5 h-5 rounded-full {% if step == 'categories' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black">2</span>
-                <span>2 Categories & Gender</span>
+            <!-- Step 2: Events & Divisions -->
+            <a href="{% if is_create %}#{% else %}{{ setup_url_base }}?step=events{% endif %}" 
+               class="flex items-center justify-center space-x-2 py-2 px-2.5 rounded-xl transition {% if step == 'events' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="w-5 h-5 rounded-full {% if step == 'events' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black shrink-0">2</span>
+                <span class="truncate">2 Events & Divisions</span>
             </a>
 
-            <!-- Step 3: Events -->
-            <a href="{% url 'championship_setup' champ_id=championship.id %}?step=events" 
-               class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl transition {% if step == 'events' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
-                <span class="w-5 h-5 rounded-full {% if step == 'events' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black">3</span>
-                <span>3 Events</span>
+            <!-- Step 3: Rules & Quotas -->
+            <a href="{% if is_create %}#{% else %}{{ setup_url_base }}?step=rules{% endif %}" 
+               class="flex items-center justify-center space-x-2 py-2 px-2.5 rounded-xl transition {% if step == 'rules' or step == 'categories' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="w-5 h-5 rounded-full {% if step == 'rules' or step == 'categories' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black shrink-0">3</span>
+                <span class="truncate">3 Rules & Quotas</span>
             </a>
 
             <!-- Step 4: Schedule -->
-            <a href="{% url 'championship_setup' champ_id=championship.id %}?step=schedule" 
-               class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl transition {% if step == 'schedule' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
-                <span class="w-5 h-5 rounded-full {% if step == 'schedule' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black">4</span>
-                <span>4 Schedule</span>
+            <a href="{% if is_create %}#{% else %}{{ setup_url_base }}?step=schedule{% endif %}" 
+               class="flex items-center justify-center space-x-2 py-2 px-2.5 rounded-xl transition {% if step == 'schedule' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="w-5 h-5 rounded-full {% if step == 'schedule' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black shrink-0">4</span>
+                <span class="truncate">4 Schedule</span>
             </a>
 
-            <!-- Step 5: Review & Publish -->
-            <a href="{% url 'championship_setup' champ_id=championship.id %}?step=review" 
-               class="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl transition {% if step == 'review' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
-                <span class="w-5 h-5 rounded-full {% if step == 'review' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black">5</span>
-                <span>5 Review</span>
+            <!-- Step 5: Branding & Templates -->
+            <a href="{% if is_create %}#{% else %}{{ setup_url_base }}?step=branding{% endif %}" 
+               class="flex items-center justify-center space-x-2 py-2 px-2.5 rounded-xl transition {% if step == 'branding' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="w-5 h-5 rounded-full {% if step == 'branding' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black shrink-0">5</span>
+                <span class="truncate">5 Branding</span>
+            </a>
+
+            <!-- Step 6: Review & Publish -->
+            <a href="{% if is_create %}#{% else %}{{ setup_url_base }}?step=review{% endif %}" 
+               class="flex items-center justify-center space-x-2 py-2 px-2.5 rounded-xl transition {% if step == 'review' %}bg-teal-50 text-[#00838f] border border-teal-200 shadow-xs{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="w-5 h-5 rounded-full {% if step == 'review' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-[11px] font-black shrink-0">6</span>
+                <span class="truncate">6 Review</span>
             </a>
         </div>
     </div>
@@ -83,6 +90,168 @@
 
         <!-- Left Column: Active Step Content (8 Cols) -->
         <div class="lg:col-span-8 space-y-6">
+
+            <!-- ========================================== -->
+            <!-- STEP 1: BASICS & HEADER SNIPPET -->
+            <!-- ========================================== -->
+            {% if step == 'basics' %}
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Championship Basic Details & Official Header</h2>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">
+                            {% if is_create %}Configure basic championship info, dates, venue, and upload optional header snippet.{% else %}Update basic details, dates, venue, and header banner for {{ championship.name }}.{% endif %}
+                        </p>
+                    </div>
+                    {% if not is_create and championship %}
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                        {{ championship.code }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" action="{% if is_create %}{% url 'championship_create' %}{% else %}{{ setup_url_base }}?step=basics{% endif %}" class="space-y-5">
+                    {% csrf_token %}
+                    {% if not is_create %}
+                    <input type="hidden" name="action" value="update_basics">
+                    {% endif %}
+
+                    <!-- Championship Name -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Championship Name <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="name" required 
+                            value="{{ championship.name|default:'3rd Telangana State Yogasana Sports Championship 2026' }}"
+                            placeholder="Enter official championship name"
+                            class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-bold text-slate-900 transition">
+                    </div>
+
+                    <!-- Code & Year -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Championship Code
+                            </label>
+                            <input type="text" name="code" 
+                                value="{{ championship.code|default:'' }}"
+                                placeholder="Auto-generated if blank (e.g. TYSA-STATE-2026)"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-semibold text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Year <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" name="year" required 
+                                value="{{ championship.year|default:'2026' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-semibold text-slate-900">
+                        </div>
+                    </div>
+
+                    <!-- Dates Grid (Start, End, Cutoff) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Start Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="start_date" required 
+                                value="{{ championship.start_date|date:'Y-m-d'|default:'2026-11-15' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                End Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="end_date" required 
+                                value="{{ championship.end_date|date:'Y-m-d'|default:'2026-11-17' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Age Cutoff Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="age_cutoff_date" required 
+                                value="{{ championship.age_cutoff_date|date:'Y-m-d'|default:'2026-12-31' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                    </div>
+
+                    <!-- Registration Dates -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Registration Open Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="registration_start" required 
+                                value="{{ championship.registration_start|date:'Y-m-d'|default:'2026-10-01' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Registration Closing Date <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="registration_end" required 
+                                value="{{ championship.registration_end|date:'Y-m-d'|default:'2026-11-10' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                    </div>
+
+                    <!-- Venue Details -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Venue Facility / Stadium <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" name="venue_name" required 
+                                value="{{ championship.venue_name|default:'G.M.C. Balayogi Indoor Stadium' }}"
+                                placeholder="e.g. Indoor Stadium, Hall 1"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Host City <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" name="venue_city" required 
+                                value="{{ championship.venue_city|default:'Hyderabad' }}"
+                                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#00838f] outline-none font-medium text-slate-900">
+                        </div>
+                    </div>
+
+                    <!-- Optional Header Snippet Banner -->
+                    <div class="bg-teal-50/60 border border-teal-200/90 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center space-x-2 text-teal-900">
+                            <i data-lucide="image" class="w-4 h-4 text-[#00838f]"></i>
+                            <label class="text-xs font-extrabold uppercase tracking-wide">
+                                Official Header Snippet Banner (Optional)
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-slate-600">
+                            Upload a custom official header banner image (recommended: 1200×200 png/jpg). If provided, it renders directly at the top of printable Master Rolls, Results, and Score Sheets.
+                        </p>
+                        {% if championship and championship.header_snippet %}
+                        <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <img src="{{ championship.header_snippet.url }}" alt="Header Snippet" class="h-12 max-w-[200px] object-contain rounded">
+                                <span class="text-xs font-bold text-slate-700">Current Header Banner</span>
+                            </div>
+                            <label class="inline-flex items-center space-x-1.5 text-xs text-rose-600 font-semibold cursor-pointer">
+                                <input type="checkbox" name="clear_header_snippet" value="1" class="rounded text-rose-600">
+                                <span>Remove current banner</span>
+                            </label>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="header_snippet" accept="image/*" 
+                               class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#00838f] file:text-white hover:file:bg-[#006978] cursor-pointer">
+                    </div>
+
+                    <div class="flex justify-end pt-3">
+                        <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-2">
+                            <span>{% if is_create %}Save & Proceed to Categories →{% else %}Save Basics & Continue →{% endif %}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
 
             <!-- ========================================== -->
             <!-- STEP 2: AGE CATEGORIES & GENDER DIVISIONS -->
@@ -107,26 +276,19 @@
                 <form method="POST" class="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 space-y-3">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="update_categories_settings">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
-                                COP Rules Version <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="text" name="rules_edition" value="{{ championship.rules_edition|default:'Yogasana Bharat COP 2024–2026' }}"
-                                class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:border-teal-500 shadow-2xs">
-                        </div>
-                        <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex-1 max-w-sm">
                             <label class="block text-xs font-bold text-slate-700 mb-1">
                                 Age Cutoff Reference Date <span class="text-rose-500">*</span>
                             </label>
                             <input type="date" name="age_cutoff_date" value="{{ championship.age_cutoff_date|date:'Y-m-d'|default:'2026-12-31' }}"
                                 class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:border-teal-500 shadow-2xs">
                         </div>
-                    </div>
-                    <div class="flex justify-end pt-1">
-                        <button type="submit" class="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition shadow-2xs">
-                            Save Reference Settings
-                        </button>
+                        <div class="flex items-end">
+                            <button type="submit" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition shadow-2xs">
+                                Update Cutoff Reference Date
+                            </button>
+                        </div>
                     </div>
                 </form>
 
@@ -274,7 +436,7 @@
                        class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition">
                         ← Step 1: Basics
                     </a>
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=events" 
+                    <a href="{{ setup_url_base }}?step=events" 
                        class="px-5 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5">
                         <span>Step 3: Events & Rules →</span>
                     </a>
@@ -383,11 +545,11 @@
                 </div>
 
                 <div class="flex justify-between items-center pt-4 border-t border-slate-100">
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=categories" 
+                    <a href="{{ setup_url_base }}?step=categories" 
                        class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition">
                         ← Step 2: Categories
                     </a>
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=schedule" 
+                    <a href="{{ setup_url_base }}?step=schedule" 
                        class="px-5 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5">
                         <span>Step 4: Schedule →</span>
                     </a>
@@ -554,11 +716,11 @@
                 </div>
 
                 <div class="flex justify-between items-center pt-4 border-t border-slate-100">
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=events" 
+                    <a href="{{ setup_url_base }}?step=events" 
                        class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition">
                         ← Step 3: Events
                     </a>
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=review" 
+                    <a href="{{ setup_url_base }}?step=review" 
                        class="px-5 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5">
                         <span>Step 5: Review & Publish →</span>
                     </a>
@@ -621,6 +783,76 @@
                     </div>
                 </div>
 
+                <!-- Authorized Signatories Preset Configuration -->
+                <form method="POST" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_signatories">
+                    <div class="border-b border-slate-100 pb-2">
+                        <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider text-[#00838f]">
+                            Authorized Signatories Preset (Master Rolls & Official Results)
+                        </h3>
+                        <p class="text-[11px] text-slate-500 font-medium">Configure official titles/names to be printed in the signature blocks at the bottom of sheets.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <!-- Master Roll Signatories -->
+                        <div class="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200">
+                            <span class="font-extrabold text-slate-800 block text-[11px]">Master Roll Signatures (Left to Right)</span>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 1</label>
+                                <input type="text" name="master_roll_signatory_1" value="{{ championship.master_roll_signatory_1|default:'Competition Director' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 2</label>
+                                <input type="text" name="master_roll_signatory_2" value="{{ championship.master_roll_signatory_2|default:'Stage Manager' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 3</label>
+                                <input type="text" name="master_roll_signatory_3" value="{{ championship.master_roll_signatory_3|default:'Chief Judge' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 4</label>
+                                <input type="text" name="master_roll_signatory_4" value="{{ championship.master_roll_signatory_4|default:'General Secretary / President' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Results Signatories -->
+                        <div class="space-y-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200">
+                            <span class="font-extrabold text-slate-800 block text-[11px]">Results & Scoreboard Signatures (Left to Right)</span>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 1</label>
+                                <input type="text" name="results_signatory_1" value="{{ championship.results_signatory_1|default:'Chief Judge' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 2</label>
+                                <input type="text" name="results_signatory_2" value="{{ championship.results_signatory_2|default:'Competition Director' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 3</label>
+                                <input type="text" name="results_signatory_3" value="{{ championship.results_signatory_3|default:'Observer / Federation Rep' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Signatory 4</label>
+                                <input type="text" name="results_signatory_4" value="{{ championship.results_signatory_4|default:'General Secretary' }}"
+                                       class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none font-medium">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition">
+                            Save Signatories Preset
+                        </button>
+                    </div>
+                </form>
+
                 <!-- Publish Form -->
                 <form method="POST" class="bg-teal-50/60 border border-teal-200 rounded-2xl p-5 space-y-4">
                     {% csrf_token %}
@@ -652,7 +884,7 @@
                 </form>
 
                 <div class="flex justify-start pt-2">
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=schedule" 
+                    <a href="{{ setup_url_base }}?step=schedule" 
                        class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition">
                         ← Step 4: Schedule
                     </a>
@@ -739,7 +971,7 @@
                         </div>
                     </a>
 
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=categories" 
+                    <a href="{{ setup_url_base }}?step=categories" 
                        class="flex items-center space-x-3 p-2 rounded-xl transition {% if step == 'categories' %}bg-teal-50/70 text-[#00838f]{% else %}hover:bg-slate-50 text-slate-700{% endif %}">
                         <div class="w-6 h-6 rounded-full {% if step == 'categories' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center font-bold text-xs shrink-0">
                             2
@@ -750,7 +982,7 @@
                         </div>
                     </a>
 
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=events" 
+                    <a href="{{ setup_url_base }}?step=events" 
                        class="flex items-center space-x-3 p-2 rounded-xl transition {% if step == 'events' %}bg-teal-50/70 text-[#00838f]{% else %}hover:bg-slate-50 text-slate-700{% endif %}">
                         <div class="w-6 h-6 rounded-full {% if step == 'events' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center font-bold text-xs shrink-0">
                             3
@@ -761,7 +993,7 @@
                         </div>
                     </a>
 
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=schedule" 
+                    <a href="{{ setup_url_base }}?step=schedule" 
                        class="flex items-center space-x-3 p-2 rounded-xl transition {% if step == 'schedule' %}bg-teal-50/70 text-[#00838f]{% else %}hover:bg-slate-50 text-slate-700{% endif %}">
                         <div class="w-6 h-6 rounded-full {% if step == 'schedule' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center font-bold text-xs shrink-0">
                             4
@@ -772,7 +1004,7 @@
                         </div>
                     </a>
 
-                    <a href="{% url 'championship_setup' champ_id=championship.id %}?step=review" 
+                    <a href="{{ setup_url_base }}?step=review" 
                        class="flex items-center space-x-3 p-2 rounded-xl transition {% if step == 'review' %}bg-teal-50/70 text-[#00838f]{% else %}hover:bg-slate-50 text-slate-700{% endif %}">
                         <div class="w-6 h-6 rounded-full {% if step == 'review' %}bg-[#00838f] text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center font-bold text-xs shrink-0">
                             5
@@ -791,3 +1023,4 @@
 
 </div>
 {% endblock %}
+

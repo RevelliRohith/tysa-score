@@ -1,197 +1,525 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Branding & Official Logos — {{ championship.name }} — TYSA Score{% endblock %}
+{% block title %}Interactive Branding & Multi-Logo Editor — {{ championship.name }} — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8 space-y-6">
+<div class="space-y-6 max-w-7xl mx-auto pb-16">
 
-    <!-- Top Header -->
-    <div class="max-w-7xl mx-auto">
-        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
-            <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition flex items-center space-x-1">
-                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-                <span>Dashboard</span>
-            </a>
-            <span>/</span>
-            <a href="{% url 'championship_list' %}" class="hover:text-teal-700 transition">Championships</a>
-            <span>/</span>
-            <span class="text-slate-800 font-bold">Branding & Logos</span>
-        </div>
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Championship Branding & Multi-Logo Setup</h1>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                    Manage State Logo, Organizing District Logo, and 3–8 Sponsor/Partner Logos for <strong>{{ championship.name }}</strong>.
-                </p>
+    <!-- Top Breadcrumb & Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+                <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition flex items-center space-x-1">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                    <span>Dashboard</span>
+                </a>
+                <span>/</span>
+                <a href="{% url 'championship_list' %}" class="hover:text-teal-700 transition">Championships</a>
+                <span>/</span>
+                <span class="text-slate-800 font-bold">Interactive Branding Editor</span>
             </div>
             <div class="flex items-center space-x-3">
-                <a href="{% url 'championship_setup' champ_id=championship.id %}" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition flex items-center space-x-1.5 shadow-2xs">
-                    <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i>
-                    <span>Championship Setup</span>
-                </a>
-                <a href="{% url 'public_live_display' %}" target="_blank" class="px-4 py-2 text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-xl transition flex items-center space-x-1.5 shadow-2xs">
-                    <i data-lucide="external-link" class="w-4 h-4 text-teal-600"></i>
-                    <span>Live Display Preview</span>
-                </a>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Interactive Branding & Header Editor</h1>
+                <span class="px-2.5 py-1 rounded-full text-xs font-mono font-black bg-teal-50 text-teal-800 border border-teal-200">
+                    Layout v{{ championship.branding_version }}
+                </span>
             </div>
+            <p class="text-xs text-slate-500 font-medium mt-1">
+                Drag to reposition, resize with aspect-ratio locking, set layers, and preview exact A4 print dimensions for <strong>{{ championship.name }}</strong>.
+            </p>
         </div>
-    </div>
-
-    <!-- Live Official Printable Header Preview (What appears on Master Rolls & Scoreboards) -->
-    <div class="max-w-7xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-        <div class="pb-3 border-b border-slate-100 flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
-                <h2 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Official Printable Header Preview</h2>
-            </div>
-            <span class="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-200">
-                Rendered on Master Rolls, Results & Certificates
-            </span>
-        </div>
-
-        {% include "includes/printable_header.html" %}
-    </div>
-
-    <!-- Two-Column Grid: Upload Logos (Left) & Current Branding Assets (Right) -->
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        <!-- Left 5 Cols: Add New Logo Form -->
-        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
-            <div class="border-b border-slate-100 pb-3">
-                <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Add Branding Logo (3–10 Logos)</h3>
-                <p class="text-xs text-slate-500 font-medium mt-0.5">Upload State Logo, Organizing District Logo, or Sponsor/Partner Logos.</p>
-            </div>
-
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <form method="POST" class="inline">
                 {% csrf_token %}
-                <input type="hidden" name="action" value="add_logo">
+                <input type="hidden" name="action" value="reset_default_layout">
+                <button type="submit" onclick="return confirm('Reset all logo positions to the official Master-Roll default arrangement? (State left, NYSF centre, District right, Sponsors in gaps)')"
+                        class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition flex items-center space-x-1.5 shadow-2xs">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-slate-500"></i>
+                    <span>Reset to Master-Roll Default</span>
+                </button>
+            </form>
+            <button type="button" onclick="saveActiveLayout()" class="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                <span>Save Layout Version (v{{ championship.branding_version|add:1 }})</span>
+            </button>
+            <a href="{% url 'championship_setup' champ_id=championship.id %}?step=branding" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition flex items-center space-x-1">
+                <span>Setup Wizard →</span>
+            </a>
+        </div>
+    </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Logo Category / Type <span class="text-rose-500">*</span></label>
-                    <select name="logo_type" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-teal-500 font-semibold text-slate-800">
-                        <option value="STATE">State Association Logo (TYSA)</option>
-                        <option value="DISTRICT">Organizing District Logo (e.g. Mancherial)</option>
-                        <option value="FEDERATION">National / Federation Logo (NYSF)</option>
-                        <option value="SPONSOR" selected>Sponsor / Partner Logo</option>
-                        <option value="OTHER">Other Partner / Supporting Logo</option>
-                    </select>
+    <!-- Interactive Canvas & Print Dimension Switcher -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="w-3 h-3 rounded-full bg-teal-600 animate-pulse"></span>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Interactive Stationery Header Canvas</h2>
+                <span class="text-xs text-slate-400 font-medium">(Click logo to inspect, drag to move, drag bottom-right handle to resize)</span>
+            </div>
+            <!-- Dimension Previews -->
+            <div class="flex items-center space-x-2 text-xs font-bold">
+                <span class="text-slate-500 text-[11px]">Print Preview:</span>
+                <button type="button" onclick="setCanvasMode('landscape')" id="btnLandscape" class="px-3 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs transition">
+                    A4 Landscape (Master Roll / 297mm)
+                </button>
+                <button type="button" onclick="setCanvasMode('portrait')" id="btnPortrait" class="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition">
+                    A4 Portrait (Certificates / 210mm)
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Container with Safe Margin Boundary -->
+        <div class="overflow-x-auto p-2 bg-slate-100 rounded-2xl border border-slate-200 flex justify-center">
+            <div id="brandingCanvasWrapper" class="w-full max-w-[1050px] transition-all duration-300">
+                <!-- Header Canvas -->
+                <div id="brandingCanvas" 
+                     class="relative bg-white rounded-xl border-2 border-dashed border-teal-500/80 shadow-md select-none overflow-hidden"
+                     style="height: 180px; width: 100%;">
+                    
+                    <!-- Safe Print Margins Guide -->
+                    <div class="absolute inset-1.5 border border-dotted border-amber-300/80 pointer-events-none rounded flex items-start justify-between px-2 pt-0.5">
+                        <span class="text-[9px] font-mono text-amber-600 uppercase tracking-wider">◀ Safe Print Margin Left</span>
+                        <span class="text-[9px] font-mono text-slate-300 uppercase">Interactive Layout Header Arena</span>
+                        <span class="text-[9px] font-mono text-amber-600 uppercase tracking-wider">Safe Print Margin Right ▶</span>
+                    </div>
+
+                    <!-- Centered Typography Layer (Navy / Teal / Gold Reference Styling) -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-24 z-0">
+                        <div class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-[#00838f]">
+                            Telangana Yogasana Sports Association
+                        </div>
+                        <h2 class="text-base sm:text-xl font-black uppercase tracking-tight text-[#112B4A] leading-tight mt-0.5">
+                            {{ championship.name }}
+                        </h2>
+                        <div class="flex items-center space-x-2 py-0.5">
+                            <div class="h-0.5 bg-teal-600 w-12"></div>
+                            <span class="text-[9px] text-[#D97706] font-bold">◆</span>
+                            <div class="h-0.5 bg-teal-600 w-12"></div>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-500">
+                            {{ championship.start_date|date:"d M" }} – {{ championship.end_date|date:"d M Y" }} • {{ championship.venue_name }}, {{ championship.venue_city }}
+                        </div>
+                    </div>
+
+                    <!-- Draggable Interactive Logo Elements -->
+                    {% for logo in branding_logos %}
+                    <div class="branding-logo-box absolute cursor-move border-2 border-transparent hover:border-teal-400 p-1 rounded-lg bg-white/95 shadow-2xs group transition-shadow"
+                         id="logoBox_{{ logo.id }}"
+                         data-logo-id="{{ logo.id }}"
+                         data-logo-type="{{ logo.logo_type }}"
+                         data-title="{{ logo.title }}"
+                         data-aspect-ratio="{{ logo.width }}/{{ logo.height }}"
+                         data-lock-aspect="{{ logo.lock_aspect_ratio|yesno:'true,false' }}"
+                         data-z-index="{{ logo.z_index|default:1 }}"
+                         data-alignment="{{ logo.alignment|default:'center' }}"
+                         style="left: {{ logo.pos_x|default:0 }}%; top: {{ logo.pos_y|default:0 }}%; width: {{ logo.width|default:110 }}px; height: {{ logo.height|default:75 }}px; z-index: {{ logo.z_index|default:1 }};"
+                         onclick="selectLogoItem('{{ logo.id }}', event)">
+                        
+                        <div class="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                            {% if logo.image %}
+                            <img src="{{ logo.image.url }}" alt="{{ logo.title }}" class="max-h-full max-w-full object-contain">
+                            {% else %}
+                            <span class="text-[10px] font-bold text-slate-400">{{ logo.title }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Type Badge Overlay -->
+                        <span class="absolute -top-2 left-1 text-[8px] font-black uppercase px-1 py-0.2 rounded bg-slate-800 text-white shadow-2xs opacity-0 group-hover:opacity-100 transition-opacity">
+                            {{ logo.get_logo_type_display|truncatechars:15 }}
+                        </span>
+
+                        <!-- Resize Handle in Bottom-Right Corner -->
+                        <div class="resize-handle absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-teal-600 rounded-full cursor-se-resize shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                             onmousedown="startResize('{{ logo.id }}', event)">
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
+                        <i data-lucide="image-plus" class="w-8 h-8 text-slate-300 mb-1"></i>
+                        <span class="font-bold">No logos added yet. Use the upload panel below to add official logos.</span>
+                    </div>
+                    {% endfor %}
+
                 </div>
+            </div>
+        </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Title / Organization Name <span class="text-rose-500">*</span></label>
-                    <input type="text" name="title" required placeholder="e.g. Mancherial Dist Yogasana Association / Title Sponsor"
-                        class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-teal-500 font-medium text-slate-900">
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+            <span>Canvas Bounds: 100% width, 180px height. Positions are persisted as exact percentages for multi-device print scaling.</span>
+            <span class="font-mono text-teal-700 font-bold" id="selectionCoordinates">Click any logo to inspect coordinates</span>
+        </div>
+    </div>
+
+    <!-- Hidden Layout Form for Auto/Manual Save -->
+    <form id="saveLayoutForm" method="POST" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_layout">
+        <input type="hidden" name="layout_data" id="layoutDataInput" value="{}">
+    </form>
+
+    <!-- Two-Column Control Hub: Selected Logo Properties (Left) & Add New Logo (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Selected Logo Properties Fine-Tuning (6 Cols) -->
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="sliders" class="w-4 h-4 text-teal-600"></i>
+                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Logo Fine-Tuning & Numeric Controls</h3>
                 </div>
+                <span id="selectedLogoTitleBadge" class="text-xs font-bold text-slate-500">No logo selected</span>
+            </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Logo Image File <span class="text-rose-500">*</span></label>
-                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                        <input type="file" name="image" accept="image/*" required class="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border file:border-slate-200 file:text-xs file:font-bold file:bg-white file:text-slate-700 hover:file:bg-slate-50">
-                        <p class="text-[10px] text-slate-400 mt-1">PNG with transparent background recommended. SVG, JPG accepted.</p>
+            <div id="noSelectionMsg" class="py-8 text-center text-slate-400 text-xs">
+                <i data-lucide="mouse-pointer" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+                <p class="font-bold text-slate-700">Select any logo on the canvas above.</p>
+                <p class="text-[11px] mt-0.5">You can also drag logos directly or adjust fine numeric inputs below.</p>
+            </div>
+
+            <div id="selectedLogoControls" class="hidden space-y-4 text-xs">
+                <!-- Numeric Coordinates Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">X Position (%)</label>
+                        <input type="number" id="inputPosX" step="0.5" min="0" max="95" oninput="applyNumericControl()"
+                               class="w-full px-2.5 py-1.5 font-mono font-bold bg-white border border-slate-200 rounded-lg text-slate-800 outline-none focus:border-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Y Position (%)</label>
+                        <input type="number" id="inputPosY" step="0.5" min="0" max="80" oninput="applyNumericControl()"
+                               class="w-full px-2.5 py-1.5 font-mono font-bold bg-white border border-slate-200 rounded-lg text-slate-800 outline-none focus:border-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Width (px)</label>
+                        <input type="number" id="inputWidth" step="5" min="40" max="300" oninput="applyNumericControl()"
+                               class="w-full px-2.5 py-1.5 font-mono font-bold bg-white border border-slate-200 rounded-lg text-slate-800 outline-none focus:border-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Height (px)</label>
+                        <input type="number" id="inputHeight" step="5" min="30" max="180" oninput="applyNumericControl()"
+                               class="w-full px-2.5 py-1.5 font-mono font-bold bg-white border border-slate-200 rounded-lg text-slate-800 outline-none focus:border-teal-500">
                     </div>
                 </div>
 
-                <div class="pt-1">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" name="show_on_prints" checked class="w-4 h-4 text-teal-600 rounded">
-                        <span class="text-xs font-bold text-slate-700">Display this logo on printable sheets and result exports</span>
+                <!-- Aspect Ratio & Alignment Shortcuts -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <label class="inline-flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                        <input type="checkbox" id="chkLockAspect" onchange="applyNumericControl()" class="w-4 h-4 text-teal-600 rounded">
+                        <span>Lock Aspect Ratio Proportions</span>
                     </label>
+
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">Quick Align:</span>
+                        <button type="button" onclick="setQuickAlign('left')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-700">
+                            Left (2%)
+                        </button>
+                        <button type="button" onclick="setQuickAlign('center')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-700">
+                            Centre (43%)
+                        </button>
+                        <button type="button" onclick="setQuickAlign('right')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-700">
+                            Right (86%)
+                        </button>
+                    </div>
                 </div>
 
-                <div class="pt-2">
-                    <button type="submit" class="w-full py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center justify-center space-x-1.5">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                        <span>Upload & Add Logo</span>
+                <!-- Layer Ordering (Z-Index) & Actions -->
+                <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[11px] font-bold text-slate-500">Layer (Z-Index):</span>
+                        <button type="button" onclick="adjustZIndex(1)" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 text-xs">
+                            Bring Forward ↑
+                        </button>
+                        <button type="button" onclick="adjustZIndex(-1)" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 text-xs">
+                            Send Back ↓
+                        </button>
+                    </div>
+
+                    <form id="deleteLogoForm" method="POST" onsubmit="return confirm('Remove this logo from branding?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_logo">
+                        <input type="hidden" name="logo_id" id="deleteLogoIdInput" value="">
+                        <button type="submit" class="px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 rounded-lg transition flex items-center space-x-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>Remove Logo</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add / Upload New Logo (6 Cols) -->
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Upload Logo Asset</h3>
+                    <p class="text-xs text-slate-500 font-medium">State, National Body, Organizing District, or Sponsor logo.</p>
+                </div>
+                <span class="text-xs font-bold font-mono text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-200">
+                    {{ branding_logos.count }} / 12 Logos
+                </span>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-3.5 text-xs">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_logo">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Logo Role / Category <span class="text-rose-500">*</span></label>
+                        <select name="logo_type" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
+                            <option value="STATE">State Association (TYSA) - Left</option>
+                            <option value="FEDERATION">National Body (NYSF) - Centre</option>
+                            <option value="DISTRICT">Organizing District - Right</option>
+                            <option value="SPONSOR" selected>Supporting / Sponsor Logo - Gap</option>
+                            <option value="OTHER">Other Partner</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Title / Body Name <span class="text-rose-500">*</span></label>
+                        <input type="text" name="title" required placeholder="e.g. Telangana Yogasana Association"
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Image File (PNG transparent recommended) <span class="text-rose-500">*</span></label>
+                    <input type="file" name="image" accept="image/*" required 
+                           class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border file:border-slate-200 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <label class="inline-flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                        <input type="checkbox" name="show_on_prints" checked class="w-4 h-4 text-teal-600 rounded">
+                        <span>Show on printable sheets & Master Roll</span>
+                    </label>
+
+                    <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        <span>Upload & Add to Canvas</span>
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Right 7 Cols: Active Logos List & Management -->
-        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Configured Logos ({{ branding_logos.count }})</h3>
-                    <p class="text-xs text-slate-500 font-medium mt-0.5">Logos assigned to this championship.</p>
-                </div>
-                <span class="text-xs font-bold text-teal-700">{{ branding_logos.count }} / 10 Active</span>
-            </div>
-
-            <div class="divide-y divide-slate-100">
-                {% for logo in branding_logos %}
-                <div class="py-3 flex items-center justify-between gap-4">
-                    <div class="flex items-center space-x-3.5 min-w-0">
-                        <div class="w-14 h-14 rounded-xl border border-slate-200 bg-slate-50 p-1 flex items-center justify-center shrink-0 overflow-hidden">
-                            {% if logo.image %}
-                            <img src="{{ logo.image.url }}" alt="{{ logo.title }}" class="max-h-full max-w-full object-contain">
-                            {% endif %}
-                        </div>
-                        <div class="min-w-0">
-                            <div class="flex items-center space-x-2">
-                                <span class="text-xs font-extrabold text-slate-900 truncate">{{ logo.title }}</span>
-                                <span class="px-2 py-0.2 rounded text-[9px] font-black uppercase
-                                    {% if logo.logo_type == 'STATE' %}bg-teal-50 text-teal-800 border border-teal-200
-                                    {% elif logo.logo_type == 'DISTRICT' %}bg-indigo-50 text-indigo-800 border border-indigo-200
-                                    {% else %}bg-slate-100 text-slate-600{% endif %}">
-                                    {{ logo.get_logo_type_display }}
-                                </span>
-                            </div>
-                            <div class="text-[11px] text-slate-400 mt-0.5">
-                                {% if logo.show_on_prints %}
-                                <span class="text-emerald-600 font-semibold">✓ Visible on Master Rolls & Results</span>
-                                {% else %}
-                                <span class="text-slate-400">Hidden from prints</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center space-x-1.5 shrink-0">
-                        <!-- Move Up -->
-                        <form method="POST" class="inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="move_logo">
-                            <input type="hidden" name="logo_id" value="{{ logo.id }}">
-                            <input type="hidden" name="direction" value="up">
-                            <button type="submit" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition" title="Move Up in order">
-                                <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </form>
-
-                        <!-- Move Down -->
-                        <form method="POST" class="inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="move_logo">
-                            <input type="hidden" name="logo_id" value="{{ logo.id }}">
-                            <input type="hidden" name="direction" value="down">
-                            <button type="submit" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition" title="Move Down in order">
-                                <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </form>
-
-                        <!-- Delete -->
-                        <form method="POST" class="inline" onsubmit="return confirm('Remove this logo?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_logo">
-                            <input type="hidden" name="logo_id" value="{{ logo.id }}">
-                            <button type="submit" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition" title="Delete Logo">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="py-12 text-center text-slate-400 text-xs space-y-2">
-                    <i data-lucide="images" class="w-10 h-10 mx-auto text-slate-300"></i>
-                    <p class="font-bold text-slate-700">No branding logos uploaded yet.</p>
-                    <p>Add State Logo (TYSA), Organizing District Logo (e.g. Mancherial), and 3–8 partner/sponsor logos using the form on the left.</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
     </div>
 
 </div>
+
+<!-- Interactive Drag, Resize, and Canvas Logic -->
+<script>
+    let activeLogoId = null;
+    let isDragging = false;
+    let isResizing = false;
+    let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
+    let initialWidth = 0, initialHeight = 0;
+    let canvasRect = null;
+
+    function getCanvasRect() {
+        const c = document.getElementById('brandingCanvas');
+        return c.getBoundingClientRect();
+    }
+
+    function selectLogoItem(logoId, ev) {
+        if (ev) ev.stopPropagation();
+        activeLogoId = logoId;
+
+        // Deselect all
+        document.querySelectorAll('.branding-logo-box').forEach(el => {
+            el.classList.remove('ring-2', 'ring-teal-600', 'bg-teal-50/20');
+        });
+
+        const activeBox = document.getElementById(`logoBox_${logoId}`);
+        if (!activeBox) return;
+
+        activeBox.classList.add('ring-2', 'ring-teal-600', 'bg-teal-50/20');
+
+        // Populate controls
+        document.getElementById('noSelectionMsg').classList.add('hidden');
+        document.getElementById('selectedLogoControls').classList.remove('hidden');
+        document.getElementById('selectedLogoTitleBadge').innerText = activeBox.getAttribute('data-title') || 'Logo #' + logoId;
+        document.getElementById('deleteLogoIdInput').value = logoId;
+
+        // Populate inputs from inline styles
+        const posX = parseFloat(activeBox.style.left) || 0;
+        const posY = parseFloat(activeBox.style.top) || 0;
+        const width = parseFloat(activeBox.style.width) || 110;
+        const height = parseFloat(activeBox.style.height) || 75;
+        const lockAspect = activeBox.getAttribute('data-lock-aspect') === 'true';
+
+        document.getElementById('inputPosX').value = posX.toFixed(1);
+        document.getElementById('inputPosY').value = posY.toFixed(1);
+        document.getElementById('inputWidth').value = Math.round(width);
+        document.getElementById('inputHeight').value = Math.round(height);
+        document.getElementById('chkLockAspect').checked = lockAspect;
+
+        document.getElementById('selectionCoordinates').innerText = 
+            `Selected: ${activeBox.getAttribute('data-title')} (X: ${posX.toFixed(1)}%, Y: ${posY.toFixed(1)}%, W: ${Math.round(width)}px, H: ${Math.round(height)}px)`;
+    }
+
+    function applyNumericControl() {
+        if (!activeLogoId) return;
+        const activeBox = document.getElementById(`logoBox_${activeLogoId}`);
+        if (!activeBox) return;
+
+        const posX = parseFloat(document.getElementById('inputPosX').value) || 0;
+        const posY = parseFloat(document.getElementById('inputPosY').value) || 0;
+        const width = parseFloat(document.getElementById('inputWidth').value) || 100;
+        let height = parseFloat(document.getElementById('inputHeight').value) || 70;
+        const lockAspect = document.getElementById('chkLockAspect').checked;
+
+        if (lockAspect) {
+            const ratioParts = (activeBox.getAttribute('data-aspect-ratio') || '110/75').split('/');
+            const ratio = (parseFloat(ratioParts[0]) || 110) / (parseFloat(ratioParts[1]) || 75);
+            height = width / ratio;
+            document.getElementById('inputHeight').value = Math.round(height);
+        }
+
+        activeBox.style.left = `${posX}%`;
+        activeBox.style.top = `${posY}%`;
+        activeBox.style.width = `${width}px`;
+        activeBox.style.height = `${height}px`;
+        activeBox.setAttribute('data-lock-aspect', lockAspect ? 'true' : 'false');
+    }
+
+    function setQuickAlign(pos) {
+        if (!activeLogoId) return;
+        let x = 2.0;
+        if (pos === 'center') x = 43.0;
+        if (pos === 'right') x = 86.0;
+        document.getElementById('inputPosX').value = x;
+        applyNumericControl();
+    }
+
+    function adjustZIndex(delta) {
+        if (!activeLogoId) return;
+        const activeBox = document.getElementById(`logoBox_${activeLogoId}`);
+        if (!activeBox) return;
+        let z = parseInt(activeBox.style.zIndex || 1) + delta;
+        if (z < 1) z = 1;
+        if (z > 20) z = 20;
+        activeBox.style.zIndex = z;
+        activeBox.setAttribute('data-z-index', z);
+    }
+
+    // Drag-to-reposition logic
+    document.addEventListener('mousedown', function(e) {
+        const box = e.target.closest('.branding-logo-box');
+        if (!box || e.target.classList.contains('resize-handle')) return;
+        
+        isDragging = true;
+        const logoId = box.getAttribute('data-logo-id');
+        selectLogoItem(logoId, e);
+
+        canvasRect = getCanvasRect();
+        startX = e.clientX;
+        startY = e.clientY;
+
+        initialLeft = parseFloat(box.style.left) || 0;
+        initialTop = parseFloat(box.style.top) || 0;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (isDragging && activeLogoId) {
+            const box = document.getElementById(`logoBox_${activeLogoId}`);
+            if (!box || !canvasRect) return;
+
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            const deltaLeftPercent = (deltaX / canvasRect.width) * 100;
+            const deltaTopPercent = (deltaY / canvasRect.height) * 100;
+
+            let newLeft = Math.max(0, Math.min(92, initialLeft + deltaLeftPercent));
+            let newTop = Math.max(0, Math.min(85, initialTop + deltaTopPercent));
+
+            box.style.left = `${newLeft.toFixed(1)}%`;
+            box.style.top = `${newTop.toFixed(1)}%`;
+
+            document.getElementById('inputPosX').value = newLeft.toFixed(1);
+            document.getElementById('inputPosY').value = newTop.toFixed(1);
+            document.getElementById('selectionCoordinates').innerText = 
+                `Position: X: ${newLeft.toFixed(1)}%, Y: ${newTop.toFixed(1)}%`;
+        }
+
+        if (isResizing && activeLogoId) {
+            const box = document.getElementById(`logoBox_${activeLogoId}`);
+            if (!box) return;
+
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            let newW = Math.max(40, Math.min(300, initialWidth + deltaX));
+            let newH = Math.max(30, Math.min(180, initialHeight + deltaY));
+
+            const lock = box.getAttribute('data-lock-aspect') === 'true';
+            if (lock) {
+                const ratioParts = (box.getAttribute('data-aspect-ratio') || '110/75').split('/');
+                const ratio = (parseFloat(ratioParts[0]) || 110) / (parseFloat(ratioParts[1]) || 75);
+                newH = newW / ratio;
+            }
+
+            box.style.width = `${Math.round(newW)}px`;
+            box.style.height = `${Math.round(newH)}px`;
+
+            document.getElementById('inputWidth').value = Math.round(newW);
+            document.getElementById('inputHeight').value = Math.round(newH);
+        }
+    });
+
+    document.addEventListener('mouseup', function() {
+        isDragging = false;
+        isResizing = false;
+    });
+
+    function startResize(logoId, ev) {
+        ev.stopPropagation();
+        isResizing = true;
+        selectLogoItem(logoId, ev);
+
+        const box = document.getElementById(`logoBox_${logoId}`);
+        startX = ev.clientX;
+        startY = ev.clientY;
+        initialWidth = parseFloat(box.style.width) || 110;
+        initialHeight = parseFloat(box.style.height) || 75;
+        ev.preventDefault();
+    }
+
+    function setCanvasMode(mode) {
+        const wrapper = document.getElementById('brandingCanvasWrapper');
+        const btnL = document.getElementById('btnLandscape');
+        const btnP = document.getElementById('btnPortrait');
+        if (mode === 'landscape') {
+            wrapper.style.maxWidth = '1050px';
+            btnL.className = 'px-3 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs transition';
+            btnP.className = 'px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition';
+        } else {
+            wrapper.style.maxWidth = '750px';
+            btnP.className = 'px-3 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs transition';
+            btnL.className = 'px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition';
+        }
+    }
+
+    function saveActiveLayout() {
+        const layout = {};
+        document.querySelectorAll('.branding-logo-box').forEach(el => {
+            const logoId = el.getAttribute('data-logo-id');
+            layout[logoId] = {
+                x: parseFloat(el.style.left) || 0,
+                y: parseFloat(el.style.top) || 0,
+                width: parseFloat(el.style.width) || 110,
+                height: parseFloat(el.style.height) || 75,
+                z_index: parseInt(el.style.zIndex) || 1,
+                lock_aspect_ratio: el.getAttribute('data-lock-aspect') === 'true',
+                alignment: el.getAttribute('data-alignment') || 'center'
+            };
+        });
+
+        document.getElementById('layoutDataInput').value = JSON.stringify(layout);
+        document.getElementById('saveLayoutForm').submit();
+    }
+</script>
 {% endblock %}

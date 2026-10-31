@@ -1,89 +1,98 @@
 {% load static %}
-<!-- Official TYSA Championship Header with Balanced Multi-Logo Banner -->
-<!-- User Specification: Organizing District Logo on LEFT, National/Federation Logo in MIDDLE, State Association (TYSA) Logo on RIGHT -->
-<div class="printable-header border-b-2 border-slate-900 pb-4 mb-6 text-slate-900">
-    <div class="flex items-center justify-between gap-4">
-        
-        <!-- 1. LEFT: Organizing District Logo -->
-        <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0 border border-slate-200/80 rounded-xl p-1.5 bg-slate-50/50">
-            {% if district_logo and district_logo.image %}
-                <img src="{{ district_logo.image.url }}" alt="{{ district_logo.title }}" class="max-h-full max-w-full object-contain">
-            {% else %}
-                <div class="w-full h-full rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center text-center p-1 bg-white">
-                    <span class="text-xs font-black text-indigo-900">DIST</span>
-                    <span class="text-[7.5px] font-bold text-slate-500 uppercase leading-tight">Organizing Dist</span>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- 2. MIDDLE / MAIN: National Federation Logo & Official Titles -->
-        <div class="text-center flex-1 px-3 space-y-1 min-w-0">
-            <!-- National Federation Logo in the top middle -->
-            <div class="flex items-center justify-center space-x-2 mb-1">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center border border-slate-200/80 rounded-xl p-1 bg-slate-50/50">
-                    {% if fed_logo and fed_logo.image %}
-                        <img src="{{ fed_logo.image.url }}" alt="{{ fed_logo.title }}" class="max-h-full max-w-full object-contain">
+<!-- Official TYSA Championship Header with Balanced Multi-Logo Stationery Banner -->
+<div class="printable-header pb-4 mb-4 text-slate-900 print:mb-2 print:pb-2">
+    {% if championship.header_snippet %}
+    <!-- Full-Width High-Resolution Official Stationery Header -->
+    <div class="w-full text-center mb-2">
+        <img src="{{ championship.header_snippet.url }}" alt="{{ championship.name }}" 
+             class="w-full max-h-56 sm:max-h-64 object-contain rounded-xl border border-slate-200/80 shadow-xs mx-auto print:border-0 print:shadow-none print:rounded-none">
+    </div>
+    {% else %}
+    <!-- Fallback Native 5-Logo Balanced Official Stationery Header -->
+    <div class="border-b-2 border-slate-900 pb-4">
+        <!-- 5-Logo Slots Row -->
+        <div class="grid grid-cols-5 gap-3 items-center text-center mb-3">
+            <!-- 1. Far Left: State Association (TYSA) -->
+            <div class="flex flex-col items-center">
+                <div class="w-20 h-16 sm:w-24 sm:h-20 border border-slate-200 rounded-lg p-1 bg-white flex items-center justify-center">
+                    {% if state_logo and state_logo.image %}
+                        <img src="{{ state_logo.image.url }}" alt="State Association" class="max-h-full max-w-full object-contain">
                     {% else %}
-                        <div class="w-full h-full rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center text-center bg-white p-0.5">
-                            <span class="text-[10px] font-black text-teal-800">NYSF</span>
-                            <span class="text-[6.5px] font-bold text-slate-400 uppercase">National</span>
+                        <div class="w-full h-full border border-dashed border-slate-300 rounded flex flex-col items-center justify-center p-0.5">
+                            <span class="text-[10px] font-black text-teal-800">TYSA</span>
                         </div>
                     {% endif %}
                 </div>
-                <div class="text-left hidden sm:block">
-                    <div class="text-[9px] font-extrabold uppercase tracking-widest text-slate-500">Recognized by MYAS, Govt. of India</div>
-                    <div class="text-[10px] font-black uppercase tracking-wider text-slate-700">National Yogasana Sports Federation</div>
+                <span class="text-[8px] sm:text-[9px] font-bold text-slate-600 uppercase mt-1">State Association</span>
+            </div>
+
+            <!-- 2. Left-Center: Supporting Body -->
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-14 sm:w-20 sm:h-16 border border-slate-200 rounded-lg p-1 bg-white flex items-center justify-center">
+                    <div class="w-full h-full border border-dashed border-slate-300 rounded flex flex-col items-center justify-center p-0.5">
+                        <span class="text-[9px] font-bold text-slate-400">SUPPORTING</span>
+                    </div>
                 </div>
+                <span class="text-[8px] sm:text-[9px] font-bold text-slate-500 uppercase mt-1">Supporting Body</span>
             </div>
 
-            <div class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-slate-800">
-                Telangana Yogasana Sports Association (TYSA)
-            </div>
-            <h1 class="text-lg sm:text-2xl font-black uppercase tracking-tight text-slate-950 font-serif leading-tight">
-                {{ championship.name|default:"Telangana State Yogasana Championship 2026" }}
-            </h1>
-            <div class="text-[11px] font-bold text-slate-700 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 pt-0.5">
-                <span>📍 {{ championship.venue_name|default:"Main Stadium" }}, {{ championship.venue_city|default:"Hyderabad" }}</span>
-                <span>•</span>
-                <span>📅 {{ championship.start_date|date:"d M" }} – {{ championship.end_date|date:"d M Y" }}</span>
-                <span>•</span>
-                <span class="font-mono text-teal-800">COP: {{ championship.rules_edition|default:"COP 2024–2026" }}</span>
-            </div>
-        </div>
-
-        <!-- 3. RIGHT: State Association Logo (TYSA) -->
-        <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0 border border-slate-200/80 rounded-xl p-1.5 bg-slate-50/50">
-            {% if state_logo and state_logo.image %}
-                <img src="{{ state_logo.image.url }}" alt="{{ state_logo.title }}" class="max-h-full max-w-full object-contain">
-            {% elif championship.logo %}
-                <img src="{{ championship.logo.url }}" alt="TYSA State" class="max-h-full max-w-full object-contain">
-            {% else %}
-                <div class="w-full h-full rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center text-center p-1 bg-white">
-                    <span class="text-xs font-black text-teal-800">TYSA</span>
-                    <span class="text-[7.5px] font-bold text-slate-500 uppercase leading-tight">State Assoc</span>
-                </div>
-            {% endif %}
-        </div>
-
-    </div>
-
-    <!-- 4. Sponsor & Partner Logos Banner (Customizable & Movable) -->
-    {% if other_logos or championship.branding_logos.all %}
-    <div class="mt-3 pt-2 border-t border-slate-200/90 flex flex-wrap items-center justify-between text-[9px] text-slate-500 uppercase font-bold gap-2">
-        <span class="text-slate-500 font-extrabold tracking-wider">Official Partners & Sponsors:</span>
-        <div class="flex items-center space-x-3 overflow-x-auto py-0.5">
-            {% for l in championship.branding_logos.all %}
-                {% if l.show_on_prints and l.logo_type != 'STATE' and l.logo_type != 'DISTRICT' and l.logo_type != 'FEDERATION' %}
-                <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">
-                    {% if l.image %}
-                    <img src="{{ l.image.url }}" alt="{{ l.title }}" class="h-5 max-w-16 object-contain">
+            <!-- 3. Exact Center: National Body (Subtly Emphasized) -->
+            <div class="flex flex-col items-center">
+                <div class="w-24 h-18 sm:w-28 sm:h-20 border-2 border-slate-300 rounded-xl p-1 bg-white flex items-center justify-center shadow-2xs">
+                    {% if fed_logo and fed_logo.image %}
+                        <img src="{{ fed_logo.image.url }}" alt="National Federation" class="max-h-full max-w-full object-contain">
+                    {% else %}
+                        <div class="w-full h-full border border-dashed border-teal-300 rounded-lg flex flex-col items-center justify-center p-0.5 bg-teal-50/20">
+                            <span class="text-[11px] font-black text-teal-900">NYSF</span>
+                        </div>
                     {% endif %}
-                    <span class="text-slate-800 font-bold lowercase text-[10px]">{{ l.title }}</span>
                 </div>
-                {% endif %}
-            {% empty %}
-                <span class="text-slate-400 normal-case italic text-[10px]">Partner & Sponsor logos appear here across all prints</span>
-            {% endfor %}
+                <span class="text-[9px] sm:text-[10px] font-black text-teal-900 uppercase mt-1">National Body</span>
+            </div>
+
+            <!-- 4. Right-Center: Partner / Sponsor -->
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-14 sm:w-20 sm:h-16 border border-slate-200 rounded-lg p-1 bg-white flex items-center justify-center">
+                    <div class="w-full h-full border border-dashed border-slate-300 rounded flex flex-col items-center justify-center p-0.5">
+                        <span class="text-[9px] font-bold text-slate-400">PARTNER</span>
+                    </div>
+                </div>
+                <span class="text-[8px] sm:text-[9px] font-bold text-slate-500 uppercase mt-1">Partner / Sponsor</span>
+            </div>
+
+            <!-- 5. Far Right: Organizing District -->
+            <div class="flex flex-col items-center">
+                <div class="w-20 h-16 sm:w-24 sm:h-20 border border-slate-200 rounded-lg p-1 bg-white flex items-center justify-center">
+                    {% if district_logo and district_logo.image %}
+                        <img src="{{ district_logo.image.url }}" alt="Organizing District" class="max-h-full max-w-full object-contain">
+                    {% else %}
+                        <div class="w-full h-full border border-dashed border-slate-300 rounded flex flex-col items-center justify-center p-0.5">
+                            <span class="text-[10px] font-black text-indigo-900">DIST</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <span class="text-[8px] sm:text-[9px] font-bold text-slate-600 uppercase mt-1">Organizing District</span>
+            </div>
+        </div>
+
+        <!-- Typography & Titles -->
+        <div class="text-center space-y-1">
+            <div class="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-slate-600">
+                Telangana State
+            </div>
+            <h1 class="text-xl sm:text-3xl font-black uppercase tracking-tight text-[#112B4A] leading-tight">
+                {{ championship.name|default:"Yogasana Championship" }}
+            </h1>
+            <div class="flex items-center justify-center space-x-2 text-teal-700 py-0.5">
+                <div class="h-px bg-teal-600 w-16"></div>
+                <span class="text-[10px] text-amber-600">◆</span>
+                <div class="h-px bg-teal-600 w-16"></div>
+            </div>
+            <div class="text-xs font-bold text-slate-600 flex items-center justify-center gap-3">
+                <span>{{ championship.start_date|date:"d M" }} – {{ championship.end_date|date:"d M Y" }}</span>
+                <span>•</span>
+                <span>{{ championship.venue_name|default:"Main Stadium" }}, {{ championship.venue_city|default:"Hyderabad" }}</span>
+            </div>
         </div>
     </div>
     {% endif %}

@@ -4,7 +4,27 @@
 {% block title %}Universal Judges Directory & Accreditation — TYSA Score{% endblock %}
 
 {% block content %}
+<style>
+    @media print {
+        body { background: white !important; font-size: 10pt !important; }
+        .no-print, header, nav, aside, footer, form, .tab-pills { display: none !important; }
+        .print-only { display: block !important; }
+        table { width: 100% !important; border: 1px solid #333 !important; }
+        th, td { border: 1px solid #666 !important; padding: 4px 6px !important; }
+        @page { size: landscape; margin: 12mm; }
+    }
+    .print-only { display: none; }
+</style>
+
 <div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8 space-y-6">
+
+    <!-- Official Header for Print & PDF -->
+    <div class="print-only mb-6">
+        {% include "includes/printable_header.html" %}
+        <div class="text-center font-bold text-sm tracking-wide uppercase py-1 border-y border-slate-400 mb-4">
+            Statewide Universal Judges Directory & Accreditation Register
+        </div>
+    </div>
 
     <!-- Top Header -->
     <div class="max-w-7xl mx-auto">
@@ -33,7 +53,20 @@
                     Universal judges register once across all championships. CD assigns approved judges to stage panels.
                 </p>
             </div>
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="window.print()" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="printer" class="w-4 h-4 text-slate-600"></i>
+                    <span>Print Directory</span>
+                </button>
+                <button onclick="window.print()" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="file-down" class="w-4 h-4 text-rose-600"></i>
+                    <span>Download PDF</span>
+                </button>
+                <a href="{% url 'judge_id_cards_batch' %}" 
+                   class="px-3.5 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    <span>Bulk Print ID Cards</span>
+                </a>
                 <a href="{% url 'universal_judge_register' %}" target="_blank"
                    class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
                     <i data-lucide="user-plus" class="w-4 h-4"></i>

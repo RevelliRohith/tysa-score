@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Modules — TYSA Score</title>
+    <title>Admin Operations Dashboard — TYSA Score</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -14,72 +14,55 @@
 </head>
 <body class="bg-[#f3f7fa] text-slate-800 min-h-screen flex antialiased">
 
-        {% include "includes/admin_sidebar.html" %}
+    {% include "includes/admin_sidebar.html" %}
 
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col min-w-0">
 
-        <!-- Top Navigation Bar matching 02_Admin_Dashboard.png -->
+        <!-- Top Navigation Bar -->
         <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between shrink-0">
-            
-            <!-- Left: Championship Selector -->
-            <div class="relative">
-                <button class="flex items-center space-x-2.5 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition">
-                    <span>{{ championship.name|default:"Telangana State Championship 2026" }}</span>
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
-                </button>
+            <!-- Left: Scope Indicator -->
+            <div class="flex items-center space-x-3">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-xs font-bold text-slate-700">Scope: <strong>{{ championship.name|default:"Telangana State Championship 2026" }}</strong></span>
             </div>
 
-            <!-- Middle: Search Input -->
-            <div class="relative w-80 lg:w-96">
-                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-                <input type="text" placeholder="Find a module..." 
-                    class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 outline-none focus:border-[#00838f] focus:ring-1 focus:ring-[#00838f] placeholder-slate-400 transition">
-            </div>
-
-            <!-- Right: Bell Notification & User Avatar Dropdown -->
+            <!-- Right: Admin User Profile Pill -->
             <div class="flex items-center space-x-4">
-                <!-- Bell Notification -->
-                <button class="relative p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-50 transition">
-                    <i data-lucide="bell" class="w-5 h-5"></i>
-                    <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500"></span>
-                </button>
-
-                <!-- User Profile Pill -->
-                <div class="flex items-center space-x-2.5 pl-2">
+                <div class="flex items-center space-x-2.5">
                     <div class="w-8 h-8 rounded-full bg-[#dbeafe] text-[#0369a1] font-bold text-xs flex items-center justify-center">
                         SA
                     </div>
                     <div class="text-left hidden sm:block leading-tight">
                         <div class="text-xs font-bold text-slate-900">{{ user.full_name|default:"System Admin" }}</div>
-                        <div class="text-[10px] text-slate-400 font-medium">Full access</div>
+                        <div class="text-[10px] text-slate-400 font-medium">State Administrator</div>
                     </div>
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
                 </div>
             </div>
-
         </header>
 
         <!-- Main Body Content -->
-        <main class="flex-1 p-8 space-y-6 max-w-[1400px] w-full mx-auto overflow-y-auto">
+        <main class="flex-1 p-8 space-y-8 max-w-[1400px] w-full mx-auto overflow-y-auto">
 
-            <!-- Header Row with "All modules" Title & 4 Stat Badges -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Header Row with Operations Title & 4 Operational Stat Badges -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
                 <div>
-                    <h1 class="text-3xl font-black text-[#1a365d] tracking-tight">All modules</h1>
-                    <p class="text-xs text-slate-500 font-medium mt-1">Manage every stage of your championship.</p>
+                    <h1 class="text-2xl sm:text-3xl font-black text-[#1a365d] tracking-tight">Admin Operations Center</h1>
+                    <p class="text-xs text-slate-500 font-medium mt-0.5">
+                        Active Championship: <strong>{{ championship.name|default:"Telangana State Championship 2026" }}</strong>
+                    </p>
                 </div>
 
-                <!-- 4 Stat Badges (Exact Match to 02_Admin_Dashboard.png) -->
+                <!-- 4 Real Stat Badges -->
                 <div class="flex flex-wrap items-center gap-3">
                     <!-- Stat 1: Athletes -->
-                    <a href="{% url 'athlete_register_step1' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs hover:shadow-xs transition group">
+                    <a href="{% url 'athlete_entries_list' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs hover:shadow-xs transition group">
                         <div class="w-9 h-9 rounded-xl bg-[#dbeafe] text-[#1e40af] flex items-center justify-center">
                             <i data-lucide="users" class="w-4 h-4"></i>
                         </div>
                         <div>
-                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.total_athletes|default:"248" }}</div>
-                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Athletes</div>
+                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.total_athletes|default:"0" }}</div>
+                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Registered Athletes</div>
                         </div>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 ml-1"></i>
                     </a>
@@ -90,20 +73,20 @@
                             <i data-lucide="user-check" class="w-4 h-4"></i>
                         </div>
                         <div>
-                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.approved_judges|default:"36" }}</div>
-                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Judges</div>
+                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.approved_judges|default:"0" }}</div>
+                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Approved Judges</div>
                         </div>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 ml-1"></i>
                     </a>
 
                     <!-- Stat 3: Event entries -->
-                    <a href="{% url 'district_draw' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs hover:shadow-xs transition group">
+                    <a href="{% url 'athlete_entries_list' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs hover:shadow-xs transition group">
                         <div class="w-9 h-9 rounded-xl bg-[#ffedd5] text-[#c2410c] flex items-center justify-center">
                             <i data-lucide="file-text" class="w-4 h-4"></i>
                         </div>
                         <div>
-                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.total_entries|default:"412" }}</div>
-                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Event entries</div>
+                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.total_entries|default:"0" }}</div>
+                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Event Entries</div>
                         </div>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 ml-1"></i>
                     </a>
@@ -114,418 +97,248 @@
                             <i data-lucide="map-pin" class="w-4 h-4"></i>
                         </div>
                         <div>
-                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.venue_cleared|default:"196" }}</div>
-                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Venue cleared</div>
+                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.venue_cleared|default:"0" }}</div>
+                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Venue Cleared</div>
                         </div>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 ml-1"></i>
                     </a>
                 </div>
             </div>
 
-            <!-- 6 Numbered Module Blocks Grid (2 Columns, Exact Match to 02_Admin_Dashboard.png) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                <!-- 1. SETUP Block -->
-                <div class="bg-[#f0f9fa] border border-[#d3edf0] rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-[#1a365d]">
-                            <i data-lucide="settings" class="w-4 h-4"></i>
-                            <h2 class="font-extrabold text-sm tracking-tight">1. SETUP</h2>
-                        </div>
-                        <span class="text-xs text-slate-500 font-medium">Configure your championship.</span>
+            <!-- SECTION 1: RUNNING & ACTIVE CHAMPIONSHIPS -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="trophy" class="w-5 h-5 text-[#00838f]"></i>
+                        <h2 class="text-lg font-black text-slate-900 tracking-tight">Running & Active Championships</h2>
+                        <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                            {{ running_championships.count }} Active
+                        </span>
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Card 1: Championships & COP -->
-                        <a href="{% url 'championship_setup' champ_id=championship.id|default:1 %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center">
-                                        <i data-lucide="trophy" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Championships & COP</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Create championships, configure COP and events</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 2: Asana Library -->
-                        <a href="{% url 'catalogue_view' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#ffedd5] text-[#ea580c] flex items-center justify-center">
-                                        <i data-lucide="book-open" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Asana Library</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Manage asana library and classifications</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 3: Users & Permissions -->
-                        <a href="{% url 'users_and_permissions' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#f3e8ff] text-[#9333ea] flex items-center justify-center">
-                                        <i data-lucide="user-cog" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Users & Permissions</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Manage users, roles and access permissions</p>
-                            </div>
-                        </a>
-                    </div>
+                    <a href="{% url 'championship_create' %}" class="px-4 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Create Championship</span>
+                    </a>
                 </div>
 
-                <!-- 2. REGISTRATION & APPROVALS Block -->
-                <div class="bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-[#1a365d]">
-                            <i data-lucide="users" class="w-4 h-4"></i>
-                            <h2 class="font-extrabold text-sm tracking-tight">2. REGISTRATION & APPROVALS</h2>
+                <!-- Championship Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {% for champ in running_championships %}
+                    <div class="bg-white rounded-2xl border {% if championship and championship.id == champ.id %}border-[#00838f] ring-2 ring-[#00838f]/20 shadow-md{% else %}border-slate-200 shadow-2xs{% endif %} p-5 flex flex-col justify-between hover:shadow-sm transition space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1">
+                                    <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">{{ champ.code }}</span>
+                                    <h3 class="text-sm font-extrabold text-slate-900 leading-snug line-clamp-2 mt-0.5">{{ champ.name }}</h3>
+                                </div>
+                                <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg shrink-0 
+                                    {% if champ.status == 'IN_PROGRESS' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                    {% elif champ.status == 'PUBLISHED' %}bg-teal-50 text-teal-700 border border-teal-200
+                                    {% else %}bg-slate-100 text-slate-600{% endif %}">
+                                    {{ champ.get_status_display }}
+                                </span>
+                            </div>
+
+                            <div class="space-y-1.5 text-xs text-slate-600">
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                    <span>{{ champ.start_date|date:"d M" }} – {{ champ.end_date|date:"d M Y" }}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                    <span class="truncate">{{ champ.venue_name }}, {{ champ.venue_city }}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                    <span><strong>{{ champ.registrations.count }}</strong> athletes enrolled</span>
+                                </div>
+                            </div>
                         </div>
-                        <span class="text-xs text-slate-500 font-medium">Manage registrations and approvals.</span>
-                    </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Card 1: Athletes & Keys -->
-                        <a href="{% url 'athlete_register_step1' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#dcfce7] text-[#16a34a] flex items-center justify-center">
-                                        <i data-lucide="users" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Athletes & Keys</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Manage athlete registrations, keys and eligibility</p>
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            {% if championship and championship.id == champ.id %}
+                            <span class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 font-bold text-xs border border-teal-200">
+                                <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+                                <span>Active Context</span>
+                            </span>
+                            {% else %}
+                            <a href="{% url 'championship_switch' champ_id=champ.id %}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 font-bold text-xs transition">
+                                Switch Context
+                            </a>
+                            {% endif %}
+                            <div class="flex items-center space-x-1.5">
+                                <a href="{% url 'championship_setup' champ_id=champ.id %}" class="p-2 rounded-xl text-slate-500 hover:text-[#00838f] hover:bg-slate-50 border border-slate-200 transition" title="Setup & Rules">
+                                    <i data-lucide="settings" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'venue_verification' %}" class="p-2 rounded-xl text-slate-500 hover:text-[#00838f] hover:bg-slate-50 border border-slate-200 transition" title="Venue Verification">
+                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'master_roll' %}" class="p-2 rounded-xl text-slate-500 hover:text-[#00838f] hover:bg-slate-50 border border-slate-200 transition" title="Master Roll">
+                                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                                </a>
                             </div>
-                        </a>
-
-                        <!-- Card 2: Judge Registration & Approval -->
-                        <a href="{% url 'judge_approval_queue' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#ffedd5] text-[#ea580c] flex items-center justify-center">
-                                        <i data-lucide="user-check" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Judge Registration & Approval</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Review and approve judge registrations</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 3: District Approval -->
-                        <a href="{% url 'district_approvals' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#fee2e2] text-[#dc2626] flex items-center justify-center">
-                                        <i data-lucide="file-check-2" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">District Approval</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Review and approve district registrations</p>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- 3. COMPETITION OPERATIONS Block -->
-                <div class="bg-[#f0fdfa] border border-[#ccfbf1] rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-[#1a365d]">
-                            <i data-lucide="settings" class="w-4 h-4"></i>
-                            <h2 class="font-extrabold text-sm tracking-tight">3. COMPETITION OPERATIONS</h2>
                         </div>
-                        <span class="text-xs text-slate-500 font-medium">Manage venues, competition and draws.</span>
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Card 1: Venue Verification -->
-                        <a href="{% url 'venue_verification' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center">
-                                        <i data-lucide="map-pin" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Venue Verification</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Manage venues and verification status</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 2: CD Dashboard -->
-                        <a href="{% url 'cd_corrections' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#ccfbf1] text-[#0d9488] flex items-center justify-center">
-                                        <i data-lucide="cog" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">CD Dashboard</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Event operations and competition management</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 3: Draw & Master Roll -->
-                        <a href="{% url 'district_draw' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#fee2e2] text-[#dc2626] flex items-center justify-center">
-                                        <i data-lucide="git-branch" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Draw & Master Roll</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Generate draws and manage master roll</p>
-                            </div>
+                    {% empty %}
+                    <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+                        <i data-lucide="trophy" class="w-10 h-10 text-slate-300 mx-auto"></i>
+                        <p class="text-sm font-semibold text-slate-600">No active championships created yet.</p>
+                        <a href="{% url 'championship_create' %}" class="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#00838f] text-white text-xs font-bold shadow-xs">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Create First Championship</span>
                         </a>
                     </div>
+                    {% endfor %}
                 </div>
-
-                <!-- 4. STAGES & JUDGING Block -->
-                <div class="bg-[#faf5ff] border border-[#f3e8ff] rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-[#1a365d]">
-                            <i data-lucide="users" class="w-4 h-4"></i>
-                            <h2 class="font-extrabold text-sm tracking-tight">4. STAGES & JUDGING</h2>
-                        </div>
-                        <span class="text-xs text-slate-500 font-medium">Plan and manage judging.</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Card 1: Panels & Stages -->
-                        <a href="{% url 'panel_assignments' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#f3e8ff] text-[#9333ea] flex items-center justify-center">
-                                        <i data-lucide="layout-list" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Panels & Stages</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Create judge panels and manage stage assignments</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 2: Judging Desks -->
-                        <a href="{% url 'scoring_traditional_d' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center">
-                                        <i data-lucide="monitor" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Judging Desks</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Monitor and manage all judging desks</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 3: Chief / Jury / CD Review -->
-                        <a href="{% url 'scoring_chief_judge' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#ffedd5] text-[#ea580c] flex items-center justify-center">
-                                        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Chief / Jury / CD Review</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Review results and handle CD corrections</p>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- 5. RESULTS & AWARDS Block -->
-                <div class="bg-[#fffbeb] border border-[#fef3c7] rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-[#1a365d]">
-                            <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
-                            <h2 class="font-extrabold text-sm tracking-tight">5. RESULTS & AWARDS</h2>
-                        </div>
-                        <span class="text-xs text-slate-500 font-medium">Score, publish results and manage awards.</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Card 1: Live Scores & Results -->
-                        <a href="{% url 'public_live_display' %}" target="_blank" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#dcfce7] text-[#16a34a] flex items-center justify-center">
-                                        <i data-lucide="bar-chart" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Live Scores & Results</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Real-time scoring and results publication</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 2: Certificates -->
-                        <a href="{% url 'certificate_generate' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center">
-                                        <i data-lucide="award" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Certificates</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Generate and manage certificates</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 3: Statistics & Trophies -->
-                        <a href="{% url 'report_trophies' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#f3e8ff] text-[#9333ea] flex items-center justify-center">
-                                        <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Statistics & Trophies</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Medal tally, statistics and trophies</p>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- 6. ADMINISTRATION Block -->
-                <div class="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-[#1a365d]">
-                            <i data-lucide="settings" class="w-4 h-4"></i>
-                            <h2 class="font-extrabold text-sm tracking-tight">6. ADMINISTRATION</h2>
-                        </div>
-                        <span class="text-xs text-slate-500 font-medium">Supporting tools and system management.</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Card 1: Volunteer & Guest Registers -->
-                        <a href="{% url 'registers_view' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center">
-                                        <i data-lucide="contact" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Volunteer & Guest Registers</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Manage volunteer and guest registrations</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 2: Reports & Ceremonies -->
-                        <a href="{% url 'report_ceremonies' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#ccfbf1] text-[#0d9488] flex items-center justify-center">
-                                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Reports & Ceremonies</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">Detailed reports, ceremonies and press releases</p>
-                            </div>
-                        </a>
-
-                        <!-- Card 3: Settings & Audit Log -->
-                        <a href="{% url 'report_complete' %}" class="bg-white p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-500 hover:shadow-xs transition group flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="w-8 h-8 rounded-lg bg-[#f1f5f9] text-[#334155] flex items-center justify-center">
-                                        <i data-lucide="sliders" class="w-4 h-4"></i>
-                                    </div>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600"></i>
-                                </div>
-                                <h3 class="font-bold text-xs text-slate-900 group-hover:text-[#00838f]">Settings & Audit Log</h3>
-                                <p class="text-[11px] text-slate-500 font-normal leading-relaxed mt-1">System settings and audit trail</p>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Bottom "Pending actions" Card matching 02_Admin_Dashboard.png -->
-            <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs flex flex-col lg:flex-row items-center justify-between gap-6">
-                <!-- Left Title -->
-                <div class="flex items-center space-x-3 shrink-0">
-                    <div class="text-[#1a365d]">
-                        <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+            <!-- SECTION 2: LIVE COMPETITION OPERATIONS DESK -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-teal-700"></i>
+                        <h2 class="text-lg font-black text-slate-900 tracking-tight">Active Competition & Field Operations</h2>
                     </div>
-                    <div>
-                        <h2 class="text-base font-extrabold text-[#1a365d]">Pending actions</h2>
-                        <p class="text-xs text-slate-500 font-medium mt-0.5">Items that need your attention.</p>
-                    </div>
+                    <span class="text-xs text-slate-500 font-medium">One-click operational access for officials</span>
                 </div>
 
-                <!-- Right 3 Action Badges -->
-                <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto justify-end">
-                    <!-- Action 1: District approvals -->
-                    <a href="{% url 'district_approvals' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 hover:border-rose-400 hover:shadow-xs transition group flex-1 sm:flex-initial">
-                        <div class="w-10 h-10 rounded-xl bg-[#fee2e2] text-[#dc2626] flex items-center justify-center shrink-0">
-                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Op Card 1: Universal District Draw -->
+                    <a href="{% url 'district_draw' %}" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-[#00838f] hover:shadow-xs transition group space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-xl bg-teal-50 text-[#00838f] flex items-center justify-center font-bold">
+                                <i data-lucide="shuffle" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full uppercase">Universal</span>
                         </div>
-                        <div class="leading-tight">
-                            <div class="text-xl font-black text-slate-900">{{ stats.pending_approvals|default:"18" }}</div>
-                            <div class="text-xs font-semibold text-slate-700">District approvals</div>
-                            <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#fee2e2] text-[#dc2626]">
-                                Pending approval
-                            </span>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-[#00838f] transition">Championship District Draw</h3>
+                            <p class="text-xs text-slate-500 mt-1">Universal 1–33 district lottery draw determining competitor start numbers across all events.</p>
                         </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-slate-600 ml-2"></i>
                     </a>
 
-                    <!-- Action 2: Judge applications -->
-                    <a href="{% url 'judge_approval_queue' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 hover:border-amber-400 hover:shadow-xs transition group flex-1 sm:flex-initial">
-                        <div class="w-10 h-10 rounded-xl bg-[#ffedd5] text-[#ea580c] flex items-center justify-center shrink-0">
-                            <i data-lucide="user" class="w-5 h-5"></i>
+                    <!-- Op Card 2: Master Roll Generation -->
+                    <a href="{% url 'master_roll' %}" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-[#00838f] hover:shadow-xs transition group space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                                <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full uppercase">Official Print</span>
                         </div>
-                        <div class="leading-tight">
-                            <div class="text-xl font-black text-slate-900">{{ stats.pending_judges|default:"6" }}</div>
-                            <div class="text-xs font-semibold text-slate-700">Judge applications</div>
-                            <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ffedd5] text-[#c2410c]">
-                                New applications
-                            </span>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-blue-700 transition">Master Roll Generation</h3>
+                            <p class="text-xs text-slate-500 mt-1">Event, Category, Gender and Round rolls sorted by lottery with optional signature column.</p>
                         </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-slate-600 ml-2"></i>
                     </a>
 
-                    <!-- Action 3: Document exceptions -->
-                    <a href="{% url 'venue_verification' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 hover:border-blue-400 hover:shadow-xs transition group flex-1 sm:flex-initial">
-                        <div class="w-10 h-10 rounded-xl bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center shrink-0">
-                            <i data-lucide="file-question" class="w-5 h-5"></i>
+                    <!-- Op Card 3: Venue Verification Desk -->
+                    <a href="{% url 'venue_verification' %}" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-[#00838f] hover:shadow-xs transition group space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full uppercase">Check-in</span>
                         </div>
-                        <div class="leading-tight">
-                            <div class="text-xl font-black text-slate-900">{{ stats.pending_exceptions|default:"4" }}</div>
-                            <div class="text-xs font-semibold text-slate-700">Document exceptions</div>
-                            <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#e0f2fe] text-[#0369a1]">
-                                Entries with issues
-                            </span>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-amber-700 transition">Venue Verification & Exceptions</h3>
+                            <p class="text-xs text-slate-500 mt-1">Athlete biometric/document checks, attendance, and CD/Admin authorized exception logging.</p>
                         </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-slate-600 ml-2"></i>
                     </a>
+
+                    <!-- Op Card 4: Judging & Chief Review -->
+                    <a href="{% url 'scoring_chief_judge' %}" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-[#00838f] hover:shadow-xs transition group space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                                <i data-lucide="check-check" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full uppercase">Judging Review</span>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-purple-700 transition">Judging & Chief Review Desk</h3>
+                            <p class="text-xs text-slate-500 mt-1">Inspect D1-D4 marks, Evaluator validity, and authorize provisional score publication.</p>
+                        </div>
+                    </a>
+
+                    <!-- Op Card 5: CD Correction & Scorelock -->
+                    <a href="{% url 'cd_corrections' %}" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-[#00838f] hover:shadow-xs transition group space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+                                <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full uppercase">CD Restricted</span>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-rose-700 transition">CD Correction & Finalization</h3>
+                            <p class="text-xs text-slate-500 mt-1">Full athlete dossier inspection, judge resubmission grants with recorded reasons, and finalization.</p>
+                        </div>
+                    </a>
+
+                    <!-- Op Card 6: Multi-Arena Live Big Screen -->
+                    <a href="{% url 'public_live_display' %}" target="_blank" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-[#00838f] hover:shadow-xs transition group space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                                <i data-lucide="tv" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full uppercase">Live Arena</span>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-emerald-700 transition">Live Arena Score Display</h3>
+                            <p class="text-xs text-slate-500 mt-1">100% viewport live arena scoreboard with current performer and top-3 gold/silver/bronze badges.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- SECTION 3: RECENT AUDIT LOGS -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
+                        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Recent Operations & Audit Log</h2>
+                    </div>
+                    <a href="{% url 'users_and_permissions' %}?tab=history" class="text-xs font-bold text-[#00838f] hover:underline flex items-center space-x-1">
+                        <span>View Full Audit History</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">
+                                <th class="py-2 px-3">Timestamp</th>
+                                <th class="py-2 px-3">Action</th>
+                                <th class="py-2 px-3">Operator</th>
+                                <th class="py-2 px-3">Entity Scoped</th>
+                                <th class="py-2 px-3">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+                            {% for log in recent_logs %}
+                            <tr class="hover:bg-slate-50/70 transition">
+                                <td class="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{{ log.timestamp|date:"d M H:i" }}</td>
+                                <td class="py-2.5 px-3 font-bold text-slate-900">{{ log.action }}</td>
+                                <td class="py-2.5 px-3 text-slate-800">{{ log.user.full_name|default:log.user.email }}</td>
+                                <td class="py-2.5 px-3 font-mono text-[11px] text-[#00838f]">{{ log.entity_type }} #{{ log.entity_id }}</td>
+                                <td class="py-2.5 px-3 text-slate-500 max-w-xs truncate">{{ log.details|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-4 text-center text-slate-400 text-xs">No recent audit log entries recorded.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
             <!-- Page Footer -->
             <footer class="pt-4 pb-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-400">
                 <div>
-                    TYSA Score • Telangana State Yogasana Championship 2026
+                    TYSA Score • Telangana Yogasana Sports Association
                 </div>
                 <div>
-                    Design preview • Sample data
+                    Championship Management Platform
                 </div>
             </footer>
 

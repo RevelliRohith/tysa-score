@@ -56,60 +56,61 @@
         #adminSidebarNav::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Desktop sidebar collapse */
+        @media (min-width: 768px) {
+            #adminSidebar.collapsed {
+                margin-left: -280px;
+            }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-[#f8fafc] text-slate-800 antialiased min-h-screen {% if is_admin and not hide_navbar %}flex font-sans overflow-x-hidden{% else %}flex flex-col font-sans{% endif %}">
+<body class="bg-[#f8fafc] text-slate-800 antialiased min-h-screen {% if show_sidebar and not hide_navbar %}flex font-sans overflow-x-hidden{% else %}flex flex-col font-sans{% endif %}">
 
-{% if is_admin and not hide_navbar %}
-    <!-- Admin Grouped Left Navigation Sidebar matching Reference UI -->
+{% if show_sidebar and not hide_navbar %}
+    <!-- Unified Role-Aware Left Navigation Sidebar matching Reference UI -->
     {% include "includes/admin_sidebar.html" %}
+{% endif %}
 
-    <div class="flex-1 flex flex-col min-w-0 min-h-screen">
-        <!-- Admin Top Navigation Bar -->
-        {% include "includes/admin_header.html" %}
-{% else %}
-    <!-- Non-Admin Top Navigation Bar -->
+<div id="mainContentWrapper" class="flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-200">
     {% if not hide_navbar %}
-        {% include "includes/non_admin_header.html" %}
+        <!-- Unified Top Header Bar -->
+        {% include "includes/admin_header.html" %}
     {% endif %}
-{% endif %}
 
-<!-- Messages / Alerts -->
-{% if messages %}
-<div class="{% if is_admin and not hide_navbar %}px-6 lg:px-8 pt-4 w-full{% else %}max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full{% endif %}">
-    {% for message in messages %}
-    <div class="p-3 mb-3 text-xs font-semibold rounded-xl border flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border-rose-200{% elif message.tags == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %}">
-        <span>{{ message }}</span>
-        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600">&times;</button>
+    <!-- Messages / Alerts -->
+    {% if messages %}
+    <div class="{% if show_sidebar and not hide_navbar %}px-4 sm:px-6 lg:px-8 pt-4 w-full{% else %}max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full{% endif %}">
+        {% for message in messages %}
+        <div class="p-3 mb-3 text-xs font-semibold rounded-xl border flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border-rose-200{% elif message.tags == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %}">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600">&times;</button>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
-{% endif %}
+    {% endif %}
 
-<!-- Main Content Area -->
-<main class="{% if is_admin and not hide_navbar %}flex-1 bg-[#f8fafc] p-6 lg:p-8 min-w-0 overflow-y-auto{% else %}flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6{% endif %}">
-    {% block content %}{% endblock %}
-</main>
+    <!-- Main Content Area -->
+    <main class="{% if show_sidebar and not hide_navbar %}flex-1 bg-[#f8fafc] p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto{% else %}flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
 
-{% if is_admin and not hide_navbar %}
-    </div><!-- End of flex-1 flex flex-col min-w-0 min-h-screen -->
-{% else %}
-    <!-- Non-admin footer -->
+    {% if not show_sidebar and not hide_navbar %}
+    <!-- Public / Standalone Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
             <div>
                 © 2026 Telangana Yogasana Association (TYSA). Official Championship Platform.
             </div>
             <div class="flex items-center space-x-4 mt-2 sm:mt-0 font-medium">
-                {% if is_judge_only %}
-                <a href="{% url 'judge_portal' %}" class="hover:text-brand-600">Judge Portal</a>
-                {% endif %}
-                <a href="{% url 'scoreboard_view' %}" class="hover:text-brand-600">Scoreboard</a>
+                <a href="{% url 'scoreboard_view' %}" class="hover:text-teal-700">Live Scoreboard</a>
+                <a href="{% url 'login' %}" class="hover:text-teal-700">Official Portal</a>
             </div>
         </div>
     </footer>
-{% endif %}
+    {% endif %}
+</div>
 
     <script>
         lucide.createIcons();

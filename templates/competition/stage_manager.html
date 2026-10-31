@@ -15,23 +15,23 @@
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
             <div>
                 <span class="text-slate-400 block font-medium">Championship</span>
-                <span class="font-bold text-slate-900 truncate block">Telangana State Yogasana Championship 2026</span>
+                <span class="font-bold text-slate-900 truncate block">{{ championship.name|default:"Telangana State Championship" }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Event</span>
-                <span class="font-bold text-slate-900">Traditional</span>
+                <span class="font-bold text-slate-900">{{ current_panel.event_config.get_event_type_display|default:"Traditional Yogasana" }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Category</span>
-                <span class="font-bold text-slate-900">Junior Boys</span>
+                <span class="font-bold text-slate-900">{{ current_panel.age_category.name|default:"Junior" }} ({{ current_panel.gender|default:"M" }})</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Round</span>
-                <span class="font-bold text-slate-900">Semi Final</span>
+                <span class="font-bold text-slate-900">{{ current_panel.round_type|default:"Preliminary" }}</span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Stage</span>
-                <span class="font-bold text-teal-800">Stage A</span>
+                <span class="text-slate-400 block font-medium">Stage / Arena</span>
+                <span class="font-bold text-teal-800">{{ current_panel.stage_name|default:"Stage 1" }}</span>
             </div>
         </div>
     </div>
@@ -305,55 +305,88 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <a href="{% url 'second_screen' %}" target="_blank" class="py-2.5 px-3 border border-teal-800 text-teal-800 hover:bg-teal-50 rounded-lg text-xs font-semibold text-center flex items-center justify-center space-x-1.5 transition">
-                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        <span>Open display window</span>
-                    </a>
-                    <button type="button" onclick="alert('Full screen triggered on Display 2')" class="py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 shadow-xs transition">
-                        <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
-                        <span>Full screen on display 2</span>
+                    <button type="button" onclick="openAudienceWindow('{% url 'public_live_display' %}?stage={{ current_panel.stage_name|urlencode }}&event_id={{ current_panel.event_config_id }}&cat_id={{ current_panel.age_category_id }}&gender={{ current_panel.gender }}&round_type={{ current_panel.round_type }}')" 
+                            class="py-2.5 px-3 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold text-center flex items-center justify-center space-x-1.5 shadow-xs transition">
+                        <i data-lucide="tv" class="w-4 h-4"></i>
+                        <span>Launch Arena Live Display</span>
                     </button>
+                    <a href="{% url 'second_screen' %}" target="_blank" class="py-2.5 px-3 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold text-center flex items-center justify-center space-x-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span>Second Screen Window</span>
+                    </a>
                 </div>
 
                 <!-- Tabs -->
                 <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
-                    <button type="button" class="flex-1 py-1.5 bg-white text-teal-900 rounded-lg font-bold shadow-xs">Live results</button>
-                    <button type="button" class="flex-1 py-1.5 hover:text-slate-900">Current batch</button>
-                    <button type="button" class="flex-1 py-1.5 hover:text-slate-900">Holding screen</button>
+                    <button type="button" onclick="setAudienceMode('live')" id="tab-live" class="flex-1 py-1.5 bg-white text-teal-900 rounded-lg font-bold shadow-xs">Live results</button>
+                    <button type="button" onclick="setAudienceMode('batch')" id="tab-batch" class="flex-1 py-1.5 hover:text-slate-900">Current batch</button>
+                    <button type="button" onclick="setAudienceMode('holding')" id="tab-holding" class="flex-1 py-1.5 hover:text-slate-900">Holding screen</button>
                 </div>
 
                 <!-- Status Strip -->
                 <div class="border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
                     <div>
-                        <div class="text-xs font-bold text-slate-900">On air: approved results · Stage A</div>
+                        <div id="operator-on-air-text" class="text-xs font-bold text-slate-900">On air: approved results · {{ current_panel.stage_name|default:"Stage 1" }}</div>
                         <p class="text-[11px] text-slate-500">Only approved, released scores appear on the audience display. Pending scores stay private.</p>
                     </div>
                     <div class="text-right text-xs shrink-0">
-                        <div class="text-slate-400 text-[10px]">Last synced</div>
-                        <div class="font-bold text-slate-900 font-mono">10:24:12</div>
-                        <div class="text-[10px] text-slate-500">Recent published batch <span class="font-semibold text-slate-800">Batch 2</span></div>
+                        <div class="text-slate-400 text-[10px]">Sync Status</div>
+                        <div id="sync-time-label" class="font-bold text-emerald-700 font-mono">CONNECTED</div>
+                        <div id="mode-state-desc" class="text-[10px] text-slate-500">Mode: <span class="font-semibold text-slate-800">Live Standings</span></div>
                     </div>
                 </div>
 
                 <!-- 4 Action Pills -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <button type="button" class="p-2 border border-blue-600 bg-blue-50 text-blue-700 font-semibold rounded-lg flex items-center justify-center space-x-1">
+                    <button type="button" onclick="setAudienceMode('live')" class="p-2 border border-blue-600 bg-blue-50 text-blue-700 font-semibold rounded-lg flex items-center justify-center space-x-1 transition hover:bg-blue-100">
                         <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                         <span>Show approved</span>
                     </button>
-                    <button type="button" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1">
+                    <button type="button" onclick="togglePauseUpdates()" id="btn-pause-updates" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1 transition">
                         <i data-lucide="pause" class="w-3.5 h-3.5"></i>
-                        <span>Pause updates</span>
+                        <span id="pause-text">Pause updates</span>
                     </button>
-                    <button type="button" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1">
+                    <button type="button" onclick="setAudienceMode('holding')" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1 transition">
                         <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
                         <span>Holding screen</span>
                     </button>
-                    <button type="button" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1">
+                    <button type="button" onclick="setAudienceMode('hide')" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1 transition">
                         <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
                         <span>Hide scores</span>
                     </button>
                 </div>
+
+                <script>
+                function openAudienceWindow(url) {
+                    window.open(url, 'tysa_audience_window', 'width=1600,height=900,menubar=no,toolbar=no,location=no,status=no');
+                }
+                function setAudienceMode(mode) {
+                    localStorage.setItem('tysa_audience_mode', mode);
+                    const modeDesc = document.getElementById('mode-state-desc');
+                    const onAirText = document.getElementById('operator-on-air-text');
+                    if (mode === 'holding' || mode === 'hide') {
+                        if (modeDesc) modeDesc.innerHTML = 'Mode: <span class="font-semibold text-amber-700">Holding Screen</span>';
+                        if (onAirText) onAirText.innerText = 'On air: Holding Intermission Screen';
+                    } else {
+                        if (modeDesc) modeDesc.innerHTML = 'Mode: <span class="font-semibold text-emerald-700">Live Standings</span>';
+                        if (onAirText) onAirText.innerText = 'On air: approved results · {{ current_panel.stage_name|default:"Stage 1" }}';
+                    }
+                }
+                function togglePauseUpdates() {
+                    const isPaused = localStorage.getItem('tysa_audience_paused') === 'true';
+                    const newPaused = !isPaused;
+                    localStorage.setItem('tysa_audience_paused', newPaused ? 'true' : 'false');
+                    const pauseText = document.getElementById('pause-text');
+                    const btn = document.getElementById('btn-pause-updates');
+                    if (newPaused) {
+                        pauseText.innerText = 'Resume updates';
+                        btn.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-300');
+                    } else {
+                        pauseText.innerText = 'Pause updates';
+                        btn.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+                    }
+                }
+                </script>
 
                 <!-- Toggle Switch -->
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">

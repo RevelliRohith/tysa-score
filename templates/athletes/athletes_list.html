@@ -1,0 +1,625 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registered Athletes Directory — TYSA Score{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        body { background: white !important; font-size: 10pt !important; }
+        .no-print, header, nav, aside, footer, form, .filter-card, .pagination-bar, .modal-backdrop { display: none !important; }
+        .print-only { display: block !important; }
+        .athletes-table { width: 100% !important; border: 1px solid #333 !important; }
+        .athletes-table th, .athletes-table td { border: 1px solid #666 !important; padding: 4px 6px !important; }
+        @page { size: landscape; margin: 12mm; }
+    }
+    .print-only { display: none; }
+</style>
+
+<div class="min-h-screen bg-slate-50 text-slate-800 -m-6 sm:-m-8 p-6 lg:p-8 space-y-6">
+
+    <!-- Official Header for Print -->
+    <div class="print-only mb-6">
+        {% include "includes/printable_header.html" %}
+        <div class="text-center font-bold text-sm tracking-wide uppercase py-1 border-y border-slate-400 mb-4">
+            Master Registered Athletes Roll — Telangana Yogasana Sports Association
+        </div>
+    </div>
+
+    <!-- Breadcrumb & Header Section -->
+    <div class="max-w-7xl mx-auto">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 mb-1">
+            <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700 transition flex items-center space-x-1">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Dashboard</span>
+            </a>
+            <span>/</span>
+            <span class="text-slate-500">Athletes</span>
+            <span>/</span>
+            <span class="text-slate-800 font-bold">Registered Athletes Directory</span>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Registered Athletes Directory</h1>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                    Central database of all registered yogasana athletes across Telangana with permanent IDs, documents, and credentials.
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="window.print()" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="printer" class="w-4 h-4 text-slate-600"></i>
+                    <span>Print Directory</span>
+                </button>
+                <a href="?export=excel&q={{ q }}&district={{ district_filter }}&gender={{ gender_filter }}&id_status={{ print_status }}&age_group={{ age_filter }}" 
+                   class="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="sheet" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Export Excel (.xlsx)</span>
+                </a>
+                <a href="{% url 'athlete_id_cards_batch' %}" 
+                   class="px-3.5 py-2 text-xs font-bold text-white bg-[#00838f] hover:bg-[#006978] rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    <span>Bulk Print ID Cards</span>
+                </a>
+                <a href="{% url 'athlete_entries_list' %}" 
+                   class="px-3.5 py-2 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-indigo-600"></i>
+                    <span>Event Entries Roll</span>
+                </a>
+                <a href="{% url 'athlete_register_step1' %}" 
+                   class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span>Register New Athlete</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+        <!-- Total Athletes -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 shrink-0">
+                <i data-lucide="users" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Athletes</span>
+                <span class="text-2xl font-black text-slate-900">{{ total_athletes }}</span>
+                <span class="text-[10px] text-teal-600 font-bold block mt-0.5">Permanent Public IDs</span>
+            </div>
+        </div>
+
+        <!-- Gender Ratio -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
+                <i data-lucide="scale" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Gender Ratio</span>
+                <div class="flex items-center space-x-2 text-sm font-black text-slate-900 mt-0.5">
+                    <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-bold">{{ male_count }} Boys</span>
+                    <span class="text-slate-300">/</span>
+                    <span class="px-1.5 py-0.5 rounded bg-pink-50 text-pink-700 text-xs font-bold">{{ female_count }} Girls</span>
+                </div>
+                <span class="text-[10px] text-slate-400 font-semibold block mt-1">Statewide distribution</span>
+            </div>
+        </div>
+
+        <!-- Districts Covered -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                <i data-lucide="map-pin" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Districts Active</span>
+                <span class="text-2xl font-black text-slate-900">{{ unique_districts_count }} <span class="text-xs font-medium text-slate-400">/ 33</span></span>
+                <span class="text-[10px] text-amber-700 font-bold block mt-0.5">Affiliated Districts</span>
+            </div>
+        </div>
+
+        <!-- ID Cards Printed -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <i data-lucide="badge-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">ID Cards Printed</span>
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl font-black text-slate-900">{{ printed_count }}</span>
+                    {% if pending_print_count > 0 %}
+                    <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        {{ pending_print_count }} pending
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        100% printed
+                    </span>
+                    {% endif %}
+                </div>
+                <span class="text-[10px] text-slate-400 font-medium block mt-0.5">Automated barcode cards</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="max-w-7xl mx-auto bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4 no-print">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+            <!-- Search Input -->
+            <div class="lg:col-span-2">
+                <label class="block font-bold text-slate-700 mb-1">Search Athlete Name / Public ID / Mobile / Guardian / Academy</label>
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                    <input type="text" name="q" value="{{ q }}" placeholder="e.g. Rohith, TYSA-ATH-00009, Mancherial, 9876543210"
+                        class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-teal-500 font-medium text-slate-900">
+                </div>
+            </div>
+
+            <!-- District Filter -->
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">District</label>
+                <select name="district" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-800">
+                    <option value="">All 33 Districts ▾</option>
+                    {% for d in districts %}
+                    <option value="{{ d }}" {% if district_filter == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Gender Filter -->
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Gender</label>
+                <select name="gender" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-800">
+                    <option value="">All Genders ▾</option>
+                    <option value="M" {% if gender_filter == 'M' %}selected{% endif %}>Male / Boys</option>
+                    <option value="F" {% if gender_filter == 'F' %}selected{% endif %}>Female / Girls</option>
+                </select>
+            </div>
+
+            <!-- Age Group Filter -->
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Age Bracket</label>
+                <select name="age_group" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-800">
+                    <option value="">All Ages ▾</option>
+                    <option value="sub_junior" {% if age_filter == 'sub_junior' %}selected{% endif %}>Sub-Junior (&lt; 14 yrs)</option>
+                    <option value="junior" {% if age_filter == 'junior' %}selected{% endif %}>Junior (14–18 yrs)</option>
+                    <option value="senior" {% if age_filter == 'senior' %}selected{% endif %}>Senior (18+ yrs)</option>
+                </select>
+            </div>
+
+            <!-- ID Card Status Filter -->
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">ID Card Status</label>
+                <select name="id_status" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-800">
+                    <option value="">All Print States ▾</option>
+                    <option value="printed" {% if print_status == 'printed' %}selected{% endif %}>Printed</option>
+                    <option value="pending" {% if print_status == 'pending' %}selected{% endif %}>Pending Print</option>
+                </select>
+            </div>
+
+            <!-- Submit & Reset Buttons -->
+            <div class="lg:col-span-4 flex items-center justify-end space-x-2 pt-1">
+                {% if q or district_filter or gender_filter or print_status or age_filter %}
+                <a href="{% url 'athletes_list' %}" class="px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition flex items-center space-x-1">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    <span>Clear All Filters</span>
+                </a>
+                {% endif %}
+                <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition flex items-center space-x-1.5">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                    <span>Apply Filters</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Athletes Table Card -->
+    <div class="max-w-7xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                    Registered Athletes Directory ({{ total_count }})
+                </h2>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">
+                    Showing {{ athletes.start_index }}–{{ athletes.end_index }} of {{ total_count }} verified athlete profiles.
+                </p>
+            </div>
+            <span class="text-xs font-bold font-mono text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
+                Page {{ athletes.number }} of {{ athletes.paginator.num_pages }}
+            </span>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs athletes-table">
+                <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="py-2.5 px-3 w-8 text-center">#</th>
+                        <th class="py-2.5 px-3">Athlete</th>
+                        <th class="py-2.5 px-3 font-mono">Public Athlete ID</th>
+                        <th class="py-2.5 px-3 text-center">Age / DOB</th>
+                        <th class="py-2.5 px-3">District & Academy</th>
+                        <th class="py-2.5 px-3">Guardian & Mobile</th>
+                        <th class="py-2.5 px-3 text-center">Documents</th>
+                        <th class="py-2.5 px-3 text-center">Registrations</th>
+                        <th class="py-2.5 px-3 text-center">ID Card</th>
+                        <th class="py-2.5 px-3 text-right no-print">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-semibold">
+                    {% for ath in athletes %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3 px-3 text-center text-slate-400 font-mono">
+                            {{ forloop.counter0|add:athletes.start_index }}
+                        </td>
+                        
+                        <!-- Athlete Name & Photo -->
+                        <td class="py-3 px-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-teal-200">
+                                    {% if ath.photo %}
+                                    <img src="{{ ath.photo.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <span>🧘</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <span class="font-extrabold text-slate-900 block text-xs">{{ ath.full_name }}</span>
+                                    <span class="text-[10px] font-medium text-slate-400">
+                                        {% if ath.gender == 'M' %}
+                                        <span class="text-blue-600 font-bold">Boy</span>
+                                        {% else %}
+                                        <span class="text-pink-600 font-bold">Girl</span>
+                                        {% endif %}
+                                        • Registered {{ ath.created_at|date:"M Y" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Public ID -->
+                        <td class="py-3 px-3 font-mono font-bold">
+                            <a href="{% url 'athlete_id_card' athlete_id=ath.public_athlete_id %}" 
+                               class="text-teal-700 hover:text-teal-900 hover:underline flex items-center space-x-1" 
+                               title="View Athlete ID Card">
+                                <span>{{ ath.public_athlete_id }}</span>
+                                <i data-lucide="external-link" class="w-3 h-3 text-teal-500"></i>
+                            </a>
+                        </td>
+
+                        <!-- Age / DOB -->
+                        <td class="py-3 px-3 text-center">
+                            {% if ath.dob %}
+                            <span class="font-extrabold text-slate-900 text-xs block">{{ ath.computed_age }} yrs</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ ath.dob|date:"d-m-Y" }}</span>
+                            {% else %}
+                            <span class="text-slate-400 text-xs">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- District & Academy -->
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900 block">{{ ath.district }}</span>
+                            <span class="text-[10px] text-slate-500 truncate max-w-[180px] block">
+                                {{ ath.academy|default:"Independent Athlete" }}
+                            </span>
+                        </td>
+
+                        <!-- Guardian & Mobile -->
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-slate-900 block text-xs">{{ ath.guardian_name|default:"—" }}</span>
+                            {% if ath.mobile %}
+                            <a href="tel:{{ ath.mobile }}" class="text-[11px] text-teal-600 hover:underline font-mono">
+                                {{ ath.mobile }}
+                            </a>
+                            {% else %}
+                            <span class="text-[11px] text-slate-400 font-mono">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Documents -->
+                        <td class="py-3 px-3 text-center">
+                            {% with docs_count=ath.documents.count %}
+                            {% if docs_count > 0 %}
+                            <button type="button" 
+                                    onclick="openAthleteModal('modal-ath-{{ ath.id }}')"
+                                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition inline-flex items-center space-x-1">
+                                <i data-lucide="file-check" class="w-3 h-3 text-teal-600"></i>
+                                <span>{{ docs_count }} Proof{{ docs_count|pluralize }}</span>
+                            </button>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400 border border-slate-200">
+                                0 Proofs
+                            </span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        <!-- Registrations -->
+                        <td class="py-3 px-3 text-center">
+                            {% with reg_count=ath.registrations.count %}
+                            {% if reg_count > 0 %}
+                            <button type="button" 
+                                    onclick="openAthleteModal('modal-ath-{{ ath.id }}')"
+                                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 hover:bg-indigo-100 transition inline-flex items-center space-x-1">
+                                <i data-lucide="trophy" class="w-3 h-3 text-indigo-600"></i>
+                                <span>{{ reg_count }} Champ{{ reg_count|pluralize }}</span>
+                            </button>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400">
+                                None
+                            </span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        <!-- ID Card Printed Status -->
+                        <td class="py-3 px-3 text-center">
+                            <form method="POST" class="inline no-print">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_print">
+                                <input type="hidden" name="athlete_id" value="{{ ath.id }}">
+                                {% if ath.is_id_card_printed %}
+                                <button type="submit" title="Click to toggle status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition inline-flex items-center space-x-1">
+                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                    <span>Printed</span>
+                                </button>
+                                {% else %}
+                                <button type="submit" title="Click to mark printed" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition inline-flex items-center space-x-1">
+                                    <i data-lucide="clock" class="w-3 h-3 text-amber-600"></i>
+                                    <span>Pending</span>
+                                </button>
+                                {% endif %}
+                            </form>
+                            <span class="print-only font-bold text-[10px]">
+                                {% if ath.is_id_card_printed %}PRINTED{% else %}PENDING{% endif %}
+                            </span>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="py-3 px-3 text-right space-x-1 no-print">
+                            <a href="{% url 'athlete_id_card' athlete_id=ath.public_athlete_id %}" 
+                               class="p-1.5 text-teal-600 hover:bg-teal-50 border border-teal-200 rounded-lg inline-flex items-center" 
+                               title="View ID Card">
+                                <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>
+                            </a>
+
+                            <button type="button" 
+                                    onclick="openAthleteModal('modal-ath-{{ ath.id }}')"
+                                    class="p-1.5 text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-lg inline-flex items-center" 
+                                    title="Inspect Athlete & Entries">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            </button>
+
+                            <form method="POST" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="start_registration">
+                                <input type="hidden" name="athlete_id" value="{{ ath.id }}">
+                                <button type="submit" 
+                                        class="p-1.5 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg inline-flex items-center" 
+                                        title="Enroll into {{ championship.name|default:'Current Championship' }}">
+                                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- Details Modal for this Athlete -->
+                    <div id="modal-ath-{{ ath.id }}" class="athlete-modal fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                        <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-sm shrink-0 border border-teal-200 overflow-hidden">
+                                        {% if ath.photo %}
+                                        <img src="{{ ath.photo.url }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                        <span>🧘</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h3 class="font-black text-slate-900 text-base">{{ ath.full_name }}</h3>
+                                        <span class="font-mono text-xs font-bold text-teal-700">{{ ath.public_athlete_id }}</span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="closeAthleteModal('modal-ath-{{ ath.id }}')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition">
+                                    <i data-lucide="x" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+
+                            <!-- Athlete Bio Grid -->
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div>
+                                    <span class="text-slate-400 block font-semibold">Gender</span>
+                                    <span class="font-bold text-slate-900">{{ ath.get_gender_display }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block font-semibold">Date of Birth</span>
+                                    <span class="font-bold text-slate-900">{{ ath.dob|date:"d M Y"|default:"—" }} ({{ ath.computed_age }} yrs)</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block font-semibold">District</span>
+                                    <span class="font-bold text-slate-900">{{ ath.district }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block font-semibold">Father / Guardian</span>
+                                    <span class="font-bold text-slate-900">{{ ath.guardian_name|default:"—" }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block font-semibold">Contact Mobile</span>
+                                    <span class="font-bold font-mono text-slate-900">{{ ath.mobile|default:"—" }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block font-semibold">Academy / Centre</span>
+                                    <span class="font-bold text-slate-900">{{ ath.academy|default:"Independent" }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Document Verification Section -->
+                            <div class="space-y-2">
+                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center space-x-1.5">
+                                    <i data-lucide="file-check-2" class="w-4 h-4 text-teal-600"></i>
+                                    <span>Uploaded Verification Documents ({{ ath.documents.count }})</span>
+                                </h4>
+                                {% if ath.documents.exists %}
+                                <div class="space-y-1.5">
+                                    {% for doc in ath.documents.all %}
+                                    <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 text-xs">
+                                        <div class="flex items-center space-x-2">
+                                            <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+                                            <div>
+                                                <span class="font-bold text-slate-900 block">{{ doc.get_document_type_display }}</span>
+                                                <span class="text-[10px] text-slate-400 font-mono">{{ doc.document_number|default:"No reference number" }}</span>
+                                            </div>
+                                        </div>
+                                        {% if doc.document_file %}
+                                        <a href="{{ doc.document_file.url }}" target="_blank" class="px-2.5 py-1 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition flex items-center space-x-1">
+                                            <i data-lucide="download" class="w-3 h-3"></i>
+                                            <span>View Document</span>
+                                        </a>
+                                        {% else %}
+                                        <span class="text-slate-400 text-xs">File not attached</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 text-center">
+                                    No identity or age documents uploaded for this athlete yet.
+                                </p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Enrolled Championship History -->
+                            <div class="space-y-2">
+                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center space-x-1.5">
+                                    <i data-lucide="trophy" class="w-4 h-4 text-indigo-600"></i>
+                                    <span>Championship Enrolments & Event Routines</span>
+                                </h4>
+                                {% if ath.registrations.exists %}
+                                <div class="space-y-2">
+                                    {% for r in ath.registrations.all %}
+                                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-black text-slate-900">{{ r.championship.name }} ({{ r.championship.year }})</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
+                                                {{ r.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 font-mono">
+                                            Reg No: <strong>{{ r.registration_number }}</strong> • Venue Cleared: 
+                                            {% if r.venue_cleared %}<span class="text-emerald-700 font-bold">YES</span>{% else %}<span class="text-slate-400">NO</span>{% endif %}
+                                        </div>
+                                        {% if r.event_entries.exists %}
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                                            {% for ent in r.event_entries.all %}
+                                            <div class="p-2 bg-white rounded-lg border border-slate-100 flex items-center justify-between">
+                                                <div>
+                                                    <span class="font-bold text-slate-800 block">{{ ent.event_config.get_event_type_display }}</span>
+                                                    <span class="text-[10px] text-slate-400">{{ ent.age_category.name }}</span>
+                                                </div>
+                                                <span class="font-mono font-black text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                                                    Chest {{ ent.chest_number|default:"—" }}
+                                                </span>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 text-center">
+                                    Not currently registered in any championships.
+                                </p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Modal Footer Actions -->
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                                <a href="{% url 'athlete_id_card' athlete_id=ath.public_athlete_id %}" 
+                                   class="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition flex items-center space-x-1.5">
+                                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                                    <span>Open Official ID Card</span>
+                                </a>
+                                <button type="button" 
+                                        onclick="closeAthleteModal('modal-ath-{{ ath.id }}')"
+                                        class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                                    Close Window
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="py-12 text-center text-slate-400">
+                            <i data-lucide="user-x" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+                            <p class="font-bold text-sm text-slate-600">No registered athletes found</p>
+                            <p class="text-xs text-slate-400 mt-1">Try modifying your search criteria or register a new athlete.</p>
+                            <a href="{% url 'athlete_register_step1' %}" class="inline-flex items-center space-x-1.5 mt-3 px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                <span>Register Athlete</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Bar -->
+        {% if athletes.paginator.num_pages > 1 %}
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 pagination-bar no-print">
+            <span class="text-xs text-slate-500 font-semibold">
+                Showing {{ athletes.start_index }} to {{ athletes.end_index }} of {{ total_count }} athletes
+            </span>
+            <div class="flex items-center space-x-1">
+                {% if athletes.has_previous %}
+                <a href="?page={{ athletes.previous_page_number }}&q={{ q }}&district={{ district_filter }}&gender={{ gender_filter }}&id_status={{ print_status }}&age_group={{ age_filter }}" 
+                   class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+                    ‹ Previous
+                </a>
+                {% endif %}
+
+                <span class="px-3 py-1.5 text-xs font-bold font-mono text-teal-800 bg-teal-50 border border-teal-200 rounded-lg">
+                    {{ athletes.number }} / {{ athletes.paginator.num_pages }}
+                </span>
+
+                {% if athletes.has_next %}
+                <a href="?page={{ athletes.next_page_number }}&q={{ q }}&district={{ district_filter }}&gender={{ gender_filter }}&id_status={{ print_status }}&age_group={{ age_filter }}" 
+                   class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+                    Next ›
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+    function openAthleteModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+    }
+
+    function closeAthleteModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+    }
+
+    // Close on backdrop click
+    document.querySelectorAll('.athlete-modal').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+    });
+</script>
+{% endblock %}

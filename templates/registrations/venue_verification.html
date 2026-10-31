@@ -568,18 +568,80 @@
                     </form>
                 </div>
 
-                <!-- Exception Request / Reporting -->
-                <div class="pt-3 border-t border-slate-100">
-                    <form method="POST" class="flex items-center space-x-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="log_exception">
-                        <input type="hidden" name="registration_id" value="{{ selected_registration.id }}">
-                        <input type="text" name="exception_notes" placeholder="Log desk exception / missing doc / grievance..."
-                            class="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-amber-500">
-                        <button type="submit" class="px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition shrink-0">
-                            Log Exception
-                        </button>
-                    </form>
+                <!-- Structured Exception Acceptance Section -->
+                <div class="pt-4 border-t border-slate-100 space-y-3">
+                    {% if selected_registration.has_venue_exception %}
+                    <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-3.5 space-y-1.5 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-200 text-amber-900">
+                                <i data-lucide="shield-alert" class="w-3 h-3"></i>
+                                <span>Official Exception Accepted</span>
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-400">{{ selected_registration.exception_granted_at|date:"d M Y, H:i" }}</span>
+                        </div>
+                        <div class="text-slate-800">
+                            <strong>Reason:</strong> {{ selected_registration.exception_reason }}
+                        </div>
+                        <div class="text-slate-600 text-[11px] pt-1 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-1">
+                            <span>Accepted By: <strong>{{ selected_registration.exception_authorizer_name|default:"Authorized Official" }}</strong> ({{ selected_registration.exception_accepted_by_role }})</span>
+                            <span>Phone: <strong>{{ selected_registration.exception_authorizer_mobile|default:"-" }}</strong></span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wide flex items-center space-x-1.5">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600"></i>
+                                <span>Desk Exception Acceptance</span>
+                            </span>
+                            <span class="text-[10px] text-slate-400">CD / Admin / Organizer Authorization</span>
+                        </div>
+
+                        <form method="POST" class="space-y-2.5 text-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="log_exception">
+                            <input type="hidden" name="registration_id" value="{{ selected_registration.id }}">
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Clear Reason for Exception <span class="text-rose-500">*</span></label>
+                                <input type="text" name="exception_reason" required
+                                       placeholder="e.g. Physical document verified by CD, Late transit verified"
+                                       class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg outline-none font-medium text-slate-900 focus:border-amber-500">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Accepted By Role <span class="text-rose-500">*</span></label>
+                                    <select name="exception_accepted_by_role" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg outline-none font-semibold text-slate-800">
+                                        <option value="Competition Director">Competition Director (CD)</option>
+                                        <option value="Admin">System Admin</option>
+                                        <option value="Organizer">Organizer / Venue Lead</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Authorizer Name <span class="text-rose-500">*</span></label>
+                                    <input type="text" name="exception_authorizer_name" required placeholder="e.g. Dr. P. Ramesh"
+                                           class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg outline-none font-medium text-slate-900">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Authorizer Mobile <span class="text-rose-500">*</span></label>
+                                    <input type="tel" name="exception_authorizer_mobile" required placeholder="e.g. 9876543210"
+                                           class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg outline-none font-medium text-slate-900">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-1">
+                                <label class="inline-flex items-center space-x-1.5 cursor-pointer">
+                                    <input type="checkbox" name="clear_venue_too" value="1" checked class="rounded text-amber-600">
+                                    <span class="font-bold text-slate-700">Grant Venue Clearance with Exception</span>
+                                </label>
+                                <button type="submit" class="px-3.5 py-1.5 font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-xs transition">
+                                    Accept & Authorize
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
             </div>

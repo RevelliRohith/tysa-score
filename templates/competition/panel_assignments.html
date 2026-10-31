@@ -39,9 +39,30 @@
 
     <!-- Step 1: Filter / Selection Controls (Hidden on print) -->
     <div class="print:hidden bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-        <div class="flex items-center space-x-2">
-            <span class="w-6 h-6 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center">1</span>
-            <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Step 1: Select Event, Age Category & Gender Division</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center">1</span>
+                <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Step 1: Select Event, Age Category & Gender Division</h2>
+            </div>
+            
+            <!-- Master Roll Cross-Link Status Badge -->
+            <div>
+                {% if existing_roll %}
+                <a href="{% url 'master_roll' %}?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}" 
+                   class="px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition flex items-center space-x-1.5"
+                   title="Master Roll already generated for this division">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-teal-700"></i>
+                    <span>Master Roll Ready ({{ existing_roll.roll_entries.count }} Athletes) →</span>
+                </a>
+                {% else %}
+                <a href="{% url 'master_roll' %}?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}" 
+                   class="px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition flex items-center space-x-1.5"
+                   title="No Master Roll found for this division">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                    <span>Master Roll Pending (Click to Generate) →</span>
+                </a>
+                {% endif %}
+            </div>
         </div>
 
         <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
@@ -88,26 +109,122 @@
         <!-- Printable Header (Visible on Screen & Print) -->
         {% include "includes/printable_header.html" %}
 
-        <!-- Panel Identification Banner -->
-        <div class="border-y-2 border-slate-900 py-2.5 px-2 flex flex-wrap items-center justify-between text-xs font-bold text-slate-900 uppercase tracking-wider bg-slate-50/50">
-            <div>
+        <!-- Panel Identification Banner & Status Bar -->
+        <div class="border-y-2 border-slate-900 py-3 px-3 flex flex-wrap items-center justify-between text-xs font-bold text-slate-900 uppercase tracking-wider bg-slate-50/50 gap-3">
+            <div class="flex flex-wrap items-center gap-2">
                 <span>Event: <strong>{{ current_event.get_event_type_display|default:"Traditional Yogasana" }}</strong></span>
-                <span class="mx-2">•</span>
+                <span class="text-slate-300">•</span>
                 <span>Category: <strong>{{ current_cat.name|default:"Junior Boys" }} ({{ gender }})</strong></span>
-            </div>
-            <div>
+                <span class="text-slate-300">•</span>
                 <span>Stage: <strong>{{ current_panel.stage_name|default:"Stage 1" }}</strong></span>
-                <span class="mx-2">•</span>
+                <span class="text-slate-300">•</span>
                 <span>Round: <strong>{{ round_type }}</strong></span>
             </div>
+            
+            <!-- Event Closure Status Badge & Actions (Hidden on Print) -->
+            <div class="flex items-center space-x-3 print:hidden">
+                {% if current_panel.is_closed %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300">
+                    <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+                    <span>CLOSED & RELEASED</span>
+                </span>
+                <form method="POST" class="inline" onsubmit="return confirm('Re-open this event panel for active scoring and modifications?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="panel_id" value="{{ current_panel.id }}">
+                    <input type="hidden" name="action" value="reopen_event">
+                    <button type="submit" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                        <i data-lucide="unlock" class="w-3.5 h-3.5 text-slate-600"></i>
+                        <span>Re-open Event</span>
+                    </button>
+                </form>
+                {% else %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span>ACTIVE / OPEN</span>
+                </span>
+                <form method="POST" class="inline" onsubmit="return confirm('Officially CLOSE this event? Once closed, all assigned judges will be freed and made available for other events.')">
+                    {% csrf_token %}
+                    <input type="hidden" name="panel_id" value="{{ current_panel.id }}">
+                    <input type="hidden" name="action" value="close_event">
+                    <button type="submit" class="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg shadow-2xs transition flex items-center space-x-1">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-rose-600"></i>
+                        <span>Close Event & Release Judges</span>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
         </div>
+
+        <!-- Judge Availability & Allocation Dashboard (Hidden on print) -->
+        <div class="print:hidden bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="users" class="w-5 h-5 text-teal-700"></i>
+                    <div>
+                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-800">Judge Availability & Allocation Governance</h3>
+                        <p class="text-[11px] text-slate-500 font-medium">One-judge-per-active-event rule: Judges assigned to open events cannot be assigned elsewhere until that event closes.</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 text-xs font-bold">
+                    <div class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg flex items-center space-x-1.5 shadow-2xs">
+                        <span class="text-slate-500">Approved:</span>
+                        <span class="text-slate-900 font-black">{{ total_approved_count }}</span>
+                    </div>
+                    <div class="px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center space-x-1.5 text-emerald-800 shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                        <span>Available:</span>
+                        <span class="font-black">{{ available_count }}</span>
+                    </div>
+                    <div class="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center space-x-1.5 text-amber-800 shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-amber-600"></span>
+                        <span>Busy (In Open Events):</span>
+                        <span class="font-black">{{ busy_count }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if busy_roster %}
+            <details class="text-xs text-slate-600 bg-white rounded-lg border border-slate-200 p-2.5 cursor-pointer">
+                <summary class="font-bold text-slate-800 hover:text-teal-700 transition flex items-center justify-between">
+                    <span>View Roster of {{ busy_count }} Officials Currently Locked in Other Open Events</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-semibold">Click to expand</span>
+                </summary>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {% for item in busy_roster %}
+                    <div class="p-2 bg-amber-50/60 border border-amber-200/80 rounded-lg">
+                        <div class="font-bold text-slate-900">{{ item.user.full_name|default:item.user.email }}</div>
+                        <div class="text-[11px] text-slate-500">{{ item.judge.district }} • {{ item.judge.get_certification_level_display }}</div>
+                        <div class="text-[11px] font-semibold text-amber-900 mt-1 flex items-center space-x-1">
+                            <i data-lucide="lock" class="w-3 h-3 text-amber-700 shrink-0"></i>
+                            <span class="truncate">{{ item.info.seat_name }} on {{ item.info.panel_desc }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+        </div>
+
+        {% if current_panel.is_closed %}
+        <div class="print:hidden bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start space-x-3 text-xs text-rose-900">
+            <i data-lucide="check-circle" class="w-5 h-5 text-rose-700 shrink-0 mt-0.5"></i>
+            <div>
+                <span class="font-extrabold uppercase tracking-wide block">Event Panel Officially Closed</span>
+                <p class="mt-0.5 text-rose-800">
+                    This event was closed on <strong>{{ current_panel.closed_at|date:"d M Y, H:i" }}</strong>
+                    {% if current_panel.closed_by %}by <strong>{{ current_panel.closed_by.full_name|default:current_panel.closed_by.email }}</strong>{% endif %}.
+                    All assigned officials have been released and are now available for subsequent events. To modify panel assignments or re-run scoring, click the <strong>Re-open Event</strong> button above.
+                </p>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Four D-Judges Notice (Hidden on print) -->
         <div class="print:hidden bg-sky-50 border border-sky-100 rounded-xl p-3 flex items-center space-x-3 text-xs">
             <i data-lucide="info" class="w-5 h-5 text-sky-600 shrink-0"></i>
             <div>
                 <span class="font-bold text-sky-950 uppercase tracking-wider block text-[11px]">COP SPORTING RULE</span>
-                <span class="text-sky-800">Assign Chief Judge, D1–D4 Judges (Olympic trimmed mean), Time Judge, Evaluator, and Stage Manager.</span>
+                <span class="text-sky-800">Assign Chief Judge, D1–D4 Judges (Olympic trimmed mean), Time Judge, Evaluator, and Stage Manager. Intra-panel duplicates and multi-event overlaps are strictly prevented.</span>
             </div>
         </div>
 
@@ -115,6 +232,7 @@
         <form method="POST" class="space-y-6">
             {% csrf_token %}
             <input type="hidden" name="panel_id" value="{{ current_panel.id }}">
+            <input type="hidden" name="action" value="save_panel">
 
             <!-- Table of Seats and Assignable Officials -->
             <div class="overflow-x-auto border border-slate-900 rounded-xl print:rounded-none">
@@ -122,8 +240,9 @@
                     <thead>
                         <tr class="bg-slate-100 border-b-2 border-slate-900 text-[11px] font-black uppercase tracking-wider text-slate-900">
                             <th class="py-3 px-4 w-1/4 border-r border-slate-900">Seat / Operational Duty</th>
-                            <th class="py-3 px-4 w-1/2 border-r border-slate-900">Assigned Official</th>
-                            <th class="py-3 px-4">District / Certification</th>
+                            <th class="py-3 px-4 w-5/12 border-r border-slate-900">Assigned Official</th>
+                            <th class="py-3 px-4 border-r border-slate-900">District / Certification</th>
+                            <th class="py-3 px-4 text-center w-36">Physical Signature</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-300">
@@ -135,21 +254,29 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Score verification & provisional release</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="chief_judge" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="chief_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.chief_judge_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.chief_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.chief_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.chief_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.chief_judge %}
                                     <span class="font-bold text-slate-900">{{ current_panel.chief_judge.judge_profile.district }}</span> • {{ current_panel.chief_judge.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -160,21 +287,29 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Difficulty & execution evaluation</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="d1_judge" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="d1_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.d1_judge_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.d1_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.d1_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.d1_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.d1_judge %}
                                     <span class="font-bold text-slate-900">{{ current_panel.d1_judge.judge_profile.district }}</span> • {{ current_panel.d1_judge.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -185,21 +320,29 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Difficulty & execution evaluation</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="d2_judge" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="d2_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.d2_judge_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.d2_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.d2_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.d2_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.d2_judge %}
                                     <span class="font-bold text-slate-900">{{ current_panel.d2_judge.judge_profile.district }}</span> • {{ current_panel.d2_judge.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -210,21 +353,29 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Difficulty & execution evaluation</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="d3_judge" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="d3_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.d3_judge_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.d3_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.d3_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.d3_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.d3_judge %}
                                     <span class="font-bold text-slate-900">{{ current_panel.d3_judge.judge_profile.district }}</span> • {{ current_panel.d3_judge.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -235,21 +386,29 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Difficulty & execution evaluation</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="d4_judge" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="d4_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.d4_judge_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.d4_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.d4_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.d4_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.d4_judge %}
                                     <span class="font-bold text-slate-900">{{ current_panel.d4_judge.judge_profile.district }}</span> • {{ current_panel.d4_judge.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -260,21 +419,29 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Holding time / Performance duration</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="time_judge" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="time_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.time_judge_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.time_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.time_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.time_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.time_judge %}
                                     <span class="font-bold text-slate-900">{{ current_panel.time_judge.judge_profile.district }}</span> • {{ current_panel.time_judge.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -285,71 +452,161 @@
                                 <span class="text-[10px] text-slate-500 font-normal">Scoring verification & invalid items</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="evaluator" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="evaluator" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.evaluator_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.evaluator_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.evaluator_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.evaluator_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.evaluator %}
                                     <span class="font-bold text-slate-900">{{ current_panel.evaluator.judge_profile.district }}</span> • {{ current_panel.evaluator.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Select from approved list</span>
                                 {% endif %}
                             </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
+                            </td>
                         </tr>
 
-                        <!-- 8. Stage Manager -->
+                        <!-- 8. Artistry Judges (Displayed for Artistic/Rhythmic Events or Configurable) -->
+                        {% if current_event.event_type in 'ARTISTIC_SOLO,ARTISTIC_PAIR,RHYTHMIC_PAIR,FREE_FLOW' or current_panel.artistry_judge %}
+                        <tr class="hover:bg-slate-50/60 bg-amber-50/20">
+                            <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">
+                                <div class="text-sm">Artistry Judge 1</div>
+                                <span class="text-[10px] text-slate-500 font-normal">Choreography, musicality & synchronization</span>
+                            </td>
+                            <td class="py-3 px-4 border-r border-slate-300">
+                                <select name="artistry_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
+                                    <option value="">— Unassigned —</option>
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.artistry_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.artistry_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.artistry_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
+                                {% if current_panel.artistry_judge %}
+                                    <span class="font-bold text-slate-900">{{ current_panel.artistry_judge.judge_profile.district }}</span> • {{ current_panel.artistry_judge.judge_profile.get_certification_level_display }}
+                                {% else %}
+                                    <span class="text-slate-400 italic">Select from approved list</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/60 bg-amber-50/20">
+                            <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">
+                                <div class="text-sm">Artistry Judge 2</div>
+                                <span class="text-[10px] text-slate-500 font-normal">Choreography, musicality & synchronization</span>
+                            </td>
+                            <td class="py-3 px-4 border-r border-slate-300">
+                                <select name="artistry_judge_2" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
+                                    <option value="">— Unassigned —</option>
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.artistry_judge_2_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.artistry_judge_2_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.artistry_judge_2_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
+                                {% if current_panel.artistry_judge_2 %}
+                                    <span class="font-bold text-slate-900">{{ current_panel.artistry_judge_2.judge_profile.district }}</span> • {{ current_panel.artistry_judge_2.judge_profile.get_certification_level_display }}
+                                {% else %}
+                                    <span class="text-slate-400 italic">Select from approved list</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
+                            </td>
+                        </tr>
+                        {% endif %}
+
+                        <!-- 9. Stage Manager -->
                         <tr class="hover:bg-slate-50/60">
                             <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">
                                 <div class="text-sm">Stage Manager</div>
                                 <span class="text-[10px] text-slate-500 font-normal">Per-panel operational desk controller</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="stage_manager" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="stage_manager" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.stage_manager_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.stage_manager_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.stage_manager_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.stage_manager_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.stage_manager %}
                                     <span class="font-bold text-slate-900">{{ current_panel.stage_manager.full_name|default:current_panel.stage_manager.email }}</span>
                                 {% else %}
                                     <span class="text-slate-400 italic">Operational desk appointment</span>
                                 {% endif %}
                             </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
+                            </td>
                         </tr>
 
-                        <!-- 9. Optional Jury -->
+                        <!-- 10. Optional Jury -->
                         <tr class="hover:bg-slate-50/60">
                             <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">
                                 <div class="text-sm">Optional Jury Reviewer</div>
                                 <span class="text-[10px] text-slate-500 font-normal">Read-only audit desk (appointed from approved judges)</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
-                                <select name="jury_member" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600">
+                                <select name="jury_member" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— None / Optional —</option>
-                                    {% for j in approved_judges %}
-                                    <option value="{{ j.user.id }}" {% if current_panel.jury_member_id == j.user.id %}selected{% endif %}>
-                                        {{ j.user.full_name|default:j.user.email }} ({{ j.district }} • {{ j.get_certification_level_display }})
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" 
+                                        {% if current_panel.jury_member_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.jury_member_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.jury_member_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="py-3 px-4 text-slate-600">
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.jury_member %}
                                     <span class="font-bold text-slate-900">{{ current_panel.jury_member.judge_profile.district }}</span> • {{ current_panel.jury_member.judge_profile.get_certification_level_display }}
                                 {% else %}
                                     <span class="text-slate-400 italic">Optional review appointment</span>
                                 {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
                             </td>
                         </tr>
 
@@ -358,11 +615,23 @@
             </div>
 
             <!-- Submit Button (Hidden on Print) -->
-            <div class="print:hidden flex justify-end">
+            <div class="print:hidden flex items-center justify-between">
+                <div>
+                    {% if current_panel.is_closed %}
+                    <span class="text-xs font-bold text-rose-700 flex items-center space-x-1.5">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        <span>Panel is locked because this event is closed. Re-open event above to enable editing.</span>
+                    </span>
+                    {% else %}
+                    <span class="text-xs text-slate-500 font-medium">All changes are immediately reflected across digital scoring desks.</span>
+                    {% endif %}
+                </div>
+                {% if not current_panel.is_closed %}
                 <button type="submit" class="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center space-x-2">
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                     <span>Confirm & Save Panel Assignments</span>
                 </button>
+                {% endif %}
             </div>
         </form>
         {% endif %}

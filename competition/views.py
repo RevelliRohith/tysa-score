@@ -5,7 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import csv
 from django.http import HttpResponse, JsonResponse
-from .models import DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, StageBatch
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from .models import DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, StageBatch, PanelSeatAssignment
 from championships.models import Championship, EventConfiguration, AgeCategory, EventType
 from registrations.models import EventEntry, RegistrationStatus
 from judges.models import UniversalJudge, ApprovalStatus
@@ -76,18 +78,217 @@ def cd_dashboard(request):
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def district_draw(request):
     """
-    Implements 14_District_Draw_and_Master_Roll.png:
-    - Displays all 33 Telangana districts with inputs for lottery numbering (1-33).
-    - Sorts event & age category entries strictly by lottery draw sequence.
-    - Minimal neat Master Roll with Chest No, Name, District, Mobile,
-      and toggle for With Signature Column vs Without Signature Column.
+    Universal Championship District Draw:
+    Determines the single statewide 1–33 district lottery sequence
+    that applies across all events and age categories in the championship.
     """
     championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected or assigned.")
+        return redirect('no_role_assigned')
+
+    # Universal Draw across entire championship (event_config is None)
+    draw = DistrictDraw.objects.filter(championship=championship, event_config__isnull=True).first()
+    if not draw:
+        draw = DistrictDraw.objects.filter(championship=championship).first()
+
+    current_districts_order = draw.draw_order if (draw and draw.draw_order) else list(TELANGANA_DISTRICTS)
+    for d in TELANGANA_DISTRICTS:
+        if d not in current_districts_order:
+            current_districts_order.append(d)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'save_numbering':
+            district_num_pairs = []
+            for d in TELANGANA_DISTRICTS:
+                num_val = request.POST.get(f'number_{d}', '').strip()
+                try:
+                    n = int(num_val)
+                except ValueError:
+                    n = 999
+                district_num_pairs.append((n, d))
+            district_num_pairs.sort(key=lambda x: (x[0], x[1]))
+            sorted_districts = [pair[1] for pair in district_num_pairs]
+
+            draw, _ = DistrictDraw.objects.update_or_create(
+                championship=championship,
+                event_config=None,
+                defaults={
+                    'draw_order': sorted_districts,
+                    'created_by': request.user,
+                    'draw_seed': f'DRAW-{datetime.datetime.now().strftime("%Y%m%d%H%M")}'
+                }
+            )
+            messages.success(request, "Universal championship district lottery numbering saved successfully!")
+            return redirect('district_draw')
+
+        elif action == 'run_draw':
+            sorted_districts = list(TELANGANA_DISTRICTS)
+            random.seed(int(datetime.datetime.now().timestamp()))
+            random.shuffle(sorted_districts)
+
+            draw, _ = DistrictDraw.objects.update_or_create(
+                championship=championship,
+                event_config=None,
+                defaults={
+                    'draw_order': sorted_districts,
+                    'created_by': request.user,
+                    'draw_seed': f'DRAW-{datetime.datetime.now().strftime("%Y%m%d%H%M")}'
+                }
+            )
+            messages.success(request, "Auditable random district draw completed for the entire championship!")
+            return redirect('district_draw')
+
+    draw_districts_list = []
+    for idx, d_name in enumerate(current_districts_order, start=1):
+        draw_districts_list.append({
+            'name': d_name,
+            'number': idx
+        })
+
+    # Prepare side-by-side pairs for 2-column display (1-17 left, 18-33 right)
+    half = (len(draw_districts_list) + 1) // 2
+    draw_pairs = []
+    for i in range(half):
+        d1 = draw_districts_list[i]
+        d2 = draw_districts_list[i + half] if (i + half) < len(draw_districts_list) else None
+        draw_pairs.append((d1, d2))
+
+    # PDF Export for District Draw
+    if request.GET.get('export') == 'pdf':
+        import io
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=25,
+            leftMargin=25,
+            topMargin=25,
+            bottomMargin=25
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'HeaderTitle',
+            parent=styles['Heading1'],
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor('#1A365D'),
+            alignment=1
+        )
+        sub_style = ParagraphStyle(
+            'HeaderSub',
+            parent=styles['Normal'],
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor('#4A5568'),
+            alignment=1
+        )
+
+        champ_title = championship.name if championship else "TELANGANA STATE YOGASANA CHAMPIONSHIP"
+        elements.append(Paragraph("<b>TELANGANA YOGASANA SPORTS ASSOCIATION</b>", title_style))
+        elements.append(Paragraph(f"{champ_title} — OFFICIAL DISTRICT LOTTERY DRAW", sub_style))
+        elements.append(Spacer(1, 8))
+
+        draw_seed = draw.draw_seed if (draw and draw.draw_seed) else 'DRAW-OFFICIAL'
+        elements.append(Paragraph(
+            f"<b>Lottery Sequence:</b> 1 to 33 Districts &nbsp;&nbsp;|&nbsp;&nbsp; <b>Draw Seed:</b> {draw_seed} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Date:</b> {datetime.date.today().strftime('%d %B %Y')}",
+            sub_style
+        ))
+        elements.append(Spacer(1, 10))
+
+        table_data = [[
+            'Draw #', 'District Name', 'Draw #', 'District Name'
+        ]]
+        for d1, d2 in draw_pairs:
+            table_data.append([
+                str(d1['number']),
+                d1['name'],
+                str(d2['number']) if d2 else '—',
+                d2['name'] if d2 else '—'
+            ])
+
+        col_widths = [55, 215, 55, 215]
+        t = Table(table_data, colWidths=col_widths, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1A365D')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('ALIGN', (3, 0), (3, -1), 'LEFT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#94A3B8')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 20))
+
+        # Signatures
+        sig_data = [
+            ['______________________', '______________________', '______________________', '______________________'],
+            ['Drawn By (Scrutiny)', 'Chief Judge', 'Competition Director (CD)', 'General Secretary'],
+            ['Date: ______________', 'Date: ______________', 'Date: ______________', 'Date: ______________']
+        ]
+        sig_table = Table(sig_data, colWidths=[135, 135, 135, 135])
+        sig_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1E293B')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(sig_table)
+        doc.build(elements)
+
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="District_Draw_{championship.code if championship else "Official"}.pdf"'
+        return response
+
+    state_logo = championship.branding_logos.filter(logo_type='STATE').first() if championship else None
+    district_logo = championship.branding_logos.filter(logo_type='DISTRICT').first() if championship else None
+    fed_logo = championship.branding_logos.filter(logo_type='FEDERATION').first() if championship else None
+
+    return render(request, 'competition/district_draw.html', {
+        'championship': championship,
+        'draw': draw,
+        'draw_districts': draw_districts_list,
+        'draw_pairs': draw_pairs,
+        'state_logo': state_logo,
+        'district_logo': district_logo,
+        'fed_logo': fed_logo,
+    })
+
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
+def master_roll(request):
+    """
+    Dedicated Master Roll Generation & Official Printing:
+    Generates division-specific performance rolls sorted strictly by the championship's
+    universal district lottery draw. Provides signature column toggle, cross-links with
+    Judge Panels, and formats with configurable authorized signatures.
+    """
+    championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected.")
+        return redirect('admin_dashboard')
+
     event_configs = championship.event_configurations.filter(is_enabled=True)
     selected_event_id = request.GET.get('event_id')
     current_event = event_configs.filter(id=selected_event_id).first() if selected_event_id else event_configs.first()
 
-    categories = current_event.age_categories.all() if current_event else []
+    categories = current_event.age_categories.all() if current_event else AgeCategory.objects.all().order_by('display_order')
     selected_cat_id = request.GET.get('cat_id')
     current_cat = categories.filter(id=selected_cat_id).first() if selected_cat_id else categories.first()
 
@@ -95,19 +296,14 @@ def district_draw(request):
     round_type = request.GET.get('round_type', 'PRELIMINARY')
     view_mode = request.GET.get('view_mode', 'without_sig') # 'without_sig' or 'with_sig'
 
-    # Current District Lottery Draw
-    draw = DistrictDraw.objects.filter(
-        championship=championship,
-        event_config=current_event
-    ).first()
+    # Universal championship district lottery draw
+    draw = DistrictDraw.objects.filter(championship=championship, event_config__isnull=True).first()
+    if not draw:
+        draw = DistrictDraw.objects.filter(championship=championship).first()
 
-    current_districts_order = draw.draw_order if (draw and draw.draw_order) else list(TELANGANA_DISTRICTS)
-    # Ensure all 33 districts exist
-    for d in TELANGANA_DISTRICTS:
-        if d not in current_districts_order:
-            current_districts_order.append(d)
+    sorted_districts = draw.draw_order if (draw and draw.draw_order) else list(TELANGANA_DISTRICTS)
 
-    # Master Roll
+    # Master Roll for this event/category/gender/round
     master_roll = MasterRoll.objects.filter(
         championship=championship,
         event_config=current_event,
@@ -116,37 +312,19 @@ def district_draw(request):
         round_type=round_type
     ).first()
 
-    roll_entries = master_roll.roll_entries.select_related('event_entry__registration__athlete').order_by('performance_order') if master_roll else []
+    # Cross-link: Judge Panel assignment check
+    assigned_panel = JudgePanel.objects.filter(
+        championship=championship,
+        event_config=current_event,
+        age_category=current_cat,
+        gender=gender,
+        round_type=round_type
+    ).first()
 
     if request.method == 'POST':
         action = request.POST.get('action')
         
-        if action in ['save_numbering', 'run_draw']:
-            if action == 'save_numbering':
-                # Parse manual numbering inputs
-                district_num_pairs = []
-                for d in TELANGANA_DISTRICTS:
-                    num_val = request.POST.get(f'number_{d}', '').strip()
-                    try:
-                        n = int(num_val)
-                    except ValueError:
-                        n = 999
-                    district_num_pairs.append((n, d))
-                district_num_pairs.sort(key=lambda x: (x[0], x[1]))
-                sorted_districts = [pair[1] for pair in district_num_pairs]
-            else:
-                # Automated randomized lottery
-                sorted_districts = list(TELANGANA_DISTRICTS)
-                random.seed(int(datetime.datetime.now().timestamp()))
-                random.shuffle(sorted_districts)
-
-            draw, _ = DistrictDraw.objects.update_or_create(
-                championship=championship,
-                event_config=current_event,
-                defaults={'draw_order': sorted_districts, 'created_by': request.user, 'draw_seed': f'DRAW-{datetime.datetime.now().strftime("%Y%m%d%H%M")}'}
-            )
-
-            # Generate/Update Master Roll cycling districts in draw order
+        if action == 'generate_roll':
             if not master_roll:
                 master_roll = MasterRoll.objects.create(
                     championship=championship,
@@ -164,7 +342,7 @@ def district_draw(request):
                 registration__championship=championship
             ).select_related('registration__athlete'))
 
-            # Map entries into sorted district buckets
+            # Map entries into sorted district buckets according to lottery draw
             district_buckets = {d: [] for d in sorted_districts}
             for e in eligible_entries:
                 d = e.district
@@ -194,8 +372,8 @@ def district_draw(request):
                         has_more = True
                 cycle += 1
 
-            messages.success(request, f"Lottery draw updated! Master Roll generated with {perf_order - 1} athletes.")
-            return redirect(f"/competition/draw/?event_id={current_event.id}&cat_id={current_cat.id}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
+            messages.success(request, f"Master Roll generated with {perf_order - 1} athletes ordered by championship lottery draw!")
+            return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
 
         elif action == 'lock_roll':
             if master_roll:
@@ -204,21 +382,152 @@ def district_draw(request):
                 master_roll.locked_at = datetime.datetime.now()
                 master_roll.save()
                 messages.success(request, "Master Roll officially locked. Ordinary declarations are now frozen.")
-            return redirect(f"/competition/draw/?event_id={current_event.id}&cat_id={current_cat.id}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
+            return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
 
-    draw_districts_list = []
-    for idx, d_name in enumerate(current_districts_order, start=1):
-        draw_districts_list.append({
-            'name': d_name,
-            'number': idx
-        })
+    roll_entries = master_roll.roll_entries.select_related(
+        'event_entry__registration__athlete',
+        'event_entry__partner_athlete',
+        'event_entry__event_config',
+        'event_entry__age_category'
+    ).order_by('performance_order') if master_roll else []
+
+    # PDF Export for Master Roll (with_sig or without_sig)
+    if request.GET.get('export') == 'pdf':
+        import io
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            rightMargin=20,
+            leftMargin=20,
+            topMargin=20,
+            bottomMargin=20
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'HeaderTitle',
+            parent=styles['Heading1'],
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor('#1A365D'),
+            alignment=1
+        )
+        sub_style = ParagraphStyle(
+            'HeaderSub',
+            parent=styles['Normal'],
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor('#4A5568'),
+            alignment=1
+        )
+        cell_style = ParagraphStyle(
+            'CellText',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=10
+        )
+
+        champ_title = championship.name if championship else "TELANGANA STATE YOGASANA CHAMPIONSHIP"
+        sig_mode_label = "WITH SIGNATURE" if view_mode == 'with_sig' else "WITHOUT SIGNATURE"
+        elements.append(Paragraph("<b>TELANGANA YOGASANA SPORTS ASSOCIATION</b>", title_style))
+        elements.append(Paragraph(f"{champ_title} — OFFICIAL MASTER ROLL ({sig_mode_label})", sub_style))
+        elements.append(Spacer(1, 6))
+
+        ev_label = current_event.get_event_type_display() if current_event else "Traditional"
+        cat_label = current_cat.name if current_cat else "All Categories"
+        gen_label = "Boys / Men" if gender == 'M' else "Girls / Women"
+        elements.append(Paragraph(
+            f"<b>Event:</b> {ev_label} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Category:</b> {cat_label} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Division:</b> {gen_label} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Round:</b> {round_type} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Competitors:</b> {len(roll_entries)}",
+            sub_style
+        ))
+        elements.append(Spacer(1, 10))
+
+        if view_mode == 'with_sig':
+            table_data = [[
+                'Order', 'Chest No', 'Athlete Name(s)', 'Permanent ID', 'District', 'Mobile', 'Athlete Signature'
+            ]]
+            col_widths = [45, 65, 230, 95, 120, 95, 150]
+        else:
+            table_data = [[
+                'Order', 'Chest No', 'Athlete Name(s)', 'Permanent ID', 'District', 'Mobile'
+            ]]
+            col_widths = [55, 80, 310, 110, 145, 100]
+
+        for entry in roll_entries:
+            ee = entry.event_entry
+            ath = ee.registration.athlete
+            row = [
+                str(entry.performance_order),
+                str(ee.chest_number or f"{entry.performance_order:03d}"),
+                Paragraph(ee.display_names, cell_style),
+                ath.public_athlete_id,
+                ee.district,
+                ath.mobile or "—"
+            ]
+            if view_mode == 'with_sig':
+                row.append("____________________")
+            table_data.append(row)
+
+        if not roll_entries:
+            table_data.append(["—", "—", "No master roll entries generated yet.", "—", "—", "—"] + (["—"] if view_mode == 'with_sig' else []))
+
+        t = Table(table_data, colWidths=col_widths, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1A365D')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 0), (1, -1), 'CENTER'),
+            ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+            ('ALIGN', (3, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#94A3B8')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(t)
+
+        # Bottom Signatures only if with_sig!
+        if view_mode == 'with_sig':
+            elements.append(Spacer(1, 18))
+            sig1 = championship.master_roll_signatory_1 or "Stage Manager"
+            sig2 = championship.master_roll_signatory_2 or "Chief Judge"
+            sig3 = championship.master_roll_signatory_3 or "Competition Director (CD)"
+            sig4 = championship.master_roll_signatory_4 or "General Secretary"
+            sig_data = [
+                ['_________________________', '_________________________', '_________________________', '_________________________'],
+                [sig1, sig2, sig3, sig4],
+                ['Signature & Date', 'Signature & Date', 'Signature & Date', 'Signature & Date']
+            ]
+            sig_table = Table(sig_data, colWidths=[200, 200, 200, 200])
+            sig_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1E293B')),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ]))
+            elements.append(sig_table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        filename = f"Master_Roll_{ev_label}_{cat_label}_{gender}_{sig_mode_label}.pdf".replace(' ', '_')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
     state_logo = championship.branding_logos.filter(logo_type='STATE').first() if championship else None
     district_logo = championship.branding_logos.filter(logo_type='DISTRICT').first() if championship else None
     fed_logo = championship.branding_logos.filter(logo_type='FEDERATION').first() if championship else None
-    other_logos = championship.branding_logos.exclude(logo_type__in=['STATE', 'DISTRICT', 'FEDERATION']) if championship else None
 
-    return render(request, 'competition/district_draw.html', {
+    return render(request, 'competition/master_roll.html', {
         'championship': championship,
         'event_configs': event_configs,
         'current_event': current_event,
@@ -229,21 +538,68 @@ def district_draw(request):
         'view_mode': view_mode,
         'master_roll': master_roll,
         'roll_entries': roll_entries,
-        'draw_districts': draw_districts_list,
+        'draw': draw,
+        'assigned_panel': assigned_panel,
         'state_logo': state_logo,
         'district_logo': district_logo,
         'fed_logo': fed_logo,
-        'other_logos': other_logos,
     })
+
+def get_busy_judge_map(championship, current_panel_id=None):
+    """
+    Returns a dict mapping judge_user_id -> dict of info about the OPEN event panel they are assigned to.
+    Only panels where is_active=True and is_closed=False are considered open.
+    If current_panel_id is provided, assignments on that panel are excluded.
+    """
+    if not championship:
+        return {}
+
+    open_panels = JudgePanel.objects.filter(
+        championship=championship,
+        is_active=True,
+        is_closed=False
+    ).select_related('event_config', 'age_category')
+
+    if current_panel_id:
+        open_panels = open_panels.exclude(id=current_panel_id)
+
+    busy_map = {}
+    for panel in open_panels:
+        evt_name = panel.event_config.get_event_type_display() if panel.event_config else "Event"
+        cat_name = panel.age_category.name if panel.age_category else ""
+        gender_display = "Boys" if panel.gender == 'M' else "Girls"
+        panel_desc = f"{evt_name} • {cat_name} ({gender_display}) [{panel.round_type}]"
+
+        for field in JudgePanel.SEAT_FIELDS:
+            uid = getattr(panel, f"{field}_id", None)
+            if uid:
+                seat_label = JudgePanel.SEAT_LABELS.get(field, field)
+                busy_map[uid] = {
+                    'panel_id': panel.id,
+                    'event_name': evt_name,
+                    'category_name': cat_name,
+                    'gender': panel.gender,
+                    'round_type': panel.round_type,
+                    'division': f"{cat_name} ({gender_display}) [{panel.round_type}]",
+                    'panel_desc': panel_desc,
+                    'seat_name': seat_label,
+                    'seat_field': field,
+                    'stage_name': panel.stage_name,
+                }
+    return busy_map
 
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def panel_assignments(request):
     """
     Implements 15_CD_Judge_Panel_Assignment.png:
     - Step 1: Filter/Select Event, Age Category, Gender Division, Round.
-    - Step 2: Assign approved judges via searchable dropdowns.
+    - Step 2: Assign approved judges via searchable dropdowns with availability checking.
+      * One judge if assigned till that event closes cannot be assigned to other events.
+      * Intra-panel duplicate protection (no judge can take multiple seats in the same panel).
+      * Official event closure & re-opening actions.
     - Step 3: Print preview, printable format, downloadable CSV file.
     """
+    User = get_user_model()
     championship = get_active_championship(request)
     event_configs = championship.event_configurations.filter(is_enabled=True) if championship else EventConfiguration.objects.none()
     
@@ -271,9 +627,128 @@ def panel_assignments(request):
             defaults={
                 'stage_name': 'Stage 1',
                 'session_name': 'Morning Session',
-                'is_active': True
+                'is_active': True,
+                'is_closed': False,
             }
         )
+
+    # Handle Close / Re-open / Save POST actions
+    if request.method == 'POST':
+        target_panel_id = request.POST.get('panel_id')
+        panel = get_object_or_404(JudgePanel, id=target_panel_id, championship=championship)
+        action = request.POST.get('action', 'save_panel')
+
+        redirect_url = f"/competition/panels/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}"
+
+        if action == 'close_event':
+            panel.is_closed = True
+            panel.closed_at = timezone.now()
+            panel.closed_by = request.user
+            panel.save(update_fields=['is_closed', 'closed_at', 'closed_by'])
+
+            # Synchronize PanelSeatAssignment
+            PanelSeatAssignment.objects.filter(panel=panel).update(is_active=False)
+
+            assigned_count = len(panel.get_assigned_judge_ids())
+            evt_desc = f"{panel.event_config.get_event_type_display()} - {panel.age_category.name if panel.age_category else ''} ({gender}) [{round_type}]"
+            messages.success(
+                request,
+                f"Event '{evt_desc}' is now officially CLOSED. All {assigned_count} assigned officials are released and can now be assigned to subsequent events."
+            )
+            return redirect(redirect_url)
+
+        elif action == 'reopen_event':
+            busy_map = get_busy_judge_map(championship, current_panel_id=panel.id)
+            conflict_warnings = []
+            for uid in panel.get_assigned_judge_ids():
+                if uid in busy_map:
+                    judge_obj = User.objects.filter(id=uid).first()
+                    name = judge_obj.full_name if (judge_obj and judge_obj.full_name) else (judge_obj.email if judge_obj else f"Judge #{uid}")
+                    conflict_warnings.append(f"{name} (in '{busy_map[uid]['panel_desc']}')")
+
+            panel.is_closed = False
+            panel.closed_at = None
+            panel.closed_by = None
+            panel.save(update_fields=['is_closed', 'closed_at', 'closed_by'])
+
+            PanelSeatAssignment.objects.filter(panel=panel).update(is_active=True)
+
+            if conflict_warnings:
+                messages.warning(
+                    request,
+                    f"Event re-opened. Notice: Some officials are currently assigned to other open events: {', '.join(conflict_warnings)}. Please review and update seats."
+                )
+            else:
+                messages.success(request, f"Event '{panel}' has been re-opened for active competition and panel editing.")
+            return redirect(redirect_url)
+
+        # Standard panel assignment save
+        if panel.is_closed:
+            messages.error(request, "This event panel is officially CLOSED and finalized. Click 'Re-open Event' before making any assignment changes.")
+            return redirect(redirect_url)
+
+        # Extract submitted seats
+        seat_values = {}
+        for field in JudgePanel.SEAT_FIELDS:
+            raw_val = request.POST.get(field)
+            seat_values[field] = int(raw_val) if (raw_val and raw_val.isdigit()) else None
+
+        # 1. Intra-panel duplicate check: A judge cannot take multiple seats in the same panel
+        seen_seats = {}
+        intra_conflicts = []
+        for field, uid in seat_values.items():
+            if uid:
+                if uid in seen_seats:
+                    first_field = seen_seats[uid]
+                    judge_obj = User.objects.filter(id=uid).first()
+                    name = judge_obj.full_name if (judge_obj and judge_obj.full_name) else (judge_obj.email if judge_obj else f"Judge #{uid}")
+                    label1 = JudgePanel.SEAT_LABELS.get(first_field, first_field)
+                    label2 = JudgePanel.SEAT_LABELS.get(field, field)
+                    intra_conflicts.append(f"{name} cannot be assigned to both '{label1}' and '{label2}' in the same panel.")
+                seen_seats[uid] = field
+
+        if intra_conflicts:
+            for err in intra_conflicts:
+                messages.error(request, err)
+            return redirect(redirect_url)
+
+        # 2. Open-event lock check: A judge assigned to another open event cannot be assigned here until that event closes
+        busy_map = get_busy_judge_map(championship, current_panel_id=panel.id)
+        busy_conflicts = []
+        for field, uid in seat_values.items():
+            if uid and uid in busy_map:
+                judge_obj = User.objects.filter(id=uid).first()
+                name = judge_obj.full_name if (judge_obj and judge_obj.full_name) else (judge_obj.email if judge_obj else f"Judge #{uid}")
+                c_info = busy_map[uid]
+                seat_label = JudgePanel.SEAT_LABELS.get(field, field)
+                busy_conflicts.append(
+                    f"Conflict for {seat_label}: Judge {name} is already assigned to active event '{c_info['panel_desc']}'. A judge cannot be assigned to another panel until that event closes."
+                )
+
+        if busy_conflicts:
+            for err in busy_conflicts:
+                messages.error(request, err)
+            return redirect(redirect_url)
+
+        # Update panel fields
+        for field, uid in seat_values.items():
+            setattr(panel, f"{field}_id", uid)
+        panel.save()
+
+        # Synchronize PanelSeatAssignment records
+        PanelSeatAssignment.objects.filter(panel=panel).delete()
+        for field, uid in seat_values.items():
+            if uid:
+                PanelSeatAssignment.objects.create(
+                    panel=panel,
+                    seat_name=JudgePanel.SEAT_LABELS.get(field, field.upper()),
+                    judge_id=uid,
+                    assigned_by=request.user,
+                    is_active=True
+                )
+
+        messages.success(request, f"Judge panel successfully confirmed & saved for {panel.event_config.get_event_type_display()} ({gender}, {round_type}).")
+        return redirect(redirect_url)
 
     # CSV Download Export
     if request.GET.get('export') == 'csv' and current_panel:
@@ -286,6 +761,10 @@ def panel_assignments(request):
         writer.writerow(['Category', current_cat.name if current_cat else ''])
         writer.writerow(['Gender', 'Male' if gender == 'M' else 'Female'])
         writer.writerow(['Round', round_type])
+        writer.writerow(['Status', 'CLOSED' if current_panel.is_closed else 'OPEN / ACTIVE'])
+        if current_panel.is_closed and current_panel.closed_at:
+            writer.writerow(['Closed At', current_panel.closed_at.strftime('%Y-%m-%d %H:%M')])
+            writer.writerow(['Closed By', current_panel.closed_by.full_name if current_panel.closed_by else ''])
         writer.writerow([])
         writer.writerow(['Seat / Duty', 'Assigned Judge', 'Email', 'District', 'Certification Level'])
         
@@ -296,7 +775,11 @@ def panel_assignments(request):
             ('D3 Judge', current_panel.d3_judge),
             ('D4 Judge', current_panel.d4_judge),
             ('Time Judge', current_panel.time_judge),
+            ('Time Judge 2', current_panel.time_judge_2),
             ('Evaluator', current_panel.evaluator),
+            ('Evaluator 2', current_panel.evaluator_2),
+            ('Artistry Judge', current_panel.artistry_judge),
+            ('Artistry Judge 2', current_panel.artistry_judge_2),
             ('Stage Manager', current_panel.stage_manager),
             ('Jury Member', current_panel.jury_member),
         ]
@@ -314,37 +797,47 @@ def panel_assignments(request):
                 writer.writerow([seat_name, 'Unassigned', '', '', ''])
         return response
 
-    if request.method == 'POST':
-        target_panel_id = request.POST.get('panel_id')
-        panel = get_object_or_404(JudgePanel, id=target_panel_id, championship=championship)
+    busy_map = get_busy_judge_map(championship, current_panel_id=current_panel.id if current_panel else None)
 
-        d1_id = request.POST.get('d1_judge')
-        d2_id = request.POST.get('d2_judge')
-        d3_id = request.POST.get('d3_judge')
-        d4_id = request.POST.get('d4_judge')
-        time_id = request.POST.get('time_judge')
-        evaluator_id = request.POST.get('evaluator')
-        chief_id = request.POST.get('chief_judge')
-        stage_manager_id = request.POST.get('stage_manager')
-        jury_id = request.POST.get('jury_member')
+    annotated_judges = []
+    busy_roster = []
+    available_count = 0
+    busy_count = 0
 
-        panel.d1_judge_id = d1_id if d1_id else None
-        panel.d2_judge_id = d2_id if d2_id else None
-        panel.d3_judge_id = d3_id if d3_id else None
-        panel.d4_judge_id = d4_id if d4_id else None
-        panel.time_judge_id = time_id if time_id else None
-        panel.evaluator_id = evaluator_id if evaluator_id else None
-        panel.chief_judge_id = chief_id if chief_id else None
-        panel.stage_manager_id = stage_manager_id if stage_manager_id else None
-        panel.jury_member_id = jury_id if jury_id else None
-        panel.save()
+    for j in approved_judges:
+        uid = j.user_id
+        is_busy = (uid in busy_map)
+        b_info = busy_map.get(uid)
+        if is_busy:
+            busy_count += 1
+            busy_roster.append({
+                'judge': j,
+                'user': j.user,
+                'info': b_info
+            })
+        else:
+            available_count += 1
 
-        messages.success(request, f"Judge panel successfully confirmed & saved for {panel.event_config.get_event_type_display()} ({gender}, {round_type}).")
-        return redirect(f"/competition/panels/?event_id={current_event.id}&cat_id={current_cat.id}&gender={gender}&round_type={round_type}")
+        annotated_judges.append({
+            'obj': j,
+            'user': j.user,
+            'is_busy': is_busy,
+            'busy_info': b_info
+        })
 
     state_logo = championship.branding_logos.filter(logo_type='STATE').first() if championship else None
     district_logo = championship.branding_logos.filter(logo_type='DISTRICT').first() if championship else None
     fed_logo = championship.branding_logos.filter(logo_type='FEDERATION').first() if championship else None
+
+    existing_roll = None
+    if championship and current_event:
+        existing_roll = MasterRoll.objects.filter(
+            championship=championship,
+            event_config=current_event,
+            age_category=current_cat,
+            gender=gender,
+            round_type=round_type
+        ).first()
 
     return render(request, 'competition/panel_assignments.html', {
         'championship': championship,
@@ -355,7 +848,14 @@ def panel_assignments(request):
         'gender': gender,
         'round_type': round_type,
         'current_panel': current_panel,
+        'existing_roll': existing_roll,
         'approved_judges': approved_judges,
+        'annotated_judges': annotated_judges,
+        'busy_map': busy_map,
+        'busy_count': busy_count,
+        'available_count': available_count,
+        'busy_roster': busy_roster,
+        'total_approved_count': approved_judges.count(),
         'state_logo': state_logo,
         'district_logo': district_logo,
         'fed_logo': fed_logo,
@@ -369,8 +869,9 @@ def stage_manager(request):
     second-screen controls.
     """
     championship = get_active_championship(request)
-    panels = JudgePanel.objects.filter(championship=championship, is_active=True)
-    current_panel = panels.first()
+    panels = JudgePanel.objects.filter(championship=championship, is_active=True).select_related('event_config', 'age_category')
+    panel_id = request.GET.get('panel_id')
+    current_panel = panels.filter(id=panel_id).first() if panel_id else panels.first()
 
     # Active batch on stage
     active_batch = StageBatch.objects.filter(panel=current_panel, status__in=['ACTIVE', 'SUBMITTED']).first() if current_panel else None
@@ -426,6 +927,7 @@ def stage_manager(request):
 
     return render(request, 'competition/stage_manager.html', {
         'championship': championship,
+        'panels': panels,
         'current_panel': current_panel,
         'active_batch': active_batch,
         'queued_entries': queued_entries,

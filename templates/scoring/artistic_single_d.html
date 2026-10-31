@@ -15,206 +15,130 @@
         <div class="flex items-center space-x-6 text-xs">
             <div>
                 <span class="text-slate-400 block font-medium">Chest No.</span>
-                <span class="text-lg font-bold text-slate-900 font-mono">chest112</span>
+                <span class="text-xl font-black text-slate-900 font-mono">{{ entry.chest_number|default:"--" }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Event</span>
-                <span class="text-base font-bold text-slate-900">Artistic Single</span>
+                <span class="text-base font-bold text-slate-900">{{ entry.event_config.get_event_type_display|default:"Artistic Single" }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-medium">Round</span>
-                <span class="text-base font-bold text-slate-900">Semi Final</span>
+                <span class="text-base font-bold text-slate-900">{{ perf.get_round_type_display|default:"Semi Final" }}</span>
             </div>
             <div class="bg-blue-50 border border-blue-200/60 p-2.5 rounded-xl text-center min-w-[90px]">
-                <span class="text-slate-400 text-[10px] block font-medium">Asana</span>
-                <span class="text-base font-black text-blue-900">3 of 10</span>
+                <span class="text-slate-400 text-[10px] block font-medium">Sequence</span>
+                <span class="text-base font-black text-blue-900">10 Asanas</span>
             </div>
         </div>
     </div>
 
     <!-- Sequence Pill Bar -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex items-center justify-center space-x-3 sm:space-x-6 overflow-x-auto">
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">1</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">2</span>
-        <span class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">3</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">4</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">5</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">6</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">7</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">8</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">9</span>
-        <span class="w-8 h-8 rounded-full border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">10</span>
+        {% for item in items %}
+        <span class="w-8 h-8 rounded-full font-bold flex items-center justify-center text-xs shrink-0
+            {% if forloop.first %}bg-teal-800 text-white shadow-xs{% else %}border border-slate-300 text-slate-700{% endif %}">
+            {{ item.seq }}
+        </span>
+        {% endfor %}
     </div>
 
-    <!-- Hero Asana Card -->
-    <div class="bg-emerald-50/40 rounded-2xl border border-emerald-200/80 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-            <div class="text-xs font-bold text-teal-800 uppercase tracking-wide">Performed asana (current)</div>
-            <div class="text-xs text-slate-400 font-mono mt-1">SAMPLE-003</div>
-            <div class="text-2xl font-black text-slate-900">Vrikshasana</div>
-            <div class="text-sm text-slate-600">Tree Pose</div>
+    <form method="POST">
+        {% csrf_token %}
+        <!-- Table of 10 Asanas matching 18_Artistic_Single_D_Judge.png -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold">
+                        <th class="py-3 px-4 w-10">#</th>
+                        <th class="py-3 px-4">Asana code</th>
+                        <th class="py-3 px-4">Asana name</th>
+                        <th class="py-3 px-4 text-center">Pose reference</th>
+                        <th class="py-3 px-4 text-center">BV</th>
+                        <th class="py-3 px-4 text-center w-36">Execution / 10</th>
+                        <th class="py-3 px-4 text-center">Evaluator status</th>
+                        <th class="py-3 px-4 text-right">Effective score</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800">
+                    {% for item in items %}
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="py-2.5 px-4 font-bold">{{ item.seq }}</td>
+                        <td class="py-2.5 px-4 font-mono text-slate-500">{{ item.pose.declared_code|default:"SAMPLE-001" }}</td>
+                        <td class="py-2.5 px-4">
+                            <span class="font-bold text-slate-900">{{ item.pose.declared_name|default:"Routine Pose" }}</span>
+                        </td>
+                        <td class="py-2.5 px-4 text-center">
+                            {% if item.pose.image_url %}
+                            <img src="{{ item.pose.image_url }}" alt="Pose" class="w-7 h-7 mx-auto rounded object-cover">
+                            {% else %}🧘{% endif %}
+                        </td>
+                        <td class="py-2.5 px-4 text-center font-semibold">
+                            <input type="hidden" name="bv_{{ item.seq }}" id="bv_{{ item.seq }}" value="{{ item.score_item.base_value }}">
+                            {{ item.score_item.base_value }}
+                        </td>
+                        <td class="py-2.5 px-4 text-center">
+                            <input type="number" step="0.25" min="0" max="10" 
+                                   name="exec_{{ item.seq }}" id="exec_{{ item.seq }}"
+                                   value="{{ item.score_item.execution_score }}" 
+                                   oninput="updateEffective({{ item.seq }})"
+                                   class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
+                                   {% if sub.is_locked %}disabled{% endif %}>
+                        </td>
+                        <td class="py-2.5 px-4 text-center">
+                            {% if item.score_item.is_valid %}
+                            <span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span>
+                            {% else %}
+                            <span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800">Invalid</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm" id="eff_{{ item.seq }}">
+                            {{ item.score_item.effective_item_score }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="py-6 text-center text-slate-400 italic">No sequence items found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
-        <div class="w-20 h-20 rounded-2xl bg-white border border-emerald-200 flex items-center justify-center text-4xl shadow-xs">
-            🧘
-        </div>
-
-        <div class="bg-emerald-100/60 border border-emerald-200 rounded-xl p-4 flex items-center space-x-3 max-w-md">
-            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                <i data-lucide="check" class="w-5 h-5"></i>
+        <!-- Bottom Actions matching 18_Artistic_Single_D_Judge.png -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
+            <div class="bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-center space-x-2 text-xs text-blue-900">
+                <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0"></i>
+                <span>Independent evaluation • Original marks are retained.</span>
             </div>
-            <div class="text-xs text-emerald-950">
-                <div class="font-bold">This is Asana 3 of 10</div>
-                <div>Enter execution mark for the performed asana. Original marks are retained.</div>
+
+            <div class="flex items-center space-x-3">
+                <button type="submit" name="action" value="save_draft"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Draft</span>
+                </button>
+                <button type="submit" name="action" value="submit_sheet"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit Marks</span>
+                </button>
             </div>
         </div>
-    </div>
-
-    <!-- Table of 10 Asanas matching 18_Artistic_Single_D_Judge.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
-        <table class="w-full text-left text-xs">
-            <thead>
-                <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold">
-                    <th class="py-3 px-4 w-10">#</th>
-                    <th class="py-3 px-4">Asana code</th>
-                    <th class="py-3 px-4">Asana name</th>
-                    <th class="py-3 px-4 text-center">Pose reference</th>
-                    <th class="py-3 px-4 text-center">BV</th>
-                    <th class="py-3 px-4 text-center w-36">Execution / 10</th>
-                    <th class="py-3 px-4 text-center">Evaluator status</th>
-                    <th class="py-3 px-4 text-right">Effective score</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 text-slate-800">
-                <!-- 1 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">1</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-001</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Tadasana</span> <span class="text-slate-400 block text-[11px]">Mountain Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.80</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="8.00" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">6.40</td>
-                </tr>
-                <!-- 2 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">2</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-002</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Trikonasana</span> <span class="text-slate-400 block text-[11px]">Triangle Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.90</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="7.50" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">6.75</td>
-                </tr>
-                <!-- 3 (Active) -->
-                <tr class="bg-blue-50/50 border-y-2 border-blue-500">
-                    <td class="py-2.5 px-4 font-bold text-blue-900">3</td>
-                    <td class="py-2.5 px-4 font-mono text-blue-800">SAMPLE-003</td>
-                    <td class="py-2.5 px-4"><span class="font-bold text-blue-900">Vrikshasana</span> <span class="text-blue-600 block text-[11px]">Tree Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-bold text-blue-900">0.90</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="8.00" class="w-24 text-center py-1 border-2 border-blue-500 rounded-lg font-black text-blue-900 bg-white"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-blue-950 text-sm">7.20</td>
-                </tr>
-                <!-- 4 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">4</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-004</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Bhujangasana</span> <span class="text-slate-400 block text-[11px]">Cobra Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.80</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="7.00" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">5.60</td>
-                </tr>
-                <!-- 5 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">5</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-005</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Shalabhasana</span> <span class="text-slate-400 block text-[11px]">Locust Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.80</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="7.50" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">6.00</td>
-                </tr>
-                <!-- 6 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">6</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-006</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Dhanurasana</span> <span class="text-slate-400 block text-[11px]">Bow Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.90</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="8.00" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">7.20</td>
-                </tr>
-                <!-- 7 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">7</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-007</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Paschimottanasana</span> <span class="text-slate-400 block text-[11px]">Seated Forward Bend</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.80</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="7.00" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">5.60</td>
-                </tr>
-                <!-- 8 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">8</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-008</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Ardha Matsyendrasana</span> <span class="text-slate-400 block text-[11px]">Half Spinal Twist</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.80</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="7.50" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">6.00</td>
-                </tr>
-                <!-- 9 (Invalid by Evaluator) -->
-                <tr class="hover:bg-slate-50/50 bg-rose-50/20">
-                    <td class="py-2.5 px-4 font-bold text-rose-900">9</td>
-                    <td class="py-2.5 px-4 font-mono text-rose-700">SAMPLE-009</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Ustrasana</span> <span class="text-slate-400 block text-[11px]">Camel Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.90</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="8.00" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800">Invalid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-rose-600 text-sm">0.00</td>
-                </tr>
-                <!-- 10 -->
-                <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 px-4 font-bold">10</td>
-                    <td class="py-2.5 px-4 font-mono text-slate-500">SAMPLE-010</td>
-                    <td class="py-2.5 px-4"><span class="font-bold">Shavasana</span> <span class="text-slate-400 block text-[11px]">Corpse Pose</span></td>
-                    <td class="py-2.5 px-4 text-center">🧘</td>
-                    <td class="py-2.5 px-4 text-center font-semibold">0.70</td>
-                    <td class="py-2.5 px-4 text-center"><input type="number" step="0.1" value="7.00" class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold"></td>
-                    <td class="py-2.5 px-4 text-center"><span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span></td>
-                    <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm">4.90</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Bottom Actions matching 18_Artistic_Single_D_Judge.png -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div class="bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-center space-x-2 text-xs text-blue-900">
-            <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0"></i>
-            <span>Original marks are retained.</span>
-        </div>
-
-        <div class="flex items-center space-x-3">
-            <button type="button" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition">
-                Save draft
-            </button>
-            <button type="button" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold shadow-xs transition">
-                Submit marks
-            </button>
-        </div>
-    </div>
+    </form>
 </div>
+
+<script>
+function updateEffective(seq) {
+    const execInput = document.getElementById('exec_' + seq);
+    const bvInput = document.getElementById('bv_' + seq);
+    const effCell = document.getElementById('eff_' + seq);
+    if (execInput && bvInput && effCell) {
+        const exec = parseFloat(execInput.value) || 0;
+        const bv = parseFloat(bvInput.value) || 0;
+        effCell.textContent = (exec * bv).toFixed(3);
+    }
+}
+</script>
 {% endblock %}

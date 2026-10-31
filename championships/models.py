@@ -47,6 +47,21 @@ class Championship(models.Model):
     )
     status = models.CharField(max_length=20, choices=ChampionshipStatus.choices, default=ChampionshipStatus.DRAFT)
     logo = models.ImageField(upload_to='championships/logos/', blank=True, null=True)
+    header_snippet = models.ImageField(upload_to='championships/headers/', blank=True, null=True, help_text="Optional custom official header banner image")
+    
+    # Authorized Signatories for Master Rolls and Results
+    master_roll_signatory_1 = models.CharField(max_length=150, default="Competition Director", blank=True)
+    master_roll_signatory_2 = models.CharField(max_length=150, default="Stage Manager", blank=True)
+    master_roll_signatory_3 = models.CharField(max_length=150, default="Chief Judge", blank=True)
+    master_roll_signatory_4 = models.CharField(max_length=150, default="General Secretary / President", blank=True)
+    results_signatory_1 = models.CharField(max_length=150, default="Chief Judge", blank=True)
+    results_signatory_2 = models.CharField(max_length=150, default="Competition Director", blank=True)
+    results_signatory_3 = models.CharField(max_length=150, default="Observer / Federation Rep", blank=True)
+    results_signatory_4 = models.CharField(max_length=150, default="General Secretary", blank=True)
+    
+    # Adjustable branding and layout configuration
+    branding_layout = models.JSONField(default=dict, blank=True, help_text="Versioned branding layout config")
+    branding_version = models.PositiveIntegerField(default=1, help_text="Version of the branding configuration")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -114,6 +129,19 @@ class ChampionshipLogo(models.Model):
     display_order = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
     show_on_prints = models.BooleanField(default=True, help_text="Render on printable master rolls, results, and ID cards")
+    
+    # Adjustable Positioning & Sizing Coordinates
+    pos_x = models.FloatField(default=0.0, help_text="X position percentage (0-100)")
+    pos_y = models.FloatField(default=0.0, help_text="Y position percentage (0-100)")
+    width = models.FloatField(default=120.0, help_text="Width in pixels")
+    height = models.FloatField(default=80.0, help_text="Height in pixels")
+    lock_aspect_ratio = models.BooleanField(default=True)
+    z_index = models.IntegerField(default=1)
+    alignment = models.CharField(max_length=20, default='center', choices=[
+        ('left', 'Left'),
+        ('center', 'Center'),
+        ('right', 'Right')
+    ])
 
     class Meta:
         ordering = ['display_order', 'id']

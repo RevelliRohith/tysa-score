@@ -502,4 +502,5 @@ def certificate_verify_qr(request, cert_number):
     cert = get_object_or_404(IssuedCertificate, certificate_number=cert_number)
     return render(request, 'certificates/verify.html', {
         'cert': cert,
+        'hide_navbar': True,
     })
