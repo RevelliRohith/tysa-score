@@ -198,6 +198,11 @@
                     </div>
                 </div>
 
+                {% if score_calc %}
+                <!-- Expandable D-Average Breakdown Matrix -->
+                {% include "includes/d_average_breakdown.html" %}
+                {% endif %}
+
                 <!-- Performance – 10 Asanas -->
                 <div class="space-y-2 pt-2">
                     <h4 class="text-xs font-black text-slate-900">Performance – 10 Asanas (Artistic Single)</h4>

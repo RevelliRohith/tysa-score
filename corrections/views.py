@@ -13,6 +13,7 @@ from .services import (
     finalize_performance_by_cd
 )
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem
+from scoring.services import calculate_performance_score
 from championships.models import Championship, EventConfiguration
 from accounts.models import RoleChoices
 from accounts.permissions import (
@@ -190,8 +191,10 @@ def cd_corrections(request):
     submissions = []
     sequence_items = []
     athlete = None
+    score_calc = None
     if selected_perf:
         athlete = selected_perf.event_entry.registration.athlete
+        score_calc = calculate_performance_score(selected_perf)
         submissions = JudgeSubmission.objects.filter(
             performance=selected_perf
         ).select_related('judge').prefetch_related('items').order_by('judge_role', '-version')
@@ -212,6 +215,7 @@ def cd_corrections(request):
         'athlete': athlete,
         'sequence_items': sequence_items,
         'submissions': submissions,
+        'score_calc': score_calc,
         'active_grants': grants,
         'can_unlock': can_unlock,
     })
@@ -252,6 +256,7 @@ def jury_view(request):
     selected_perf = performances.filter(id=selected_perf_id).first() if selected_perf_id else performances.first()
 
     submissions = selected_perf.submissions.prefetch_related('items').all() if selected_perf else []
+    score_calc = calculate_performance_score(selected_perf) if selected_perf else None
 
     event_configs = championship.event_configurations.filter(is_enabled=True) if championship else []
 
@@ -265,6 +270,7 @@ def jury_view(request):
         'performances': performances[:25],
         'selected_perf': selected_perf,
         'submissions': submissions,
+        'score_calc': score_calc,
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.JURY, RoleChoices.CD)

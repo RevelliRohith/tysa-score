@@ -156,9 +156,16 @@
                         </div>
                         <div class="pt-2">
                             {% if is_approved %}
-                            <a href="{% url item.scoring_url_name %}" class="inline-flex items-center px-4 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white rounded-lg font-bold text-xs shadow-xs transition">
-                                Enter Digital Scoring Desk ({{ item.seat_label }}) →
-                            </a>
+                                {% if item.scoring_url_name == 'stage_manager' %}
+                                <a href="{% url 'stage_manager' %}?panel_id={{ item.panel.id }}" class="inline-flex items-center px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg font-bold text-xs shadow-xs transition gap-1.5">
+                                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                                    <span>Open Stage Control Desk (Stage Manager) →</span>
+                                </a>
+                                {% else %}
+                                <a href="{% url item.scoring_url_name %}" class="inline-flex items-center px-4 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white rounded-lg font-bold text-xs shadow-xs transition">
+                                    Enter Digital Scoring Desk ({{ item.seat_label }}) →
+                                </a>
+                                {% endif %}
                             {% else %}
                             <span class="inline-flex items-center px-3 py-1.5 bg-slate-100 text-slate-400 rounded-lg font-bold text-xs cursor-not-allowed">
                                 Scoring Desk Locked

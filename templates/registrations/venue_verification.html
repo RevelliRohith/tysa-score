@@ -178,7 +178,7 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1">Search athlete / chest / ID / mobile</label>
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-                    <input type="text" name="q" value="{{ query }}" placeholder="e.g. Arun, TYSA-ATH-00101, 9876543210"
+                    <input type="text" name="q" value="{{ query }}" placeholder="Search by name, mobile, public ID or chest number"
                         class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-teal-500 text-slate-900 font-medium">
                 </div>
             </div>
@@ -555,7 +555,7 @@
                             <button type="submit" name="action" value="clear_venue"
                                 class="flex-1 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition flex items-center justify-center space-x-2">
                                 <i data-lucide="check-circle" class="w-4 h-4"></i>
-                                <span>Clear Athlete (Venue Cleared)</span>
+                                <span>Mark Venue Cleared</span>
                             </button>
                             {% else %}
                             <button type="submit" name="action" value="revoke_clearance"

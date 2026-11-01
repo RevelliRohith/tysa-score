@@ -83,6 +83,7 @@ urlpatterns = [
     path('competition/master-roll/', comp_views.master_roll, name='master_roll'),
     path('competition/panels/', comp_views.panel_assignments, name='panel_assignments'),
     path('competition/stage/', comp_views.stage_manager, name='stage_manager'),
+    path('competition/stage-manager/', comp_views.stage_manager, name='stage_manager_alt'),
     path('display/second-screen/', comp_views.second_screen, name='second_screen'),
 
     # Scoring Desks

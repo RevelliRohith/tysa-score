@@ -3,16 +3,77 @@ from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from django.db import transaction
 from .models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem, PerformanceArtistryScore
 from .services import calculate_performance_score
 from competition.models import StageBatch, JudgePanel
 from registrations.models import EventEntry, AsanaSequenceItem
 from catalogue.models import Asana
-from accounts.models import RoleChoices
+from accounts.models import RoleChoices, ScopedRole
 from accounts.permissions import role_required, get_active_championship
 from audit.models import AuditLog
+
+def get_judge_panel_and_batch(request, seat_fields=None, round_type=None, event_type=None):
+    """
+    Resolves the judge's assigned panel, seat label, and active pushed StageBatch.
+    Returns: (panel, seat_label, batch_or_response)
+    If no panel assigned: returns (None, None, HttpResponse to no_panel_assigned)
+    If no pushed active batch: returns (panel, seat_label, HttpResponse to waiting_for_push)
+    If active batch ready: returns (panel, seat_label, batch)
+    """
+    championship = get_active_championship(request)
+    panel_id = request.GET.get('panel_id')
+    current_panel = None
+    seat_label = None
+
+    if panel_id:
+        current_panel = JudgePanel.objects.filter(id=panel_id, championship=championship, is_active=True).first()
+
+    if not current_panel:
+        panels = JudgePanel.objects.filter(championship=championship, is_active=True, is_closed=False)
+        if event_type:
+            panels = panels.filter(event_config__event_type__icontains=event_type)
+        if round_type:
+            panels = panels.filter(round_type=round_type)
+
+        fields_to_check = seat_fields or JudgePanel.SEAT_FIELDS
+        for p in panels:
+            for f in fields_to_check:
+                if getattr(p, f"{f}_id", None) == request.user.id:
+                    current_panel = p
+                    seat_label = JudgePanel.SEAT_LABELS.get(f, 'Judge')
+                    break
+            if current_panel:
+                break
+
+    # Admin / CD preview fallback
+    if not current_panel and (request.user.is_superuser or ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists()):
+        current_panel = JudgePanel.objects.filter(championship=championship, is_active=True, is_closed=False).first()
+        if current_panel:
+            seat_label = 'Preview (CD/Admin)'
+
+    if not current_panel:
+        return None, None, render(request, 'scoring/no_panel_assigned.html', {'championship': championship})
+
+    if not seat_label:
+        for f in (seat_fields or JudgePanel.SEAT_FIELDS):
+            if getattr(current_panel, f"{f}_id", None) == request.user.id:
+                seat_label = JudgePanel.SEAT_LABELS.get(f, 'Judge')
+                break
+        if not seat_label:
+            seat_label = 'Assigned Official'
+
+    batch = StageBatch.objects.filter(panel=current_panel, status='ACTIVE').first()
+    if not batch or batch.entries.count() == 0:
+        return current_panel, seat_label, render(request, 'scoring/waiting_for_push.html', {
+            'panel': current_panel,
+            'seat_label': seat_label,
+            'championship': championship,
+        })
+
+    return current_panel, seat_label, batch
 
 @role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_traditional_d(request):
@@ -21,52 +82,88 @@ def scoring_traditional_d(request):
     Traditional earlier-round batch: 1 to 5 athlete cards shown together.
     Each card: Chest number only, actual asana code/name/photo, posture input (max 6.0),
     stability input (max 2.0), read-only timing contribution, item total.
-    7 items round progress. Save draft & Submit batch.
+    7 items asana-wise submission workflow.
     """
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
-    entries = batch.entries.all() if batch else []
-    
-    current_asana_seq = int(request.GET.get('seq', batch.current_asana_index if batch else 1))
+    current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+        request,
+        seat_fields=['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'chief_judge'],
+        event_type='TRADITIONAL',
+        round_type='PRELIMINARY'
+    )
+    if isinstance(batch_or_resp, HttpResponse):
+        return batch_or_resp
 
-    judge_role = 'D1_JUDGE'
-    if batch and batch.panel:
-        p = batch.panel
-        if p.d2_judge_id == request.user.id:
-            judge_role = 'D2_JUDGE'
-        elif p.d3_judge_id == request.user.id:
-            judge_role = 'D3_JUDGE'
-        elif p.d4_judge_id == request.user.id:
-            judge_role = 'D4_JUDGE'
-        elif p.d1_judge_id == request.user.id:
-            judge_role = 'D1_JUDGE'
+    batch = batch_or_resp
+    entries = batch.entries.all()
+    total_items = 7
+    current_asana_seq = int(request.GET.get('seq', 1))
+    if current_asana_seq < 1:
+        current_asana_seq = 1
+    if current_asana_seq > total_items:
+        current_asana_seq = total_items
 
-    # Get or create submissions for this judge
+    judge_role = seat_label.replace(' ', '_').upper()
+    if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE']:
+        judge_role = 'D1_JUDGE'
+
+    # Build sequence status tabs for 1 to 7
+    sequence_tabs = []
+    for seq_num in range(1, total_items + 1):
+        seq_locked_count = 0
+        for e in entries:
+            perf, _ = Performance.objects.get_or_create(
+                event_entry=e,
+                round_type=current_panel.round_type,
+                defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
+            )
+            sub, _ = JudgeSubmission.objects.get_or_create(
+                performance=perf,
+                judge_role=judge_role,
+                version=1,
+                defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00')}
+            )
+            score_item = AsanaScoreItem.objects.filter(submission=sub, sequence_order=seq_num).first()
+            if score_item and score_item.is_locked:
+                seq_locked_count += 1
+        
+        sequence_tabs.append({
+            'seq': seq_num,
+            'is_current': seq_num == current_asana_seq,
+            'is_locked': seq_locked_count == entries.count() if entries.exists() else False,
+            'is_partial': 0 < seq_locked_count < entries.count(),
+        })
+
+    # Prepare submissions for current_asana_seq
     submissions = {}
+    is_current_seq_locked = True if entries.exists() else False
+
     for e in entries:
         perf, _ = Performance.objects.get_or_create(
             event_entry=e,
-            round_type=batch.panel.round_type if batch and batch.panel else 'PRELIMINARY',
+            round_type=current_panel.round_type,
             defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         )
-        sub = JudgeSubmission.objects.filter(performance=perf, judge_role=judge_role, version=1).first()
-        if not sub:
-            sub = JudgeSubmission.objects.create(
-                performance=perf,
-                judge=request.user,
-                judge_role=judge_role,
-                version=1,
-                is_draft=True,
-                raw_total=Decimal('0.00')
-            )
-        elif sub.judge != request.user and not sub.is_locked:
-            sub.judge = request.user
-            sub.save(update_fields=['judge'])
+        sub, _ = JudgeSubmission.objects.get_or_create(
+            performance=perf,
+            judge_role=judge_role,
+            version=1,
+            defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00')}
+        )
         item, _ = AsanaScoreItem.objects.get_or_create(
             submission=sub,
             sequence_order=current_asana_seq,
-            defaults={'posture_score': Decimal('5.00'), 'stability_score': Decimal('1.50'), 'timing_contribution': Decimal('2.00')}
+            defaults={
+                'posture_score': Decimal('5.00'),
+                'stability_score': Decimal('1.50'),
+                'timing_contribution': Decimal('2.00'),
+                'effective_item_score': Decimal('8.50'),
+                'is_draft': True,
+                'is_locked': False
+            }
         )
-        # Fetch declared pose
+        if not item.is_locked:
+            is_current_seq_locked = False
+
         pose_seq = AsanaSequenceItem.objects.filter(event_entry=e, sequence_order=current_asana_seq).first()
         submissions[e.id] = {
             'entry': e,
@@ -76,54 +173,85 @@ def scoring_traditional_d(request):
             'pose': pose_seq
         }
 
+    # Handle POST
     if request.method == 'POST':
-        action = request.POST.get('action')
+        action = request.POST.get('action') # 'save_draft', 'submit_item_next', 'submit_final_batch'
+
         for e in entries:
             sub_id = request.POST.get(f'submission_{e.id}')
             sub = JudgeSubmission.objects.get(id=sub_id, judge=request.user)
-            if sub.is_locked:
+            item, _ = AsanaScoreItem.objects.get_or_create(submission=sub, sequence_order=current_asana_seq)
+
+            if item.is_locked and not request.user.is_superuser:
                 continue
 
-            p_val = Decimal(request.POST.get(f'posture_{e.id}', '0.0'))
-            s_val = Decimal(request.POST.get(f'stability_{e.id}', '0.0'))
-            
-            # Update score item
-            AsanaScoreItem.objects.update_or_create(
-                submission=sub,
-                sequence_order=current_asana_seq,
-                defaults={
-                    'posture_score': min(Decimal('6.00'), p_val),
-                    'stability_score': min(Decimal('2.00'), s_val),
-                    'effective_item_score': p_val + s_val + Decimal('2.00')
-                }
-            )
+            raw_p = request.POST.get(f'posture_{e.id}', '0.0')
+            raw_s = request.POST.get(f'stability_{e.id}', '0.0')
+            try:
+                p_val = min(Decimal('6.00'), max(Decimal('0.00'), Decimal(raw_p)))
+            except:
+                p_val = Decimal('0.00')
+            try:
+                s_val = min(Decimal('2.00'), max(Decimal('0.00'), Decimal(raw_s)))
+            except:
+                s_val = Decimal('0.00')
 
-        if action == 'submit_batch':
+            t_val = Decimal('2.00')
+            item.posture_score = p_val
+            item.stability_score = s_val
+            item.timing_contribution = t_val
+            item.effective_item_score = p_val + s_val + t_val
+
+            if action in ['submit_item_next', 'submit_final_batch']:
+                item.is_draft = False
+                item.is_submitted = True
+                item.is_locked = True
+                item.submitted_at = timezone.now()
+            else:
+                item.is_draft = True
+                item.is_submitted = False
+                item.is_locked = False
+            item.save()
+
+        if action == 'save_draft':
+            messages.info(request, f"Draft saved for Asana #{current_asana_seq}.")
+            return redirect(f"{request.path}?seq={current_asana_seq}")
+
+        elif action == 'submit_item_next':
+            if current_asana_seq < total_items:
+                next_seq = current_asana_seq + 1
+                messages.success(request, f"Asana #{current_asana_seq} committed & locked. Opened Asana #{next_seq}.")
+                return redirect(f"{request.path}?seq={next_seq}")
+            else:
+                action = 'submit_final_batch'
+
+        if action == 'submit_final_batch':
             for e in entries:
                 sub_id = request.POST.get(f'submission_{e.id}')
                 sub = JudgeSubmission.objects.get(id=sub_id, judge=request.user)
-                if not sub.is_locked:
-                    sub.is_draft = False
-                    sub.is_submitted = True
-                    sub.is_locked = True
-                    sub.submitted_at = datetime.datetime.now()
-                    # Calculate total
-                    total = sum(item.effective_item_score for item in sub.items.all())
-                    sub.raw_total = total
-                    sub.effective_total = total
-                    sub.save()
-            messages.success(request, f"Official {judge_role} scores submitted and locked for current batch!")
+                sub.items.all().update(is_draft=False, is_submitted=True, is_locked=True)
+                total = sum(i.effective_item_score for i in sub.items.all())
+                sub.raw_total = total
+                sub.effective_total = total
+                sub.is_draft = False
+                sub.is_submitted = True
+                sub.is_locked = True
+                sub.submitted_at = timezone.now()
+                sub.save()
+
+            messages.success(request, f"Official {seat_label} score sheet finalized and locked for all athletes in Batch #{batch.batch_number}!")
             return redirect('judge_portal')
-        else:
-            messages.success(request, f"Scores saved for Asana #{current_asana_seq}.")
-            next_seq = min(7, current_asana_seq + 1)
-            return redirect(f"/scoring/traditional-d/?seq={next_seq}")
 
     return render(request, 'scoring/traditional_d.html', {
+        'panel': current_panel,
+        'seat_label': seat_label,
         'batch': batch,
         'entries': entries,
         'current_seq': current_asana_seq,
+        'total_items': total_items,
+        'sequence_tabs': sequence_tabs,
         'submissions': submissions,
+        'is_locked': is_current_seq_locked,
         'is_final': False,
     })
 
@@ -133,46 +261,86 @@ def scoring_traditional_d_final(request):
     Implements 35_Traditional_Final_Multiple_Athletes.png:
     Traditional Final batch view (maximum 3 simultaneous athletes on stage).
     """
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
-    entries = list(batch.entries.all()[:3]) if batch else []
+    current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+        request,
+        seat_fields=['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'chief_judge'],
+        event_type='TRADITIONAL',
+        round_type='FINAL'
+    )
+    if isinstance(batch_or_resp, HttpResponse):
+        return batch_or_resp
+
+    batch = batch_or_resp
+    entries = batch.entries.all()[:3]
+    total_items = 7
     current_asana_seq = int(request.GET.get('seq', 1))
+    if current_asana_seq < 1:
+        current_asana_seq = 1
+    if current_asana_seq > total_items:
+        current_asana_seq = total_items
 
-    judge_role = 'D1_JUDGE'
-    if batch and batch.panel:
-        p = batch.panel
-        if p.d2_judge_id == request.user.id:
-            judge_role = 'D2_JUDGE'
-        elif p.d3_judge_id == request.user.id:
-            judge_role = 'D3_JUDGE'
-        elif p.d4_judge_id == request.user.id:
-            judge_role = 'D4_JUDGE'
+    judge_role = seat_label.replace(' ', '_').upper()
+    if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE']:
+        judge_role = 'D1_JUDGE'
 
+    # Build sequence status tabs for 1 to 7
+    sequence_tabs = []
+    for seq_num in range(1, total_items + 1):
+        seq_locked_count = 0
+        for e in entries:
+            perf, _ = Performance.objects.get_or_create(
+                event_entry=e,
+                round_type='FINAL',
+                defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
+            )
+            sub, _ = JudgeSubmission.objects.get_or_create(
+                performance=perf,
+                judge_role=judge_role,
+                version=1,
+                defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00')}
+            )
+            score_item = AsanaScoreItem.objects.filter(submission=sub, sequence_order=seq_num).first()
+            if score_item and score_item.is_locked:
+                seq_locked_count += 1
+        
+        sequence_tabs.append({
+            'seq': seq_num,
+            'is_current': seq_num == current_asana_seq,
+            'is_locked': seq_locked_count == entries.count() if entries.exists() else False,
+            'is_partial': 0 < seq_locked_count < entries.count(),
+        })
+
+    # Prepare submissions for current_asana_seq
     submissions = {}
+    is_current_seq_locked = True if entries.exists() else False
+
     for e in entries:
         perf, _ = Performance.objects.get_or_create(
             event_entry=e,
             round_type='FINAL',
             defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         )
-        sub = JudgeSubmission.objects.filter(performance=perf, judge_role=judge_role, version=1).first()
-        if not sub:
-            sub = JudgeSubmission.objects.create(
-                performance=perf,
-                judge=request.user,
-                judge_role=judge_role,
-                version=1,
-                is_draft=True,
-                raw_total=Decimal('0.000')
-            )
-        elif sub.judge != request.user and not sub.is_locked:
-            sub.judge = request.user
-            sub.save(update_fields=['judge'])
-
+        sub, _ = JudgeSubmission.objects.get_or_create(
+            performance=perf,
+            judge_role=judge_role,
+            version=1,
+            defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00')}
+        )
         item, _ = AsanaScoreItem.objects.get_or_create(
             submission=sub,
             sequence_order=current_asana_seq,
-            defaults={'posture_score': Decimal('5.00'), 'stability_score': Decimal('1.50'), 'timing_contribution': Decimal('2.00')}
+            defaults={
+                'posture_score': Decimal('5.00'),
+                'stability_score': Decimal('1.50'),
+                'timing_contribution': Decimal('2.00'),
+                'effective_item_score': Decimal('8.50'),
+                'is_draft': True,
+                'is_locked': False
+            }
         )
+        if not item.is_locked:
+            is_current_seq_locked = False
+
         pose_seq = AsanaSequenceItem.objects.filter(event_entry=e, sequence_order=current_asana_seq).first()
         submissions[e.id] = {
             'entry': e,
@@ -182,55 +350,88 @@ def scoring_traditional_d_final(request):
             'pose': pose_seq
         }
 
+    # Handle POST
     if request.method == 'POST':
         action = request.POST.get('action')
+
         for e in entries:
             sub_id = request.POST.get(f'submission_{e.id}')
             if not sub_id:
                 continue
             sub = JudgeSubmission.objects.get(id=sub_id, judge=request.user)
-            if sub.is_locked:
+            item, _ = AsanaScoreItem.objects.get_or_create(submission=sub, sequence_order=current_asana_seq)
+
+            if item.is_locked and not request.user.is_superuser:
                 continue
 
-            p_val = Decimal(request.POST.get(f'posture_{e.id}', '0.0'))
-            s_val = Decimal(request.POST.get(f'stability_{e.id}', '0.0'))
-            
-            AsanaScoreItem.objects.update_or_create(
-                submission=sub,
-                sequence_order=current_asana_seq,
-                defaults={
-                    'posture_score': min(Decimal('6.00'), p_val),
-                    'stability_score': min(Decimal('2.00'), s_val),
-                    'effective_item_score': p_val + s_val + Decimal('2.00')
-                }
-            )
+            raw_p = request.POST.get(f'posture_{e.id}', '0.0')
+            raw_s = request.POST.get(f'stability_{e.id}', '0.0')
+            try:
+                p_val = min(Decimal('6.00'), max(Decimal('0.00'), Decimal(raw_p)))
+            except:
+                p_val = Decimal('0.00')
+            try:
+                s_val = min(Decimal('2.00'), max(Decimal('0.00'), Decimal(raw_s)))
+            except:
+                s_val = Decimal('0.00')
 
-        if action == 'submit_batch':
+            t_val = Decimal('2.00')
+            item.posture_score = p_val
+            item.stability_score = s_val
+            item.timing_contribution = t_val
+            item.effective_item_score = p_val + s_val + t_val
+
+            if action in ['submit_item_next', 'submit_final_batch']:
+                item.is_draft = False
+                item.is_submitted = True
+                item.is_locked = True
+                item.submitted_at = timezone.now()
+            else:
+                item.is_draft = True
+                item.is_submitted = False
+                item.is_locked = False
+            item.save()
+
+        if action == 'save_draft':
+            messages.info(request, f"Draft saved for Final Asana #{current_asana_seq}.")
+            return redirect(f"{request.path}?seq={current_asana_seq}")
+
+        elif action == 'submit_item_next':
+            if current_asana_seq < total_items:
+                next_seq = current_asana_seq + 1
+                messages.success(request, f"Final Asana #{current_asana_seq} committed & locked. Opened Asana #{next_seq}.")
+                return redirect(f"{request.path}?seq={next_seq}")
+            else:
+                action = 'submit_final_batch'
+
+        if action == 'submit_final_batch':
             for e in entries:
                 sub_id = request.POST.get(f'submission_{e.id}')
                 if sub_id:
                     sub = JudgeSubmission.objects.get(id=sub_id, judge=request.user)
-                    if not sub.is_locked:
-                        sub.is_draft = False
-                        sub.is_submitted = True
-                        sub.is_locked = True
-                        sub.submitted_at = datetime.datetime.now()
-                        total = sum(item.effective_item_score for item in sub.items.all())
-                        sub.raw_total = total
-                        sub.effective_total = total
-                        sub.save()
-            messages.success(request, f"Traditional Final scores submitted and locked for batch!")
+                    sub.items.all().update(is_draft=False, is_submitted=True, is_locked=True)
+                    total = sum(i.effective_item_score for i in sub.items.all())
+                    sub.raw_total = total
+                    sub.effective_total = total
+                    sub.is_draft = False
+                    sub.is_submitted = True
+                    sub.is_locked = True
+                    sub.submitted_at = timezone.now()
+                    sub.save()
+
+            messages.success(request, f"Traditional Final {seat_label} score sheet finalized and locked for all athletes in Batch #{batch.batch_number}!")
             return redirect('judge_portal')
-        else:
-            messages.success(request, f"Scores saved for Final Asana #{current_asana_seq}.")
-            next_seq = min(7, current_asana_seq + 1)
-            return redirect(f"/scoring/traditional-d-final/?seq={next_seq}")
 
     return render(request, 'scoring/traditional_d.html', {
+        'panel': current_panel,
+        'seat_label': seat_label,
         'batch': batch,
         'entries': entries,
         'current_seq': current_asana_seq,
+        'total_items': total_items,
+        'sequence_tabs': sequence_tabs,
         'submissions': submissions,
+        'is_locked': is_current_seq_locked,
         'is_final': True,
     })
 

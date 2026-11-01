@@ -207,6 +207,11 @@
         
         <!-- Left: Judge Submissions & Marks Breakdown -->
         <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+            {% if score_calc %}
+            <!-- Expandable D-Average Breakdown Matrix -->
+            {% include "includes/d_average_breakdown.html" %}
+            {% endif %}
+
             <div>
                 <h2 class="text-sm font-extrabold text-slate-900 tracking-tight uppercase">Official Judge Submissions</h2>
                 <p class="text-xs text-slate-500 font-medium">All judge scores submitted for this athlete's routine.</p>

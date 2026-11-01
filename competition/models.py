@@ -43,8 +43,17 @@ class MasterRollEntry(models.Model):
         ('PRESENT', 'Present'),
         ('ABSENT', 'Absent'),
         ('HOLD', 'On Hold'),
-        ('COMPLETED', 'Completed')
+        ('COMPLETED', 'Completed'),
+        ('DISQUALIFIED', 'Disqualified')
     ])
+    disqualification_reason = models.TextField(blank=True)
+    dq_type = models.CharField(max_length=50, blank=True, choices=[
+        ('OPERATIONAL', 'Operational (Stage No-show / Refusal)'),
+        ('SPORTING', 'Technical Sporting Disqualification (Chief/CD)')
+    ])
+    dq_authorized_by = models.CharField(max_length=150, blank=True, help_text="Chief Judge or CD authorizer")
+    disqualified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='disqualified_entries')
+    disqualified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['performance_order']

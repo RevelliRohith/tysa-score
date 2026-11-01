@@ -55,17 +55,33 @@
 
                 <!-- 4 Real Stat Badges -->
                 <div class="flex flex-wrap items-center gap-3">
-                    <!-- Stat 1: Athletes -->
-                    <a href="{% url 'athlete_entries_list' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs hover:shadow-xs transition group">
-                        <div class="w-9 h-9 rounded-xl bg-[#dbeafe] text-[#1e40af] flex items-center justify-center">
-                            <i data-lucide="users" class="w-4 h-4"></i>
+                    <!-- Stat 1: Athletes with District Approved & Pending breakdown -->
+                    <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-2xs hover:shadow-xs transition flex flex-col justify-between min-w-[240px]">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-[#dbeafe] text-[#1e40af] flex items-center justify-center">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-black text-slate-900 leading-none">{{ stats.total_athletes|default:"0" }}</div>
+                                    <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Total Athletes</div>
+                                </div>
+                            </div>
+                            <a href="{% url 'athlete_entries_list' %}" class="text-slate-300 hover:text-slate-600">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </a>
                         </div>
-                        <div>
-                            <div class="text-base font-black text-slate-900 leading-none">{{ stats.total_athletes|default:"0" }}</div>
-                            <div class="text-[10px] font-semibold text-slate-500 mt-0.5">Registered Athletes</div>
+                        <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px]">
+                            <a href="{% url 'district_approvals' %}?tab=approved" class="px-2 py-0.5 rounded-md font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition flex items-center space-x-1" title="District Approved (Ready for Venue Clearance)">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                <span>{{ stats.dist_approved_athletes|default:"0" }} Approved</span>
+                            </a>
+                            <a href="{% url 'district_approvals' %}?tab=queue" class="px-2 py-0.5 rounded-md font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition flex items-center space-x-1" title="Pending District Review">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span>{{ stats.pending_athletes|default:"0" }} Pending</span>
+                            </a>
                         </div>
-                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 ml-1"></i>
-                    </a>
+                    </div>
 
                     <!-- Stat 2: Judges -->
                     <a href="{% url 'judge_approval_queue' %}" class="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs hover:shadow-xs transition group">
@@ -102,6 +118,201 @@
                         </div>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 ml-1"></i>
                     </a>
+                </div>
+            </div>
+
+            <!-- ATHLETE REGISTRATION & VERIFICATION PIPELINE BREAKDOWN (DISTRICT APPROVED & PENDING) -->
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="git-pull-request" class="w-5 h-5 text-teal-700"></i>
+                        <h2 class="text-lg font-black text-slate-900 tracking-tight">Athlete Registration & Verification Pipeline</h2>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <a href="{% url 'district_approvals' %}?tab=approved" class="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center space-x-1">
+                            <span>Open District Approvals</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                        <span class="text-slate-300">•</span>
+                        <a href="{% url 'venue_verification' %}" class="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center space-x-1">
+                            <span>Open Venue Desk</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Athlete Approval & Clearance 4-Metric Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                    <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <span class="text-[10px] font-black uppercase text-emerald-800 tracking-wider block">District Approved</span>
+                        <span class="text-2xl font-black text-emerald-950 font-mono">{{ stats.dist_approved_athletes|default:"0" }}</span>
+                        <span class="text-[10px] text-emerald-700 block mt-0.5">Approved by District</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200">
+                        <span class="text-[10px] font-black uppercase text-amber-800 tracking-wider block">Pending District Approval</span>
+                        <span class="text-2xl font-black text-amber-950 font-mono">{{ stats.pending_athletes|default:"0" }}</span>
+                        <span class="text-[10px] text-amber-700 block mt-0.5">Awaiting District Review</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-sky-50/70 border border-sky-200">
+                        <span class="text-[10px] font-black uppercase text-sky-800 tracking-wider block">Awaiting Venue Clearance</span>
+                        <span class="text-2xl font-black text-sky-950 font-mono">{{ stats.awaiting_venue_clearance|default:"0" }}</span>
+                        <span class="text-[10px] text-sky-700 block mt-0.5">Ready for Stadium Check-in</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-purple-50/70 border border-purple-200">
+                        <span class="text-[10px] font-black uppercase text-purple-800 tracking-wider block">Venue Cleared</span>
+                        <span class="text-2xl font-black text-purple-950 font-mono">{{ stats.venue_cleared|default:"0" }}</span>
+                        <span class="text-[10px] text-purple-700 block mt-0.5">Cleared at Stadium Desk</span>
+                    </div>
+                </div>
+
+                <!-- Two-Column Grid: Left: District Approved (Moving to Venue) | Right: Pending Applications -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- Card 1: District Approved Athletes (Moving to Venue Clearance) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="p-4 bg-emerald-50/70 border-b border-emerald-100 flex items-center justify-between">
+                                <div class="flex items-center space-x-2.5">
+                                    <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wide">District Approved Athletes</h3>
+                                        <p class="text-[11px] text-emerald-800 font-medium">Forwarded & ready for stadium Venue Clearance</p>
+                                    </div>
+                                </div>
+                                <span class="px-2.5 py-1 text-xs font-black rounded-lg bg-emerald-600 text-white shadow-2xs">
+                                    {{ stats.dist_approved_athletes|default:"0" }} Ready
+                                </span>
+                            </div>
+
+                            <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
+                                <table class="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/60 border-b border-slate-100">
+                                            <th class="py-2.5 px-3">Athlete</th>
+                                            <th class="py-2.5 px-3">District</th>
+                                            <th class="py-2.5 px-3">Approved By</th>
+                                            <th class="py-2.5 px-3 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+                                        {% for reg in dist_approved_list %}
+                                        <tr class="hover:bg-slate-50/60 transition">
+                                            <td class="py-2.5 px-3">
+                                                <div class="font-bold text-slate-900 leading-snug">{{ reg.athlete.full_name }}</div>
+                                                <div class="text-[10px] font-mono text-teal-700">{{ reg.registration_number|default:reg.athlete.public_athlete_id }}</div>
+                                            </td>
+                                            <td class="py-2.5 px-3">
+                                                <span class="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold">
+                                                    {{ reg.athlete.district }}
+                                                </span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-slate-500 text-[11px]">
+                                                <div>{{ reg.approved_by.full_name|default:reg.approved_by.email|default:"District Officer" }}</div>
+                                                <div class="text-[10px] text-slate-400 font-mono">{{ reg.approved_at|date:"d M H:i" }}</div>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-right">
+                                                <a href="{% url 'venue_verification' %}" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 shadow-2xs transition">
+                                                    <i data-lucide="map-pin" class="w-3 h-3 text-purple-600"></i>
+                                                    <span>Verify at Venue</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="py-8 text-center text-slate-400 text-xs">
+                                                <i data-lucide="check-check" class="w-6 h-6 mx-auto text-slate-300 mb-1"></i>
+                                                <span>No candidates awaiting venue desk clearance.</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="text-slate-500 text-[11px]">Step: District Quota Approval → <strong>Venue Desk</strong></span>
+                            <a href="{% url 'district_approvals' %}?tab=approved" class="font-bold text-teal-700 hover:underline text-[11px]">View All Approved Candidates →</a>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Pending Athletes (Awaiting District Review) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="p-4 bg-amber-50/70 border-b border-amber-100 flex items-center justify-between">
+                                <div class="flex items-center space-x-2.5">
+                                    <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                                        <i data-lucide="clock" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wide">Pending Athlete Applications</h3>
+                                        <p class="text-[11px] text-amber-800 font-medium">Awaiting District Association quota review</p>
+                                    </div>
+                                </div>
+                                <span class="px-2.5 py-1 text-xs font-black rounded-lg bg-amber-600 text-white shadow-2xs">
+                                    {{ stats.pending_athletes|default:"0" }} Pending
+                                </span>
+                            </div>
+
+                            <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
+                                <table class="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/60 border-b border-slate-100">
+                                            <th class="py-2.5 px-3">Candidate</th>
+                                            <th class="py-2.5 px-3">District</th>
+                                            <th class="py-2.5 px-3">Declared Events</th>
+                                            <th class="py-2.5 px-3 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+                                        {% for reg in pending_athletes_list %}
+                                        <tr class="hover:bg-slate-50/60 transition">
+                                            <td class="py-2.5 px-3">
+                                                <div class="font-bold text-slate-900 leading-snug">{{ reg.athlete.full_name }}</div>
+                                                <div class="text-[10px] font-mono text-slate-400">DOB: {{ reg.athlete.dob|date:"d M Y" }}</div>
+                                            </td>
+                                            <td class="py-2.5 px-3">
+                                                <span class="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold">
+                                                    {{ reg.athlete.district }}
+                                                </span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-slate-600 text-[11px]">
+                                                {% for entry in reg.event_entries.all %}
+                                                    <span class="inline-block px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 text-[10px] font-semibold mr-1 mb-0.5">
+                                                        {{ entry.event_config.get_event_type_display }}
+                                                    </span>
+                                                {% empty %}
+                                                    <span class="text-slate-400 italic text-[10px]">Pending selection</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td class="py-2.5 px-3 text-right">
+                                                <a href="{% url 'district_approvals' %}?tab=queue" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 shadow-2xs transition">
+                                                    <i data-lucide="eye" class="w-3 h-3 text-teal-600"></i>
+                                                    <span>Review</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="py-8 text-center text-slate-400 text-xs">
+                                                <i data-lucide="inbox" class="w-6 h-6 mx-auto text-slate-300 mb-1"></i>
+                                                <span>All athlete applications processed.</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="text-slate-500 text-[11px]">Step: Registration Submission → <strong>District Review</strong></span>
+                            <a href="{% url 'district_approvals' %}?tab=queue" class="font-bold text-amber-700 hover:underline text-[11px]">Open Application Review Queue →</a>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 

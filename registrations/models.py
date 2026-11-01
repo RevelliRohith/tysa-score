@@ -5,6 +5,7 @@ from django.conf import settings
 class RegistrationStatus(models.TextChoices):
     DRAFT = 'DRAFT', 'Draft'
     SUBMITTED = 'SUBMITTED', 'Submitted'
+    NEEDS_CORRECTION = 'NEEDS_CORRECTION', 'Needs Correction'
     DISTRICT_APPROVED = 'DISTRICT_APPROVED', 'District Approved'
     DISTRICT_REJECTED = 'DISTRICT_REJECTED', 'District Rejected'
     VENUE_CLEARED = 'VENUE_CLEARED', 'Venue Cleared'

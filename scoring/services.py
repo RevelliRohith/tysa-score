@@ -199,6 +199,75 @@ def calculate_performance_score(performance: Performance) -> Dict[str, Any]:
                     })
                     evaluator_deductions += Decimal('2.000')
 
+    # Build asana-by-asana D-matrix across D1-D4
+    d1_sub = sub_by_role.get('D1_JUDGE')
+    d2_sub = sub_by_role.get('D2_JUDGE')
+    d3_sub = sub_by_role.get('D3_JUDGE')
+    d4_sub = sub_by_role.get('D4_JUDGE')
+    eval_sub = sub_by_role.get('EVALUATOR')
+
+    d1_items = {i.sequence_order: i.effective_item_score for i in (d1_sub.items.all() if d1_sub else [])}
+    d2_items = {i.sequence_order: i.effective_item_score for i in (d2_sub.items.all() if d2_sub else [])}
+    d3_items = {i.sequence_order: i.effective_item_score for i in (d3_sub.items.all() if d3_sub else [])}
+    d4_items = {i.sequence_order: i.effective_item_score for i in (d4_sub.items.all() if d4_sub else [])}
+    eval_invalids = {i.sequence_order for i in (eval_sub.items.filter(is_valid=False) if eval_sub else [])}
+
+    sequence_count = 7 if is_traditional else 10
+    d_matrix = []
+
+    for seq in range(1, sequence_count + 1):
+        pose = AsanaSequenceItem.objects.filter(event_entry=event_entry, sequence_order=seq).first()
+        code = pose.declared_code if pose else f"SEQ-{seq}"
+        name = pose.declared_name if pose else (pose.asana.display_name if (pose and pose.asana) else f"Asana #{seq}")
+        bv = pose.declared_bv if pose else Decimal('0.80')
+
+        m1 = d1_items.get(seq, Decimal('0.00'))
+        m2 = d2_items.get(seq, Decimal('0.00'))
+        m3 = d3_items.get(seq, Decimal('0.00'))
+        m4 = d4_items.get(seq, Decimal('0.00'))
+
+        marks = [(m1, 'd1'), (m2, 'd2'), (m3, 'd3'), (m4, 'd4')]
+        sorted_marks = sorted(marks, key=lambda x: x[0])
+        
+        d1_dropped = False
+        d2_dropped = False
+        d3_dropped = False
+        d4_dropped = False
+
+        if any(d_sub and d_sub.is_submitted for d_sub in [d1_sub, d2_sub, d3_sub, d4_sub]):
+            dropped_low = sorted_marks[0][1]
+            dropped_high = sorted_marks[-1][1]
+            if dropped_low == 'd1' or dropped_high == 'd1': d1_dropped = True
+            if dropped_low == 'd2' or dropped_high == 'd2': d2_dropped = True
+            if dropped_low == 'd3' or dropped_high == 'd3': d3_dropped = True
+            if dropped_low == 'd4' or dropped_high == 'd4': d4_dropped = True
+            
+            retained_marks = [sorted_marks[1][0], sorted_marks[2][0]]
+            item_mean = sum(retained_marks) / Decimal('2.0')
+        else:
+            item_mean = Decimal('0.00')
+
+        deduction = Decimal('2.00') if seq in eval_invalids else Decimal('0.00')
+        net_score = max(Decimal('0.00'), item_mean - deduction)
+
+        d_matrix.append({
+            'seq': seq,
+            'code': code,
+            'name': name,
+            'bv': bv,
+            'd1': m1,
+            'd2': m2,
+            'd3': m3,
+            'd4': m4,
+            'd1_dropped': d1_dropped,
+            'd2_dropped': d2_dropped,
+            'd3_dropped': d3_dropped,
+            'd4_dropped': d4_dropped,
+            'trimmed_mean': item_mean,
+            'deduction': deduction,
+            'net_item_score': net_score,
+        })
+
     # Calculate Retained D Marks
     d_trimmed_scores = list(d_effective_scores)
     if len(d_effective_scores) == 4:
@@ -245,6 +314,11 @@ def calculate_performance_score(performance: Performance) -> Dict[str, Any]:
         'missing_seats': missing_seats,
         'd_effective_scores': d_effective_scores,
         'd_trimmed_scores': d_trimmed_scores,
+        'd1_total': d1_sub.effective_total if d1_sub else Decimal('0.00'),
+        'd2_total': d2_sub.effective_total if d2_sub else Decimal('0.00'),
+        'd3_total': d3_sub.effective_total if d3_sub else Decimal('0.00'),
+        'd4_total': d4_sub.effective_total if d4_sub else Decimal('0.00'),
+        'd_matrix': d_matrix,
         'retained_d': retained_d,
         'artistry_total': artistry_total,
         'timing_score': timing_score,

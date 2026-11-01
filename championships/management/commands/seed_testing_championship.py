@@ -279,8 +279,8 @@ class Command(BaseCommand):
             venue_user = get_or_create_user('venue@tysa.org', 'Smt. Kavitha Reddy (Venue Clearance Desk)', 'VenueDesk2026!', True)
             ScopedRole.objects.create(user=venue_user, role=RoleChoices.VENUE_DESK, championship=champ)
 
-            stage_user = get_or_create_user('stage@tysa.org', 'Smt. Radhika Nair (Stage Manager)', 'StageManager2026!', True)
-            ScopedRole.objects.create(user=stage_user, role=RoleChoices.STAGE_MANAGER, championship=champ)
+            stage_user = get_or_create_user('stage@tysa.org', 'Smt. Radhika Nair (Technical Official & Judge)', 'StageManager2026!', True)
+            # Note: Stage Manager is an event panel assignment (not a universal/scoped account role)
 
             jury_user = get_or_create_user('jury@tysa.org', 'Sri B. Chandrasekhar (Jury Board)', 'JuryBoard2026!', True)
             ScopedRole.objects.create(user=jury_user, role=RoleChoices.JURY, championship=champ)

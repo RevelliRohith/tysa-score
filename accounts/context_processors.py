@@ -87,10 +87,10 @@ def user_roles(request):
     is_chief_judge = (RoleChoices.CHIEF_JUDGE in roles)
     is_judge = any(r in roles for r in [
         RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE,
-        RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE, 'APPROVED_JUDGE'
+        RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE, RoleChoices.STAGE_MANAGER, 'APPROVED_JUDGE'
     ]) or hasattr(user, 'judge_profile')
 
-    is_judge_only = (not is_admin and not is_cd and not is_stage and not is_jury and not is_district and not is_venue and is_judge)
+    is_judge_only = (not is_admin and not is_cd and not is_jury and not is_district and not is_venue and is_judge)
 
     user_district = ''
     if is_district and champ:
@@ -129,7 +129,7 @@ def user_roles(request):
         active_role = "Venue Clearance Desk"
         active_role_code = "VENUE_DESK"
     elif is_stage:
-        active_role = "Stage Manager / Announcer"
+        active_role = "Stage Manager (Assigned Judge)"
         active_role_code = "STAGE_MANAGER"
     elif is_chief_judge:
         active_role = "Chief Judge"

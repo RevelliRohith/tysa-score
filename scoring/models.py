@@ -79,6 +79,12 @@ class AsanaScoreItem(models.Model):
     submission = models.ForeignKey(JudgeSubmission, on_delete=models.CASCADE, related_name='items')
     sequence_order = models.PositiveIntegerField()
     
+    # Item-level workflow and lock states
+    is_draft = models.BooleanField(default=True)
+    is_submitted = models.BooleanField(default=False)
+    is_locked = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    
     # Traditional inputs (Posture max 6.0, Stability max 2.0, Timing contrib read-only max 2.0)
     posture_score = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('0.00'))
     stability_score = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('0.00'))

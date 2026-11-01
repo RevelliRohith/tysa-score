@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}No Panel Assigned — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center -m-6 sm:-m-8 p-6">
+    <div class="max-w-lg w-full bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center space-y-6">
+        
+        <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto">
+            <i data-lucide="layout-grid" class="w-8 h-8"></i>
+        </div>
+
+        <div class="space-y-2">
+            <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+                <span>Official Judge Status: Active</span>
+            </span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">No Panel Assigned</h1>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                You are registered as an accredited Universal Judge, but you have not yet been assigned to an active competition panel for this session.
+            </p>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 text-left space-y-1.5">
+            <div class="font-bold text-slate-900">What to do next:</div>
+            <ul class="list-disc list-inside space-y-1 text-slate-500">
+                <li>Wait for the Competition Director (CD) to confirm your panel assignment.</li>
+                <li>Check your credentials and status on your profile.</li>
+                <li>Refresh your assigned panels once duty roster is confirmed.</li>
+            </ul>
+        </div>
+
+        <div class="pt-2">
+            <a href="{% url 'judge_portal' %}" class="inline-flex items-center space-x-1.5 px-6 py-2.5 rounded-xl bg-[#00838f] hover:bg-[#006978] text-white font-bold text-xs shadow-xs transition">
+                <i data-lucide="user" class="w-4 h-4"></i>
+                <span>Open Judge Profile & Panels</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

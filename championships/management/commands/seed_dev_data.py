@@ -114,7 +114,7 @@ class Command(BaseCommand):
             ('artistry@tysa.org', 'Sri Arvind Swamy', CertificationLevel.NATIONAL_B, 'Medchal', RoleChoices.ARTISTRY_JUDGE),
             ('chief@tysa.org', 'Dr. V. Nageshwar Rao', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.CHIEF_JUDGE),
             ('jury@tysa.org', 'Sri B. Chandrasekhar', CertificationLevel.NATIONAL_A, 'Hyderabad', RoleChoices.JURY),
-            ('stage@tysa.org', 'Smt. Radhika Nair', CertificationLevel.STATE, 'Hyderabad', RoleChoices.STAGE_MANAGER),
+            ('stage@tysa.org', 'Smt. Radhika Nair', CertificationLevel.STATE, 'Hyderabad', None),
         ]
 
         judges_created = {}
@@ -126,7 +126,8 @@ class Command(BaseCommand):
             if created:
                 u.set_password('judge123')
                 u.save()
-            ScopedRole.objects.get_or_create(user=u, role=role, championship=champ)
+            if role:
+                ScopedRole.objects.get_or_create(user=u, role=role, championship=champ)
             
             # Universal Judge Profile (Admin Approved)
             uj, _ = UniversalJudge.objects.get_or_create(

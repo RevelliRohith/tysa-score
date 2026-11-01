@@ -37,32 +37,58 @@ def district_approvals(request):
         districts = DistrictQuota.objects.filter(championship=championship, district_name__iexact=assigned_district) if championship else DistrictQuota.objects.none()
 
     tab = request.GET.get('tab', 'queue').strip().lower()
-    if tab not in ['queue', 'consolidated']:
+    if tab not in ['queue', 'approved', 'venue_clearance', 'consolidated']:
         tab = 'queue'
 
     selected_event = request.GET.get('event', '').strip()
     selected_cat = request.GET.get('cat', '').strip()
 
-    registrations = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete').prefetch_related('event_entries__event_config', 'event_entries__age_category') if championship else ChampionshipRegistration.objects.none()
+    base_registrations = ChampionshipRegistration.objects.filter(championship=championship).select_related('athlete', 'approved_by', 'venue_cleared_by').prefetch_related('event_entries__event_config', 'event_entries__age_category', 'athlete__documents') if championship else ChampionshipRegistration.objects.none()
     if selected_district:
-        registrations = registrations.filter(athlete__district__iexact=selected_district)
+        base_registrations = base_registrations.filter(athlete__district__iexact=selected_district)
     elif not is_admin and assigned_district:
-        registrations = registrations.filter(athlete__district__iexact=assigned_district)
+        base_registrations = base_registrations.filter(athlete__district__iexact=assigned_district)
     
     if selected_event:
-        registrations = registrations.filter(event_entries__event_config__event_type=selected_event).distinct()
+        base_registrations = base_registrations.filter(event_entries__event_config__event_type=selected_event).distinct()
     if selected_cat:
-        registrations = registrations.filter(event_entries__age_category_id=selected_cat).distinct()
+        base_registrations = base_registrations.filter(event_entries__age_category_id=selected_cat).distinct()
 
-    approved_count = registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]).count()
-    pending_count = registrations.filter(status=RegistrationStatus.SUBMITTED).count()
+    # Exact Counts for District Pipeline Awareness
+    pending_count = base_registrations.filter(status=RegistrationStatus.SUBMITTED).count()
+    dist_approved_count = base_regs_approved = base_registrations.filter(status=RegistrationStatus.DISTRICT_APPROVED).count()
+    venue_cleared_count = base_registrations.filter(Q(status=RegistrationStatus.VENUE_CLEARED) | Q(venue_cleared=True)).count()
+    approved_count = base_registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]).count()
+    corrections_count = base_registrations.filter(Q(status=RegistrationStatus.NEEDS_CORRECTION) | Q(status=RegistrationStatus.DRAFT)).count()
+    exception_count = base_registrations.filter(has_venue_exception=True).count()
+    total_count = base_registrations.count()
 
-    if tab == 'consolidated':
-        registrations = registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED])
+    # Apply Tab Filter
+    if tab == 'queue':
+        # Applications waiting for district review
+        registrations = base_registrations.filter(status=RegistrationStatus.SUBMITTED).order_by('-created_at')
+    elif tab == 'approved':
+        # Approved by district -> Forwarded & waiting for venue check-in
+        registrations = base_registrations.filter(status=RegistrationStatus.DISTRICT_APPROVED).order_by('-approved_at', '-id')
+    elif tab == 'venue_clearance':
+        # Separate Venue Clearance Module: shows both awaiting check-in and cleared candidates
+        registrations = base_registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]).order_by('-venue_cleared', '-id')
+    elif tab == 'consolidated':
+        # Master register of all approved athletes
+        registrations = base_registrations.filter(status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]).order_by('id')
+    else:
+        registrations = base_registrations.filter(status=RegistrationStatus.SUBMITTED).order_by('-created_at')
 
     quota_info = None
+    remaining_quota = 30
     if selected_district and championship:
         quota_info = DistrictQuota.objects.filter(championship=championship, district_name__iexact=selected_district).first()
+        if quota_info:
+            remaining_quota = max(0, quota_info.quota_limit - quota_info.quota_used)
+        else:
+            remaining_quota = max(0, 30 - dist_approved_count)
+    else:
+        remaining_quota = max(0, 30 - dist_approved_count)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -79,7 +105,7 @@ def district_approvals(request):
                     if success:
                         approved_count += 1
             messages.success(request, f"Successfully approved {approved_count} candidate(s) for district quota!")
-            return redirect(f"/district/approvals/?district={selected_district}&event={selected_event}&cat={selected_cat}")
+            return redirect(f"/district/approvals/?tab={tab}&district={selected_district}&event={selected_event}&cat={selected_cat}")
 
         reg_id = request.POST.get('reg_id')
         notes = request.POST.get('notes', '')
@@ -99,14 +125,19 @@ def district_approvals(request):
                     reg.refresh_from_db()
                     reg.district_approval_notes = notes
                     reg.save(update_fields=['district_approval_notes'])
-                messages.success(request, f"Registration {reg.registration_number} for {reg.athlete.full_name} approved!")
+                messages.success(request, f"Registration {reg.registration_number} for {reg.athlete.full_name} approved and forwarded to Venue Clearance!")
         elif decision == 'reject':
             reg.status = RegistrationStatus.DISTRICT_REJECTED
             reg.district_approval_notes = notes
             reg.save()
             messages.info(request, f"Registration {reg.registration_number} rejected: {notes}")
+        elif decision == 'needs_correction':
+            reg.status = RegistrationStatus.NEEDS_CORRECTION
+            reg.district_approval_notes = f"CORRECTION REQUIRED: {notes}"
+            reg.save()
+            messages.warning(request, f"Registration {reg.registration_number} returned for correction: {notes}")
         
-        return redirect(f"/district/approvals/?district={selected_district}&event={selected_event}&cat={selected_cat}")
+        return redirect(f"/district/approvals/?tab={tab}&district={selected_district}&event={selected_event}&cat={selected_cat}")
 
     from championships.models import AgeCategory, EventType
     age_categories = AgeCategory.objects.all().order_by('display_order')
@@ -116,6 +147,12 @@ def district_approvals(request):
         'tab': tab,
         'approved_count': approved_count,
         'pending_count': pending_count,
+        'corrections_count': corrections_count,
+        'dist_approved_count': dist_approved_count,
+        'venue_cleared_count': venue_cleared_count,
+        'exception_count': exception_count,
+        'total_count': total_count,
+        'remaining_quota': remaining_quota,
         'districts': districts,
         'selected_district': selected_district,
         'assigned_district': assigned_district,

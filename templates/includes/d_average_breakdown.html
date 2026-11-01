@@ -1,0 +1,109 @@
+<!-- Shared Expandable D-Average Breakdown Matrix -->
+<div class="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-xs">
+    <button type="button" onclick="const b=document.getElementById('d-breakdown-panel'); const i=document.getElementById('d-breakdown-icon'); b.classList.toggle('hidden'); i.classList.toggle('rotate-180');" class="w-full p-4 flex items-center justify-between hover:bg-slate-50/80 transition text-left cursor-pointer">
+        <div class="flex items-center space-x-3">
+            <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+            <span class="text-sm font-black text-slate-900">
+                D Average: <span class="font-mono text-teal-800 text-base font-extrabold">{{ score_calc.retained_d|default:"0.000" }}</span>
+            </span>
+            <span class="text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition">
+                ▾ View all judge marks
+            </span>
+        </div>
+        <div class="flex items-center space-x-2 text-xs font-medium text-slate-400">
+            <span class="hidden sm:inline">Asana-by-Asana Judge Matrix • Olympic Trimmed Mean</span>
+            <i data-lucide="chevron-down" id="d-breakdown-icon" class="w-4 h-4 transition-transform duration-200"></i>
+        </div>
+    </button>
+
+    <div id="d-breakdown-panel" class="hidden border-t border-slate-200 p-5 space-y-4 bg-slate-50/50">
+        <div class="flex items-center justify-between text-xs text-slate-500">
+            <span>Official Rule: When 4 D-Judges are active, the highest and lowest marks for each asana are trimmed, and the middle 2 marks are averaged.</span>
+            <span class="font-mono font-bold text-slate-700">COP 2024–2026 Trimmed Mean</span>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+            <table class="w-full text-left text-xs font-medium">
+                <thead>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px] tracking-wider">
+                        <th class="py-2.5 px-3 w-12 text-center">#</th>
+                        <th class="py-2.5 px-3">Asana Code & Name</th>
+                        <th class="py-2.5 px-3 w-16 text-center">BV</th>
+                        <th class="py-2.5 px-3 w-20 text-right">D1 Judge</th>
+                        <th class="py-2.5 px-3 w-20 text-right">D2 Judge</th>
+                        <th class="py-2.5 px-3 w-20 text-right">D3 Judge</th>
+                        <th class="py-2.5 px-3 w-20 text-right">D4 Judge</th>
+                        <th class="py-2.5 px-3 w-24 text-right">D Item Mean</th>
+                        <th class="py-2.5 px-3 w-24 text-right">Evaluator / Time</th>
+                        <th class="py-2.5 px-3 w-24 text-right font-black">Net Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800">
+                    {% for row in score_calc.d_matrix %}
+                    <tr class="hover:bg-slate-50/60 font-mono text-[11px]">
+                        <td class="py-2.5 px-3 text-center font-bold text-slate-400 font-sans">
+                            #{{ row.seq }}
+                        </td>
+                        <td class="py-2.5 px-3 font-sans">
+                            <span class="font-bold text-slate-900 font-mono text-xs">{{ row.code }}</span>
+                            <span class="text-slate-500 text-[11px] block truncate max-w-xs">{{ row.name }}</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-center text-slate-600 font-bold">
+                            {{ row.bv }}
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                            <span class="{% if row.d1_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d1_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                                {{ row.d1|stringformat:".2f" }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                            <span class="{% if row.d2_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d2_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                                {{ row.d2|stringformat:".2f" }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                            <span class="{% if row.d3_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d3_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                                {{ row.d3|stringformat:".2f" }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                            <span class="{% if row.d4_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d4_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                                {{ row.d4|stringformat:".2f" }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-bold text-teal-800">
+                            {{ row.trimmed_mean|stringformat:".3f" }}
+                        </td>
+                        <td class="py-2.5 px-3 text-right text-rose-600">
+                            {% if row.deduction > 0 %}-{{ row.deduction|stringformat:".2f" }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-black text-slate-900">
+                            {{ row.net_item_score|stringformat:".3f" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="py-6 text-center text-slate-400 italic font-sans">
+                            No individual asana mark breakdown recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if score_calc.d_matrix %}
+                <tfoot>
+                    <tr class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300 font-mono text-xs">
+                        <td colspan="3" class="py-3 px-3 uppercase text-[10px] tracking-wider font-sans">Composite D Total & Mean</td>
+                        <td class="py-3 px-3 text-right">{{ score_calc.d1_total|stringformat:".2f" }}</td>
+                        <td class="py-3 px-3 text-right">{{ score_calc.d2_total|stringformat:".2f" }}</td>
+                        <td class="py-3 px-3 text-right">{{ score_calc.d3_total|stringformat:".2f" }}</td>
+                        <td class="py-3 px-3 text-right">{{ score_calc.d4_total|stringformat:".2f" }}</td>
+                        <td class="py-3 px-3 text-right font-black text-teal-900 text-sm">{{ score_calc.retained_d|stringformat:".3f" }}</td>
+                        <td class="py-3 px-3 text-right text-rose-700">{% if score_calc.penalties > 0 %}-{{ score_calc.penalties|stringformat:".3f" }}{% else %}0.000{% endif %}</td>
+                        <td class="py-3 px-3 text-right font-black text-emerald-900 text-sm">{{ score_calc.provisional_total|stringformat:".3f" }}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>

@@ -20,7 +20,9 @@ from competition.models import JudgePanel, StageBatch
 from scoring.models import Performance
 from config.districts import TELANGANA_DISTRICTS
 from audit.models import AuditLog
+from django.views.decorators.csrf import ensure_csrf_cookie
 
+@ensure_csrf_cookie
 def login_view(request):
     """
     Role-aware Authentication & Destination Routing:
@@ -114,28 +116,76 @@ def admin_dashboard(request):
     direct operational control links, and recent audit activity.
     Redundant static module cards removed as requested.
     """
+    from registrations.models import RegistrationStatus
     championship = get_active_championship(request)
     running_championships = Championship.objects.all().order_by('-year', '-start_date')
 
     if championship:
+        base_regs = ChampionshipRegistration.objects.filter(championship=championship)
         total_athletes = Athlete.objects.filter(registrations__championship=championship).distinct().count()
-        total_registrations = ChampionshipRegistration.objects.filter(championship=championship).count()
+        total_registrations = base_regs.count()
         total_entries = EventEntry.objects.filter(registration__championship=championship).count()
-        venue_cleared = ChampionshipRegistration.objects.filter(championship=championship, venue_cleared=True).count()
-        pending_approvals = ChampionshipRegistration.objects.filter(championship=championship, status='SUBMITTED').count()
+        
+        # Unique athlete counts across pipeline
+        dist_approved_athletes = Athlete.objects.filter(
+            registrations__championship=championship,
+            registrations__status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]
+        ).distinct().count()
+
+        pending_athletes = Athlete.objects.filter(
+            registrations__championship=championship,
+            registrations__status=RegistrationStatus.SUBMITTED
+        ).distinct().count()
+
+        awaiting_venue_clearance = Athlete.objects.filter(
+            registrations__championship=championship,
+            registrations__status=RegistrationStatus.DISTRICT_APPROVED,
+            registrations__venue_cleared=False
+        ).distinct().count()
+
+        venue_cleared = Athlete.objects.filter(
+            registrations__championship=championship
+        ).filter(
+            Q(registrations__status=RegistrationStatus.VENUE_CLEARED) | Q(registrations__venue_cleared=True)
+        ).distinct().count()
+
+        corrections_count = base_regs.filter(status=RegistrationStatus.DRAFT).count()
+        rejected_count = base_regs.filter(status=RegistrationStatus.DISTRICT_REJECTED).count()
+
         active_panels = JudgePanel.objects.filter(championship=championship, is_active=True).count()
         scored_performances = Performance.objects.filter(
             event_entry__registration__championship=championship,
             status__in=['PROVISIONAL_RELEASED', 'CD_FINALIZED']
         ).count()
+
+        dist_approved_list = list(base_regs.filter(
+            status=RegistrationStatus.DISTRICT_APPROVED
+        ).select_related('athlete', 'approved_by').prefetch_related('event_entries__event_config', 'event_entries__age_category').order_by('-approved_at', '-id')[:12])
+
+        pending_athletes_list = list(base_regs.filter(
+            status=RegistrationStatus.SUBMITTED
+        ).select_related('athlete').prefetch_related('event_entries__event_config', 'event_entries__age_category').order_by('-created_at', '-id')[:12])
     else:
-        total_athletes = Athlete.objects.count()
-        total_registrations = ChampionshipRegistration.objects.count()
+        base_regs = ChampionshipRegistration.objects.all()
+        total_athletes = Athlete.objects.distinct().count()
+        total_registrations = base_regs.count()
         total_entries = EventEntry.objects.count()
-        venue_cleared = ChampionshipRegistration.objects.filter(venue_cleared=True).count()
-        pending_approvals = ChampionshipRegistration.objects.filter(status='SUBMITTED').count()
+        dist_approved_athletes = Athlete.objects.filter(registrations__status__in=[RegistrationStatus.DISTRICT_APPROVED, RegistrationStatus.VENUE_CLEARED]).distinct().count()
+        pending_athletes = Athlete.objects.filter(registrations__status=RegistrationStatus.SUBMITTED).distinct().count()
+        awaiting_venue_clearance = Athlete.objects.filter(registrations__status=RegistrationStatus.DISTRICT_APPROVED, registrations__venue_cleared=False).distinct().count()
+        venue_cleared = Athlete.objects.filter(Q(registrations__status=RegistrationStatus.VENUE_CLEARED) | Q(registrations__venue_cleared=True)).distinct().count()
+        corrections_count = base_regs.filter(status=RegistrationStatus.DRAFT).count()
+        rejected_count = base_regs.filter(status=RegistrationStatus.DISTRICT_REJECTED).count()
         active_panels = JudgePanel.objects.filter(is_active=True).count()
         scored_performances = Performance.objects.filter(status__in=['PROVISIONAL_RELEASED', 'CD_FINALIZED']).count()
+
+        dist_approved_list = list(base_regs.filter(
+            status=RegistrationStatus.DISTRICT_APPROVED
+        ).select_related('athlete', 'approved_by').prefetch_related('event_entries__event_config', 'event_entries__age_category').order_by('-approved_at', '-id')[:12])
+
+        pending_athletes_list = list(base_regs.filter(
+            status=RegistrationStatus.SUBMITTED
+        ).select_related('athlete').prefetch_related('event_entries__event_config', 'event_entries__age_category').order_by('-created_at', '-id')[:12])
 
     approved_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.APPROVED).count()
     pending_judges = UniversalJudge.objects.filter(approval_status=ApprovalStatus.PENDING).count()
@@ -147,15 +197,22 @@ def admin_dashboard(request):
         'championship': championship,
         'running_championships': running_championships,
         'recent_logs': recent_logs,
+        'dist_approved_list': dist_approved_list,
+        'pending_athletes_list': pending_athletes_list,
         'stats': {
             'total_athletes': total_athletes,
             'total_registrations': total_registrations,
             'total_entries': total_entries,
+            'dist_approved_athletes': dist_approved_athletes,
+            'pending_athletes': pending_athletes,
+            'awaiting_venue_clearance': awaiting_venue_clearance,
             'venue_cleared': venue_cleared,
+            'corrections_count': corrections_count,
+            'rejected_count': rejected_count,
             'approved_judges': approved_judges,
             'active_panels': active_panels,
             'scored_performances': scored_performances,
-            'pending_approvals': pending_approvals,
+            'pending_approvals': pending_athletes,
             'pending_judges': pending_judges,
         }
     })

@@ -1,404 +1,443 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Stage Control — TYSA Score{% endblock %}
+{% block title %}Stage Control & Marshalling — TYSA Score{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6 py-2">
     <!-- Top Metadata Card -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Stage Control</h1>
-            <p class="text-sm text-slate-500 mt-1">Manage athlete flow, send to judges and monitor scoring in real time.</p>
+        <div class="space-y-1">
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'judge_portal' %}#panels" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Return to Assigned Panels</span>
+                </a>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                    Stage Manager Desk
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight pt-1">Stage Control & Marshalling</h1>
+            <p class="text-xs text-slate-500">Call athletes, persist operational attendance, push authorized batches to judges, and publish official scores.</p>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-            <div>
-                <span class="text-slate-400 block font-medium">Championship</span>
-                <span class="font-bold text-slate-900 truncate block">{{ championship.name|default:"Telangana State Championship" }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Event</span>
-                <span class="font-bold text-slate-900">{{ current_panel.event_config.get_event_type_display|default:"Traditional Yogasana" }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Category</span>
-                <span class="font-bold text-slate-900">{{ current_panel.age_category.name|default:"Junior" }} ({{ current_panel.gender|default:"M" }})</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Round</span>
-                <span class="font-bold text-slate-900">{{ current_panel.round_type|default:"Preliminary" }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Stage / Arena</span>
-                <span class="font-bold text-teal-800">{{ current_panel.stage_name|default:"Stage 1" }}</span>
-            </div>
+        {% if panels.count > 1 %}
+        <form method="GET" class="flex items-center space-x-2 shrink-0">
+            <span class="text-xs font-bold text-slate-500 shrink-0">Switch Panel:</span>
+            <select name="panel_id" onchange="this.form.submit()" class="px-3 py-2 text-xs font-bold bg-white border border-slate-300 rounded-xl outline-none shadow-2xs focus:border-teal-600">
+                {% for p in panels %}
+                <option value="{{ p.id }}" {% if current_panel.id == p.id %}selected{% endif %}>
+                    {{ p.stage_name }} • {{ p.event_config.get_event_type_display }} ({{ p.gender }}) [{{ p.round_type }}]
+                    {% if p.stage_manager == request.user %} ★ (Your Desk){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Metadata Chips -->
+    <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+        <div>
+            <span class="text-slate-400 block font-medium">Championship</span>
+            <span class="font-bold text-slate-900 truncate block">{{ championship.name|default:"Telangana State Championship" }}</span>
+        </div>
+        <div>
+            <span class="text-slate-400 block font-medium">Event</span>
+            <span class="font-bold text-slate-900">{{ current_panel.event_config.get_event_type_display|default:"Traditional Yogasana" }}</span>
+        </div>
+        <div>
+            <span class="text-slate-400 block font-medium">Category / Gender</span>
+            <span class="font-bold text-slate-900">{{ current_panel.age_category.name|default:"Junior" }} ({{ current_panel.gender|default:"M" }})</span>
+        </div>
+        <div>
+            <span class="text-slate-400 block font-medium">Round</span>
+            <span class="font-bold text-slate-900">{{ current_panel.round_type|default:"Preliminary" }}</span>
+        </div>
+        <div>
+            <span class="text-slate-400 block font-medium">Stage / Arena</span>
+            <span class="font-bold text-teal-800">{{ current_panel.stage_name|default:"Stage 1" }}</span>
+        </div>
+        <div>
+            <span class="text-slate-400 block font-medium">Roll Version</span>
+            <span class="font-bold text-indigo-700">v{{ roll.version|default:1 }} (Finalized)</span>
         </div>
     </div>
 
     <!-- Main 2-Column Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Left Column: Next Athlete List & Event Controls -->
+        
+        <!-- Left Column: Master Roll & Batch Push Controls (7 cols) -->
         <div class="lg:col-span-7 space-y-6">
-            <!-- Next Athlete List Card -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2">
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Next Athlete List</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Select up to 5 athletes and send to all judges.</p>
+                        <h2 class="text-base font-bold text-slate-900">Finalized Master Roll (Saved Order)</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Select Present athletes within round limits to push to scoring desks.</p>
                     </div>
                     <div class="text-right text-xs">
-                        <span class="font-bold text-slate-900">Batch 3 selected</span>
-                        <span class="text-slate-500">(Maximum 5 in this round)</span>
-                        <div class="text-[11px] text-slate-400">Final: Maximum 3 will be published.</div>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-teal-50 text-teal-800 font-bold border border-teal-200">
+                            {{ batch_limit_text }}
+                        </span>
                     </div>
                 </div>
 
-                <!-- Athlete Table -->
-                <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="w-full text-left text-sm">
-                        <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50/60 text-slate-600 text-xs font-semibold">
-                                <th class="py-3 px-4 w-10 text-center">
-                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
-                                </th>
-                                <th class="py-3 px-4">Chest No.</th>
-                                <th class="py-3 px-4">Athlete Name</th>
-                                <th class="py-3 px-4">District</th>
-                                <th class="py-3 px-4">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 text-slate-800">
-                            <!-- Row 1 -->
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 text-center">
-                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
-                                </td>
-                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">101</td>
-                                <td class="py-3 px-4 font-semibold text-slate-900">Arun Kumar</td>
-                                <td class="py-3 px-4 text-slate-600">Mancherial</td>
-                                <td class="py-3 px-4">
-                                    <span class="inline-flex items-center text-xs font-medium text-emerald-700">
-                                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Present
-                                    </span>
-                                </td>
-                            </tr>
-                            <!-- Row 2 -->
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 text-center">
-                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
-                                </td>
-                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">301</td>
-                                <td class="py-3 px-4 font-semibold text-slate-900">Sai Teja</td>
-                                <td class="py-3 px-4 text-slate-600">Hyderabad</td>
-                                <td class="py-3 px-4">
-                                    <span class="inline-flex items-center text-xs font-medium text-emerald-700">
-                                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Present
-                                    </span>
-                                </td>
-                            </tr>
-                            <!-- Row 3 -->
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 text-center">
-                                    <input type="checkbox" checked class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
-                                </td>
-                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">205</td>
-                                <td class="py-3 px-4 font-semibold text-slate-900">Rohit Varma</td>
-                                <td class="py-3 px-4 text-slate-600">Medak</td>
-                                <td class="py-3 px-4">
-                                    <span class="inline-flex items-center text-xs font-medium text-emerald-700">
-                                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Present
-                                    </span>
-                                </td>
-                            </tr>
-                            <!-- Row 4 -->
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 text-center">
-                                    <input type="checkbox" class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
-                                </td>
-                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">119</td>
-                                <td class="py-3 px-4 font-semibold text-slate-900">Karthik Reddy</td>
-                                <td class="py-3 px-4 text-slate-600">Nizamabad</td>
-                                <td class="py-3 px-4">
-                                    <span class="inline-flex items-center text-xs font-medium text-slate-500">
-                                        <span class="w-2 h-2 rounded-full bg-slate-300 mr-2"></span> Pending
-                                    </span>
-                                </td>
-                            </tr>
-                            <!-- Row 5 -->
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 px-4 text-center">
-                                    <input type="checkbox" class="w-4 h-4 rounded text-teal-800 focus:ring-teal-700">
-                                </td>
-                                <td class="py-3 px-4 font-bold text-slate-900 font-mono">220</td>
-                                <td class="py-3 px-4 font-semibold text-slate-900">Vivek Naidu</td>
-                                <td class="py-3 px-4 text-slate-600">Karimnagar</td>
-                                <td class="py-3 px-4">
-                                    <span class="inline-flex items-center text-xs font-medium text-slate-500">
-                                        <span class="w-2 h-2 rounded-full bg-slate-300 mr-2"></span> Pending
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                <!-- Form for Pushing Batch -->
+                <form method="POST" id="push-batch-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="push_batch">
 
-            <!-- Event Controls Card -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-                <div>
-                    <h2 class="text-base font-bold text-slate-900">Event Controls</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Manage athlete status and send to all judges.</p>
-                </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-medium text-xs transition shadow-xs">
-                        <i data-lucide="play" class="w-4 h-4 mb-1"></i>
-                        <span class="font-bold">Present</span>
-                        <span class="text-[10px] text-teal-200">Mark selected as Present</span>
-                    </button>
-                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs transition">
-                        <i data-lucide="x" class="w-4 h-4 mb-1 text-slate-500"></i>
-                        <span class="font-bold">Absent</span>
-                        <span class="text-[10px] text-slate-400">Mark selected as Absent</span>
-                    </button>
-                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs transition">
-                        <i data-lucide="pause" class="w-4 h-4 mb-1 text-slate-500"></i>
-                        <span class="font-bold">Hold</span>
-                        <span class="text-[10px] text-slate-400">Hold selected athletes</span>
-                    </button>
-                    <button type="button" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs transition">
-                        <i data-lucide="rotate-ccw" class="w-4 h-4 mb-1 text-slate-500"></i>
-                        <span class="font-bold">Resume</span>
-                        <span class="text-[10px] text-slate-400">Resume from Hold</span>
-                    </button>
-                </div>
-
-                <!-- Push to all judges button -->
-                <button type="button" class="w-full py-4 px-4 bg-teal-800 hover:bg-teal-900 text-white rounded-xl font-bold text-sm flex flex-col items-center justify-center shadow-sm transition">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                        <span class="text-base">Push to all judges (3)</span>
+                    <!-- Athlete Master Roll Table -->
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                                    <th class="py-3 px-3 w-10 text-center">Select</th>
+                                    <th class="py-3 px-3 w-12 text-center">Order</th>
+                                    <th class="py-3 px-3">Chest #</th>
+                                    <th class="py-3 px-4">Athlete / Pair</th>
+                                    <th class="py-3 px-3">District</th>
+                                    <th class="py-3 px-3 text-center">Call Status</th>
+                                    <th class="py-3 px-3 text-right">Operational Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-800">
+                                {% for entry in roll_entries %}
+                                <tr class="hover:bg-slate-50/50 {% if entry.attendance_status == 'DISQUALIFIED' %}bg-rose-50/30{% elif entry.attendance_status == 'HOLD' %}bg-amber-50/30{% endif %}">
+                                    <td class="py-3 px-3 text-center">
+                                        {% if entry.attendance_status == 'PRESENT' %}
+                                        <input type="checkbox" name="entry_ids" value="{{ entry.event_entry.id }}" class="batch-checkbox w-4 h-4 rounded text-teal-800 focus:ring-teal-700 cursor-pointer">
+                                        {% else %}
+                                        <input type="checkbox" disabled class="w-4 h-4 rounded text-slate-300 opacity-40 cursor-not-allowed">
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-3 text-center font-bold text-slate-400">
+                                        #{{ entry.performance_order }}
+                                    </td>
+                                    <td class="py-3 px-3 font-mono font-black text-slate-900 text-sm">
+                                        {{ entry.event_entry.chest_number|default:"—" }}
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="font-bold text-slate-900">
+                                            {{ entry.event_entry.registration.athlete.full_name }}
+                                            {% if entry.event_entry.partner_athlete %}
+                                            <span class="text-slate-500 font-normal">& {{ entry.event_entry.partner_athlete.full_name }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 font-mono">{{ entry.event_entry.registration.athlete.permanent_id }}</span>
+                                    </td>
+                                    <td class="py-3 px-3 text-slate-600 font-medium">
+                                        {{ entry.event_entry.registration.athlete.district }}
+                                    </td>
+                                    <td class="py-3 px-3 text-center">
+                                        {% if entry.attendance_status == 'PRESENT' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span> Present
+                                        </span>
+                                        {% elif entry.attendance_status == 'ABSENT' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5"></span> Absent
+                                        </span>
+                                        {% elif entry.attendance_status == 'HOLD' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span> On Hold
+                                        </span>
+                                        {% elif entry.attendance_status == 'DISQUALIFIED' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800" title="{{ entry.disqualification_reason }}">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span> Disqualified
+                                        </span>
+                                        {% elif entry.attendance_status == 'COMPLETED' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span> Completed
+                                        </span>
+                                        {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
+                                            Pending
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-3 text-right">
+                                        <div class="inline-flex items-center space-x-1">
+                                            {% if entry.attendance_status != 'DISQUALIFIED' and entry.attendance_status != 'COMPLETED' %}
+                                                {% if entry.attendance_status != 'PRESENT' %}
+                                                <button type="button" onclick="submitStatusUpdate('{{ entry.id }}', 'PRESENT')" class="p-1 rounded hover:bg-emerald-50 text-emerald-700" title="Mark Present">
+                                                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                                </button>
+                                                {% endif %}
+                                                {% if entry.attendance_status != 'ABSENT' %}
+                                                <button type="button" onclick="submitStatusUpdate('{{ entry.id }}', 'ABSENT')" class="p-1 rounded hover:bg-slate-100 text-slate-500" title="Mark Absent">
+                                                    <i data-lucide="user-x" class="w-4 h-4"></i>
+                                                </button>
+                                                {% endif %}
+                                                {% if entry.attendance_status != 'HOLD' %}
+                                                <button type="button" onclick="submitStatusUpdate('{{ entry.id }}', 'HOLD')" class="p-1 rounded hover:bg-amber-50 text-amber-600" title="Hold Entry">
+                                                    <i data-lucide="pause-circle" class="w-4 h-4"></i>
+                                                </button>
+                                                {% else %}
+                                                <button type="button" onclick="submitStatusUpdate('{{ entry.id }}', 'RESUME')" class="p-1 rounded hover:bg-teal-50 text-teal-700" title="Resume from Hold">
+                                                    <i data-lucide="play-circle" class="w-4 h-4"></i>
+                                                </button>
+                                                {% endif %}
+                                                <button type="button" onclick="openDqModal('{{ entry.id }}', '{{ entry.event_entry.chest_number }}', '{{ entry.event_entry.registration.athlete.full_name }}')" class="p-1 rounded hover:bg-rose-50 text-rose-600" title="Disqualify Entry">
+                                                    <i data-lucide="ban" class="w-4 h-4"></i>
+                                                </button>
+                                            {% else %}
+                                                <span class="text-[10px] text-slate-400 italic">Locked</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="py-8 text-center text-slate-400">
+                                        No entries found in master roll for this panel.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <span class="text-xs text-teal-200 mt-0.5 font-normal">Send selected athletes to D1–D4, T, E (Maximum 5 in this round)</span>
-                </button>
 
-                <div class="bg-sky-50 border border-sky-100 rounded-lg p-3 flex items-center space-x-2 text-xs text-sky-900">
-                    <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0"></i>
-                    <span>You can select up to 5 athletes in this round.</span>
-                </div>
+                    <!-- Push to All Assigned Judges CTA -->
+                    <div class="pt-4 space-y-2">
+                        <button type="submit" id="push-btn" class="w-full py-3.5 px-4 bg-teal-800 hover:bg-teal-900 text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2 shadow-sm transition">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                            <span id="push-btn-text">Push Selected Athletes to All Assigned Judges</span>
+                        </button>
+                        <p class="text-[11px] text-slate-400 text-center">
+                            Only athletes in <strong>Present</strong> status can be pushed. Pushing releases the active batch to D-Judges, Time, Evaluator, and Chief Judge desks.
+                        </p>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <!-- Right Column: Judge Submission Progress & Big Screen Display -->
+        <!-- Right Column: Active Batch Monitor & Publication (5 cols) -->
         <div class="lg:col-span-5 space-y-6">
-            <!-- Judge Submission Progress Card -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-                <div>
-                    <h2 class="text-base font-bold text-slate-900">Judge Submission Progress</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Live status of scores submitted by judges for selected athletes.</p>
-                </div>
-
-                <!-- 7 Judge submission cards -->
-                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center">
-                    <!-- D1 -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">D1</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Submitted</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
-                    </div>
-                    <!-- D2 -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">D2</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Submitted</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
-                    </div>
-                    <!-- D3 -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">D3</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Submitted</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
-                    </div>
-                    <!-- D4 -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">D4</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Submitted</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
-                    </div>
-                    <!-- T -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">T</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Submitted</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
-                    </div>
-                    <!-- E -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">E</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Submitted</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">3 / 3</div>
-                    </div>
-                    <!-- Chief -->
-                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50/50">
-                        <div class="font-bold text-xs text-slate-800">Chief</div>
-                        <div class="flex items-center justify-center space-x-1 my-1 text-[10px] font-semibold text-slate-500">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                            <span>Pending</span>
-                        </div>
-                        <div class="text-[11px] font-bold text-slate-900">0 / 3</div>
-                    </div>
-                </div>
-
-                <!-- Chief Judge Status & Publish Button -->
-                <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            
+            <!-- Current Active Batch Card -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
-                        <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-800">
-                            <span>Chief Judge Status</span>
-                            <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                            Active Arena Stage
+                        </span>
+                        <h2 class="text-base font-bold text-slate-900 mt-1">Current Active Batch</h2>
+                    </div>
+                    {% if active_batch %}
+                    <span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 animate-pulse">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Batch #{{ active_batch.batch_number }} Live</span>
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+                        Stage Clear
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if active_batch %}
+                <!-- Pushed Athletes in Batch -->
+                <div class="space-y-2">
+                    <span class="text-xs font-bold text-slate-600 block">Athletes Currently on Stage:</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {% for entry in active_batch.entries.all %}
+                        <div class="p-2.5 rounded-xl border border-teal-200 bg-teal-50/40 flex items-center space-x-3">
+                            <span class="font-mono font-black text-sm text-teal-900 bg-teal-100 px-2 py-1 rounded-lg">
+                                #{{ entry.chest_number }}
+                            </span>
+                            <div class="truncate">
+                                <span class="font-bold text-xs text-slate-900 block truncate">{{ entry.registration.athlete.full_name }}</span>
+                                <span class="text-[10px] text-slate-500">{{ entry.registration.athlete.district }}</span>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-2 mt-0.5 text-xs">
-                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                            <span class="font-medium text-slate-700">Current batch: Pending</span>
-                        </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Scores can be published after Chief Judge submits.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Judge Submission Progress Monitor -->
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-slate-900">Assigned Desks Progress</span>
+                        <span class="text-slate-400">Total Items: {{ total_required_items }}</span>
                     </div>
 
-                    <button type="button" disabled class="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-xs font-semibold cursor-not-allowed flex items-center space-x-1.5 shrink-0">
-                        <i data-lucide="check" class="w-4 h-4"></i>
-                        <span>Publish Current Batch</span>
-                    </button>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {% for jp in judge_progress_list %}
+                        <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-center space-y-1">
+                            <span class="text-[11px] font-black text-slate-900 block truncate">{{ jp.seat }}</span>
+                            <span class="text-[10px] text-slate-500 truncate block">{{ jp.judge_name }}</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold {{ jp.badge_class }}">
+                                {{ jp.status }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
+
+                <!-- Provisional Result Publication -->
+                <form method="POST" class="pt-3 border-t border-slate-100 space-y-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="publish_batch">
+                    <input type="hidden" name="batch_id" value="{{ active_batch.id }}">
+
+                    <div class="flex items-center justify-between text-xs">
+                        <div>
+                            <span class="font-bold text-slate-900 block">Provisional Score Release</span>
+                            <span class="text-[11px] text-slate-400">Publish scores to audience display and rank board.</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 px-4 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-2 shadow-xs transition">
+                        <i data-lucide="check-check" class="w-4 h-4"></i>
+                        <span>Publish Approved Scores for Current Batch</span>
+                    </button>
+                </form>
+
+                {% else %}
+                <div class="py-10 text-center text-slate-400 space-y-2">
+                    <i data-lucide="clock" class="w-8 h-8 mx-auto text-slate-300"></i>
+                    <p class="text-xs">No active batch currently pushed. Select Present athletes from the master roll and click Push to start.</p>
+                </div>
+                {% endif %}
             </div>
 
-            <!-- Big Screen Display Card -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="tv" class="w-5 h-5 text-teal-800"></i>
-                        <h2 class="text-base font-bold text-slate-900">Big Screen Display</h2>
+            <!-- Audience Second Screen Controls Card -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center shrink-0">
+                        <i data-lucide="tv" class="w-5 h-5"></i>
                     </div>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span> Connected · Display 2
-                    </span>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Audience Second-Screen Controls</h3>
+                        <p class="text-[11px] text-slate-500">Live arena public scoreboard display.</p>
+                    </div>
                 </div>
-
-                <div>
-                    <div class="text-xs font-semibold text-slate-700">Second screen — Audience display</div>
-                    <p class="text-xs text-slate-500 mt-0.5">Open on the connected monitor or projector. Stage controls stay on this screen.</p>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <button type="button" onclick="openAudienceWindow('{% url 'public_live_display' %}?stage={{ current_panel.stage_name|urlencode }}&event_id={{ current_panel.event_config_id }}&cat_id={{ current_panel.age_category_id }}&gender={{ current_panel.gender }}&round_type={{ current_panel.round_type }}')" 
-                            class="py-2.5 px-3 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold text-center flex items-center justify-center space-x-1.5 shadow-xs transition">
-                        <i data-lucide="tv" class="w-4 h-4"></i>
-                        <span>Launch Arena Live Display</span>
-                    </button>
-                    <a href="{% url 'second_screen' %}" target="_blank" class="py-2.5 px-3 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold text-center flex items-center justify-center space-x-1.5 transition">
+                <div class="flex items-center space-x-2 pt-1">
+                    <a href="{% url 'second_screen' %}" target="_blank" class="flex-1 py-2 px-3 text-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-1.5">
                         <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        <span>Second Screen Window</span>
+                        <span>Open Arena Display</span>
+                    </a>
+                    <a href="{% url 'scoreboard_view' %}" target="_blank" class="flex-1 py-2 px-3 text-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-1.5">
+                        <i data-lucide="award" class="w-3.5 h-3.5"></i>
+                        <span>Official Standings</span>
                     </a>
                 </div>
-
-                <!-- Tabs -->
-                <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
-                    <button type="button" onclick="setAudienceMode('live')" id="tab-live" class="flex-1 py-1.5 bg-white text-teal-900 rounded-lg font-bold shadow-xs">Live results</button>
-                    <button type="button" onclick="setAudienceMode('batch')" id="tab-batch" class="flex-1 py-1.5 hover:text-slate-900">Current batch</button>
-                    <button type="button" onclick="setAudienceMode('holding')" id="tab-holding" class="flex-1 py-1.5 hover:text-slate-900">Holding screen</button>
-                </div>
-
-                <!-- Status Strip -->
-                <div class="border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
-                    <div>
-                        <div id="operator-on-air-text" class="text-xs font-bold text-slate-900">On air: approved results · {{ current_panel.stage_name|default:"Stage 1" }}</div>
-                        <p class="text-[11px] text-slate-500">Only approved, released scores appear on the audience display. Pending scores stay private.</p>
-                    </div>
-                    <div class="text-right text-xs shrink-0">
-                        <div class="text-slate-400 text-[10px]">Sync Status</div>
-                        <div id="sync-time-label" class="font-bold text-emerald-700 font-mono">CONNECTED</div>
-                        <div id="mode-state-desc" class="text-[10px] text-slate-500">Mode: <span class="font-semibold text-slate-800">Live Standings</span></div>
-                    </div>
-                </div>
-
-                <!-- 4 Action Pills -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <button type="button" onclick="setAudienceMode('live')" class="p-2 border border-blue-600 bg-blue-50 text-blue-700 font-semibold rounded-lg flex items-center justify-center space-x-1 transition hover:bg-blue-100">
-                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                        <span>Show approved</span>
-                    </button>
-                    <button type="button" onclick="togglePauseUpdates()" id="btn-pause-updates" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1 transition">
-                        <i data-lucide="pause" class="w-3.5 h-3.5"></i>
-                        <span id="pause-text">Pause updates</span>
-                    </button>
-                    <button type="button" onclick="setAudienceMode('holding')" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1 transition">
-                        <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
-                        <span>Holding screen</span>
-                    </button>
-                    <button type="button" onclick="setAudienceMode('hide')" class="p-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center justify-center space-x-1 transition">
-                        <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
-                        <span>Hide scores</span>
-                    </button>
-                </div>
-
-                <script>
-                function openAudienceWindow(url) {
-                    window.open(url, 'tysa_audience_window', 'width=1600,height=900,menubar=no,toolbar=no,location=no,status=no');
-                }
-                function setAudienceMode(mode) {
-                    localStorage.setItem('tysa_audience_mode', mode);
-                    const modeDesc = document.getElementById('mode-state-desc');
-                    const onAirText = document.getElementById('operator-on-air-text');
-                    if (mode === 'holding' || mode === 'hide') {
-                        if (modeDesc) modeDesc.innerHTML = 'Mode: <span class="font-semibold text-amber-700">Holding Screen</span>';
-                        if (onAirText) onAirText.innerText = 'On air: Holding Intermission Screen';
-                    } else {
-                        if (modeDesc) modeDesc.innerHTML = 'Mode: <span class="font-semibold text-emerald-700">Live Standings</span>';
-                        if (onAirText) onAirText.innerText = 'On air: approved results · {{ current_panel.stage_name|default:"Stage 1" }}';
-                    }
-                }
-                function togglePauseUpdates() {
-                    const isPaused = localStorage.getItem('tysa_audience_paused') === 'true';
-                    const newPaused = !isPaused;
-                    localStorage.setItem('tysa_audience_paused', newPaused ? 'true' : 'false');
-                    const pauseText = document.getElementById('pause-text');
-                    const btn = document.getElementById('btn-pause-updates');
-                    if (newPaused) {
-                        pauseText.innerText = 'Resume updates';
-                        btn.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-300');
-                    } else {
-                        pauseText.innerText = 'Pause updates';
-                        btn.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
-                    }
-                }
-                </script>
-
-                <!-- Toggle Switch -->
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <label class="flex items-center space-x-2.5 cursor-pointer">
-                        <input type="checkbox" checked class="w-4 h-4 text-teal-800 rounded focus:ring-teal-700">
-                        <span class="font-semibold text-slate-800">Auto-update approved results</span>
-                    </label>
-                    <span class="text-[11px] text-slate-400">Only approved, released scores appear on audience display.</span>
-                </div>
             </div>
+
         </div>
+
     </div>
-    <div class="text-right text-[11px] text-slate-400 mt-3">Design preview · Sample data</div>
 </div>
+
+<!-- Hidden Quick Status Update Form -->
+<form method="POST" id="status-update-form" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_entry_status">
+    <input type="hidden" name="roll_entry_id" id="status-entry-id">
+    <input type="hidden" name="status" id="status-new-value">
+</form>
+
+<!-- Disqualification Modal -->
+<div id="dq-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2 text-rose-700 font-bold text-sm">
+                <i data-lucide="ban" class="w-5 h-5"></i>
+                <span>Disqualify Athlete / Entry</span>
+            </div>
+            <button type="button" onclick="closeDqModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <p class="text-xs text-slate-600" id="dq-modal-athlete-info">
+            You are recording a formal disqualification for Chest #. Disqualified athletes cannot be resumed or pushed to scoring desks.
+        </p>
+
+        <form method="POST" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_entry_status">
+            <input type="hidden" name="status" value="DISQUALIFIED">
+            <input type="hidden" name="roll_entry_id" id="dq-entry-id">
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Disqualification Type</label>
+                <select name="dq_type" class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold">
+                    <option value="OPERATIONAL">Operational / Marshalling DQ (Failure to Report / Absent)</option>
+                    <option value="TECHNICAL">Technical Sporting DQ (COP Infraction / Rule Breach)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Authorization <span class="text-rose-600">*</span></label>
+                <input type="text" name="dq_authorized_by" required placeholder="e.g. Chief Judge / CD Approval" class="w-full text-xs p-2.5 rounded-xl border border-slate-300 outline-none focus:border-teal-600">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mandatory Reason <span class="text-rose-600">*</span></label>
+                <textarea name="disqualification_reason" required rows="3" placeholder="Provide detailed sporting or operational reason for audit record..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 outline-none focus:border-teal-600"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="closeDqModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition">
+                    Confirm Disqualification
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function submitStatusUpdate(entryId, status) {
+    document.getElementById('status-entry-id').value = entryId;
+    document.getElementById('status-new-value').value = status;
+    document.getElementById('status-update-form').submit();
+}
+
+function openDqModal(entryId, chestNo, athleteName) {
+    document.getElementById('dq-entry-id').value = entryId;
+    document.getElementById('dq-modal-athlete-info').textContent = 
+        `Recording formal disqualification for Chest #${chestNo} (${athleteName}). Requires recorded reason and authorization.`;
+    document.getElementById('dq-modal').classList.remove('hidden');
+}
+
+function closeDqModal() {
+    document.getElementById('dq-modal').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.batch-checkbox');
+    const pushBtn = document.getElementById('push-btn');
+    const pushText = document.getElementById('push-btn-text');
+    const maxBatch = {{ max_batch_size|default:5 }};
+
+    function updatePushState() {
+        const checked = document.querySelectorAll('.batch-checkbox:checked');
+        const count = checked.length;
+        if (count === 0) {
+            pushText.textContent = `Push Selected Athletes (0 Selected)`;
+            pushBtn.disabled = true;
+            pushBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else if (count > maxBatch) {
+            pushText.textContent = `Too Many Selected (${count} / max ${maxBatch})`;
+            pushBtn.disabled = true;
+            pushBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            pushText.textContent = `Push ${count} Selected Athlete${count > 1 ? 's' : ''} to All Assigned Judges`;
+            pushBtn.disabled = false;
+            pushBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updatePushState);
+    });
+
+    updatePushState();
+});
+</script>
 {% endblock %}

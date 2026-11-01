@@ -154,6 +154,11 @@ def get_user_roles_for_request(request, championship=None):
             roles.add(RoleChoices.EVALUATOR)
         elif 'CHIEF' in s_code:
             roles.add(RoleChoices.CHIEF_JUDGE)
+        elif 'STAGE' in s_code:
+            roles.add(RoleChoices.STAGE_MANAGER)
+
+        elif 'STAGE' in s_code:
+            roles.add(RoleChoices.STAGE_MANAGER)
 
     # Judge profile status
     if hasattr(user, 'judge_profile'):
@@ -194,8 +199,6 @@ def get_user_workspaces(user):
             url = 'district_approvals'
         elif sr.role == RoleChoices.VENUE_DESK:
             url = 'venue_verification'
-        elif sr.role == RoleChoices.STAGE_MANAGER:
-            url = 'stage_manager'
         elif sr.role == RoleChoices.JURY:
             url = 'jury_view'
         elif sr.role in [RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE, RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE]:
@@ -325,7 +328,7 @@ def is_user_authorized_for_url(user, url_path, championship):
 
     # CD views
     cd_views = [
-        'cd_dashboard', 'district_draw', 'panel_assignments', 'stage_manager',
+        'cd_dashboard', 'district_draw', 'panel_assignments',
         'cd_corrections', 'report_trophies', 'registers_view'
     ]
     if view_name in cd_views:
@@ -340,7 +343,7 @@ def is_user_authorized_for_url(user, url_path, championship):
         return RoleChoices.VENUE_DESK in roles
 
     # Stage views
-    if view_name in ['stage_manager', 'second_screen']:
+    if view_name in ['stage_manager', 'stage_manager_alt', 'second_screen']:
         return RoleChoices.STAGE_MANAGER in roles or RoleChoices.CD in roles
 
     # Jury views
@@ -407,6 +410,8 @@ def get_user_roles_for_championship(user, championship):
             roles.add(RoleChoices.EVALUATOR)
         elif 'CHIEF' in s_code:
             roles.add(RoleChoices.CHIEF_JUDGE)
+        elif 'STAGE' in s_code:
+            roles.add(RoleChoices.STAGE_MANAGER)
 
     if hasattr(user, 'judge_profile'):
         roles.add('APPROVED_JUDGE' if user.judge_profile.is_approved else 'PENDING_JUDGE')
@@ -435,20 +440,27 @@ def get_role_navigation_items(user, championship, current_url_name=''):
 
     roles = get_user_roles_for_championship(user, championship)
 
-    # 1. JUDGES (D, Time, Artistry, Evaluator, Chief):
-    # Requirement: Top-level navigation must contain EXACTLY: Profile, Assigned Panels.
-    is_judge_only = not is_system_admin(user) and not any(
-        r in roles for r in [RoleChoices.CD, RoleChoices.DISTRICT_USER, RoleChoices.VENUE_DESK, RoleChoices.STAGE_MANAGER, RoleChoices.JURY]
+    # 1. JUDGES (D, Time, Artistry, Evaluator, Chief, Stage Manager):
+    # Stage Manager is also a Judge and assigned per event panel
+    is_judge = not is_system_admin(user) and not any(
+        r in roles for r in [RoleChoices.CD, RoleChoices.DISTRICT_USER, RoleChoices.VENUE_DESK, RoleChoices.JURY]
     ) and (
-        any(r in roles for r in [RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE, RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE]) or
-        hasattr(user, 'judge_profile')
+        any(r in roles for r in [
+            RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE,
+            RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE, RoleChoices.STAGE_MANAGER
+        ]) or hasattr(user, 'judge_profile')
     )
 
-    if is_judge_only:
-        return [
+    if is_judge:
+        items = [
             {'label': 'Profile', 'url': '/judges/portal/#profile', 'url_name': 'judge_portal', 'icon': 'user'},
             {'label': 'Assigned Panels', 'url': '/judges/portal/#panels', 'url_name': 'judge_portal', 'icon': 'layout-grid'},
         ]
+        # If this judge is actively assigned as Stage Manager for an open event panel:
+        if RoleChoices.STAGE_MANAGER in roles:
+            items.append({'label': 'Stage Control', 'url': '/competition/stage/', 'url_name': 'stage_manager', 'icon': 'sliders'})
+            items.append({'label': '2nd Screen Display', 'url': '/display/second-screen/', 'url_name': 'second_screen', 'icon': 'monitor'})
+        return items
 
     # 2. SYSTEM ADMIN
     if is_system_admin(user):
@@ -484,8 +496,10 @@ def get_role_navigation_items(user, championship, current_url_name=''):
     if RoleChoices.DISTRICT_USER in roles:
         return [
             {'label': 'District Dashboard', 'url': '/district/approvals/', 'url_name': 'district_approvals', 'icon': 'building-2'},
-            {'label': 'Quota Tracker', 'url': '/district/approvals/#quota', 'url_name': 'district_approvals', 'icon': 'pie-chart'},
-            {'label': 'Approved Register', 'url': '/district/approvals/#register', 'url_name': 'district_approvals', 'icon': 'check-circle'},
+            {'label': 'Applications Queue', 'url': '/district/approvals/?tab=queue', 'url_name': 'district_approvals', 'icon': 'inbox'},
+            {'label': 'District Approved', 'url': '/district/approvals/?tab=approved', 'url_name': 'district_approvals', 'icon': 'user-check'},
+            {'label': 'Venue Clearance', 'url': '/district/approvals/?tab=venue_clearance', 'url_name': 'district_approvals', 'icon': 'shield-check'},
+            {'label': 'Master Register', 'url': '/district/approvals/?tab=consolidated', 'url_name': 'district_approvals', 'icon': 'clipboard-list'},
         ]
 
     # 5. VENUE DESK
@@ -495,14 +509,7 @@ def get_role_navigation_items(user, championship, current_url_name=''):
             {'label': 'Attendance Checks', 'url': '/venue/verification/#search', 'url_name': 'venue_verification', 'icon': 'search'},
         ]
 
-    # 6. STAGE MANAGER / ANNOUNCER
-    if RoleChoices.STAGE_MANAGER in roles:
-        return [
-            {'label': 'Stage Control', 'url': '/competition/stage/', 'url_name': 'stage_manager', 'icon': 'sliders'},
-            {'label': '2nd Screen Display', 'url': '/display/second-screen/', 'url_name': 'second_screen', 'icon': 'monitor'},
-        ]
-
-    # 7. JURY
+    # 6. JURY
     if RoleChoices.JURY in roles:
         return [
             {'label': 'Jury Review', 'url': '/jury/', 'url_name': 'jury_view', 'icon': 'scale'},

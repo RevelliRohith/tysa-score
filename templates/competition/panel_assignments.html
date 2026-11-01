@@ -229,10 +229,16 @@
         </div>
 
         {% if current_panel %}
-        <form method="POST" class="space-y-6">
+        <form method="POST" class="space-y-6" id="panel-form">
             {% csrf_token %}
             <input type="hidden" name="panel_id" value="{{ current_panel.id }}">
             <input type="hidden" name="action" value="save_panel">
+
+            <!-- Dynamic Intra-panel conflict notification banner -->
+            <div id="conflict-alert" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center space-x-2">
+                <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-rose-600"></i>
+                <span id="conflict-alert-msg"></span>
+            </div>
 
             <!-- Table of Seats and Assignable Officials -->
             <div class="overflow-x-auto border border-slate-900 rounded-xl print:rounded-none">
@@ -257,7 +263,7 @@
                                 <select name="chief_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.chief_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.chief_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -290,7 +296,7 @@
                                 <select name="d1_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.d1_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d1_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -323,7 +329,7 @@
                                 <select name="d2_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.d2_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d2_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -356,7 +362,7 @@
                                 <select name="d3_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.d3_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d3_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -389,7 +395,7 @@
                                 <select name="d4_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.d4_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d4_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -422,7 +428,7 @@
                                 <select name="time_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.time_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.time_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -455,7 +461,7 @@
                                 <select name="evaluator" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.evaluator_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.evaluator_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -489,7 +495,7 @@
                                 <select name="artistry_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.artistry_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.artistry_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -520,7 +526,7 @@
                                 <select name="artistry_judge_2" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.artistry_judge_2_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.artistry_judge_2_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -548,13 +554,13 @@
                         <tr class="hover:bg-slate-50/60">
                             <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">
                                 <div class="text-sm">Stage Manager</div>
-                                <span class="text-[10px] text-slate-500 font-normal">Per-panel operational desk controller</span>
+                                <span class="text-[10px] text-slate-500 font-normal">Per-panel operational desk controller (Technical Official / Judge)</span>
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300">
                                 <select name="stage_manager" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.stage_manager_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.stage_manager_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -567,9 +573,9 @@
                             </td>
                             <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
                                 {% if current_panel.stage_manager %}
-                                    <span class="font-bold text-slate-900">{{ current_panel.stage_manager.full_name|default:current_panel.stage_manager.email }}</span>
+                                    <span class="font-bold text-slate-900">{{ current_panel.stage_manager.judge_profile.district }}</span> • {{ current_panel.stage_manager.judge_profile.get_certification_level_display }}
                                 {% else %}
-                                    <span class="text-slate-400 italic">Operational desk appointment</span>
+                                    <span class="text-slate-400 italic">Select from approved judges list</span>
                                 {% endif %}
                             </td>
                             <td class="py-3 px-4 text-center">
@@ -587,7 +593,7 @@
                                 <select name="jury_member" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— None / Optional —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
                                         {% if current_panel.jury_member_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.jury_member_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -627,7 +633,7 @@
                     {% endif %}
                 </div>
                 {% if not current_panel.is_closed %}
-                <button type="submit" class="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center space-x-2">
+                <button type="submit" id="save-panel-btn" class="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center space-x-2">
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                     <span>Confirm & Save Panel Assignments</span>
                 </button>
@@ -655,6 +661,77 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('panel-form');
+    if (!form) return;
+
+    const selects = form.querySelectorAll('table select');
+    const alertBox = document.getElementById('conflict-alert');
+    const alertMsg = document.getElementById('conflict-alert-msg');
+    const saveBtn = document.getElementById('save-panel-btn');
+
+    function validateAndSync() {
+        const seen = {};
+        let duplicateName = null;
+        let hasConflict = false;
+
+        selects.forEach(sel => {
+            sel.classList.remove('border-rose-500', 'bg-rose-50');
+            const val = sel.value;
+            const opt = sel.options[sel.selectedIndex];
+            
+            // Sync metadata into sibling cell
+            const row = sel.closest('tr');
+            if (row) {
+                const detailCell = row.children[2];
+                if (detailCell) {
+                    if (val && opt && opt.dataset.district) {
+                        detailCell.innerHTML = `<span class="font-bold text-slate-900">${opt.dataset.district}</span> • ${opt.dataset.cert}`;
+                    } else if (!val) {
+                        detailCell.innerHTML = `<span class="text-slate-400 italic">Select from approved list</span>`;
+                    }
+                }
+            }
+
+            if (val) {
+                if (seen[val]) {
+                    hasConflict = true;
+                    duplicateName = opt.dataset.name || `Judge ID ${val}`;
+                    sel.classList.add('border-rose-500', 'bg-rose-50');
+                    seen[val].classList.add('border-rose-500', 'bg-rose-50');
+                } else {
+                    seen[val] = sel;
+                }
+            }
+        });
+
+        if (hasConflict) {
+            if (alertBox) {
+                alertBox.classList.remove('hidden');
+                alertMsg.textContent = `Intra-Panel Conflict Detected: ${duplicateName} is assigned to multiple seats in this panel simultaneously. Please choose distinct officials.`;
+            }
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        } else {
+            if (alertBox) alertBox.classList.add('hidden');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    selects.forEach(sel => {
+        sel.addEventListener('change', validateAndSync);
+    });
+
+    validateAndSync();
+});
+</script>
 
 <style>
 @media print {

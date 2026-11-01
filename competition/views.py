@@ -11,8 +11,9 @@ from .models import DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, Stage
 from championships.models import Championship, EventConfiguration, AgeCategory, EventType
 from registrations.models import EventEntry, RegistrationStatus
 from judges.models import UniversalJudge, ApprovalStatus
-from scoring.models import Performance, PerformanceStatus, JudgeSubmission
-from accounts.models import RoleChoices
+from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem
+from accounts.models import RoleChoices, ScopedRole
+from audit.models import AuditLog
 from accounts.permissions import get_active_championship, role_required
 from config.districts import TELANGANA_DISTRICTS
 
@@ -864,39 +865,185 @@ def panel_assignments(request):
 @role_required(RoleChoices.ADMIN, RoleChoices.STAGE_MANAGER, RoleChoices.CD)
 def stage_manager(request):
     """
-    Implements 16. stage manager.jpg:
-    Stage queue, batch push controls (1-5 prelims / 1-3 finals), per-judge submission monitor,
-    second-screen controls.
+    Stage Manager Workspace & Inside-Panel Stage Control:
+    - Displays complete finalized master roll for assigned panel in saved performance order.
+    - Call and operational status: Present, Absent, Hold, Resume, Disqualify with reasons & audit.
+    - Push to All Assigned Judges enforcing strict batch limits.
+    - Item-wise and athlete-wise judge submission progress monitor.
+    - Audience second-screen controls and approved-score publication.
+    - Navigation link to return to Assigned Panels.
     """
     championship = get_active_championship(request)
-    panels = JudgePanel.objects.filter(championship=championship, is_active=True).select_related('event_config', 'age_category')
+    panels = JudgePanel.objects.filter(championship=championship, is_active=True).select_related('event_config', 'age_category', 'stage_manager')
     panel_id = request.GET.get('panel_id')
-    current_panel = panels.filter(id=panel_id).first() if panel_id else panels.first()
-
-    # Active batch on stage
-    active_batch = StageBatch.objects.filter(panel=current_panel, status__in=['ACTIVE', 'SUBMITTED']).first() if current_panel else None
     
-    # Ready entries in roll
-    roll = MasterRoll.objects.filter(championship=championship, is_locked=True).first()
-    queued_entries = EventEntry.objects.filter(
-        registration__championship=championship,
-        registration__status=RegistrationStatus.VENUE_CLEARED
-    )[:10]
+    # Prioritize user's own assigned panel if judge
+    user_panels = panels.filter(stage_manager=request.user)
+    if panel_id:
+        current_panel = panels.filter(id=panel_id).first()
+    elif user_panels.exists():
+        current_panel = user_panels.first()
+    else:
+        current_panel = panels.first()
+
+    if not current_panel:
+        messages.info(request, "No active panels configured for this championship yet.")
+        return redirect('judge_portal')
+
+    # Security check: If user is pure Stage Manager judge (not admin/CD), ensure panel is assigned to them
+    if not request.user.is_superuser and not ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists():
+        if current_panel.stage_manager != request.user and user_panels.exists():
+            current_panel = user_panels.first()
+
+    # Active batch on stage for this specific panel
+    active_batch = StageBatch.objects.filter(panel=current_panel, status='ACTIVE').first()
+    
+    # Find or auto-initialize MasterRoll for current_panel
+    roll = MasterRoll.objects.filter(
+        championship=championship,
+        event_config=current_panel.event_config,
+        age_category=current_panel.age_category,
+        gender=current_panel.gender,
+        round_type=current_panel.round_type
+    ).order_by('-version').first()
+
+    if not roll:
+        candidates = EventEntry.objects.filter(
+            registration__championship=championship,
+            event_config=current_panel.event_config,
+            age_category=current_panel.age_category,
+            gender=current_panel.gender,
+            registration__venue_cleared=True
+        ).order_by('id')
+        if not candidates.exists():
+            candidates = EventEntry.objects.filter(
+                registration__championship=championship,
+                event_config=current_panel.event_config,
+                age_category=current_panel.age_category,
+                gender=current_panel.gender
+            ).order_by('id')
+
+        roll = MasterRoll.objects.create(
+            championship=championship,
+            event_config=current_panel.event_config,
+            age_category=current_panel.age_category,
+            gender=current_panel.gender,
+            round_type=current_panel.round_type,
+            version=current_panel.version,
+            is_locked=True,
+            locked_by=request.user
+        )
+        MasterRollEntry.objects.bulk_create([
+            MasterRollEntry(
+                master_roll=roll,
+                event_entry=c,
+                performance_order=idx,
+                attendance_status='PRESENT'
+            )
+            for idx, c in enumerate(candidates, start=1)
+        ])
+
+    roll_entries = roll.roll_entries.select_related(
+        'event_entry__registration__athlete',
+        'event_entry__partner_athlete',
+        'disqualified_by'
+    ).order_by('performance_order')
+
+    # Calculate batch limits according to COP sporting rules
+    ev_type = current_panel.event_config.event_type if current_panel.event_config else 'TRADITIONAL'
+    round_type = current_panel.round_type
+    if ev_type == 'TRADITIONAL':
+        max_batch_size = 3 if round_type == 'FINAL' else 5
+        batch_limit_text = "Final: maximum 3 simultaneous athletes." if round_type == 'FINAL' else "Preliminary: maximum 5 simultaneous athletes."
+    elif ev_type == 'ARTISTIC_SINGLE':
+        max_batch_size = 1
+        batch_limit_text = "Artistic Single: 1 athlete per performance."
+    else:
+        max_batch_size = 1  # 1 pair
+        batch_limit_text = "Artistic/Rhythmic Pair: 1 pair per performance."
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'push_batch':
+        redirect_url = f"/competition/stage/?panel_id={current_panel.id}"
+
+        # 1. Update operational attendance / disqualification status
+        if action == 'update_entry_status':
+            entry_id = request.POST.get('roll_entry_id')
+            new_status = request.POST.get('status')
+            roll_entry = get_object_or_404(MasterRollEntry, id=entry_id, master_roll__championship=championship)
+
+            if new_status == 'DISQUALIFIED':
+                reason = request.POST.get('disqualification_reason', '').strip()
+                dq_type = request.POST.get('dq_type', 'OPERATIONAL')
+                authorizer = request.POST.get('dq_authorized_by', '').strip()
+                if not reason:
+                    messages.error(request, "Disqualification requires a recorded reason.")
+                    return redirect(redirect_url)
+
+                roll_entry.attendance_status = 'DISQUALIFIED'
+                roll_entry.disqualification_reason = reason
+                roll_entry.dq_type = dq_type
+                roll_entry.dq_authorized_by = authorizer
+                roll_entry.disqualified_by = request.user
+                roll_entry.disqualified_at = timezone.now()
+                roll_entry.save()
+
+                AuditLog.log(
+                    action="DISQUALIFY_ENTRY",
+                    resource_type="MasterRollEntry",
+                    resource_id=str(roll_entry.id),
+                    details={
+                        "chest_number": roll_entry.event_entry.chest_number,
+                        "dq_type": dq_type,
+                        "authorizer": authorizer or "Stage Manager",
+                        "reason": reason,
+                    },
+                    user=request.user
+                )
+                messages.warning(request, f"Entry #{roll_entry.event_entry.chest_number} marked DISQUALIFIED: {reason}")
+                return redirect(redirect_url)
+
+            elif new_status == 'RESUME':
+                if roll_entry.attendance_status == 'DISQUALIFIED':
+                    messages.error(request, "Disqualified entries cannot be resumed through ordinary queue controls.")
+                    return redirect(redirect_url)
+                roll_entry.attendance_status = 'PRESENT'
+                roll_entry.save(update_fields=['attendance_status'])
+                messages.success(request, f"Entry #{roll_entry.event_entry.chest_number} resumed to Present.")
+                return redirect(redirect_url)
+
+            elif new_status in ['PRESENT', 'ABSENT', 'HOLD']:
+                if roll_entry.attendance_status == 'DISQUALIFIED':
+                    messages.error(request, "Disqualified entries cannot be changed through ordinary status controls.")
+                    return redirect(redirect_url)
+                roll_entry.attendance_status = new_status
+                roll_entry.save(update_fields=['attendance_status'])
+                messages.info(request, f"Entry #{roll_entry.event_entry.chest_number} status set to {new_status}.")
+                return redirect(redirect_url)
+
+        # 2. Push eligible batch to judges
+        elif action == 'push_batch':
             selected_entry_ids = request.POST.getlist('entry_ids')
             if not selected_entry_ids:
-                messages.error(request, "Please select at least 1 athlete to push to stage.")
-                return redirect('stage_manager')
-            
-            # Traditional earlier rounds permit 1 to 5; Finals permit max 3
-            if len(selected_entry_ids) > 5:
-                messages.error(request, "Cannot push more than 5 simultaneous athletes on stage!")
-                return redirect('stage_manager')
+                messages.error(request, "Please select at least 1 Present athlete to push to stage.")
+                return redirect(redirect_url)
 
-            # Create new batch
+            # Enforce batch limit
+            if len(selected_entry_ids) > max_batch_size:
+                messages.error(request, f"Cannot push more than {max_batch_size} athletes. {batch_limit_text}")
+                return redirect(redirect_url)
+
+            # Ensure all selected are PRESENT and not Disqualified or Completed
+            invalid_entries = roll_entries.filter(event_entry_id__in=selected_entry_ids).exclude(attendance_status='PRESENT')
+            if invalid_entries.exists():
+                names = [e.event_entry.display_names for e in invalid_entries]
+                messages.error(request, f"Cannot push: The following athletes are not in Present status: {', '.join(names)}")
+                return redirect(redirect_url)
+
+            # Retire any previous ACTIVE batch on this panel
+            StageBatch.objects.filter(panel=current_panel, status='ACTIVE').update(status='COMPLETED')
+
+            # Create new active batch
             batch_num = (StageBatch.objects.filter(panel=current_panel).count() + 1)
             batch = StageBatch.objects.create(
                 panel=current_panel,
@@ -907,30 +1054,126 @@ def stage_manager(request):
             entries = EventEntry.objects.filter(id__in=selected_entry_ids)
             batch.entries.set(entries)
 
-            # Create performance records
+            # Create or bind Performance records
             for e in entries:
-                Performance.objects.get_or_create(
+                perf, _ = Performance.objects.get_or_create(
                     event_entry=e,
                     round_type=current_panel.round_type,
                     defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
                 )
+                perf.batch = batch
+                perf.status = PerformanceStatus.IN_PROGRESS
+                perf.save(update_fields=['batch', 'status'])
 
-            messages.success(request, f"Batch #{batch_num} pushed to judges scoring desks!")
-            return redirect('stage_manager')
+            AuditLog.log(
+                action="STAGE_PUSH_BATCH",
+                resource_type="StageBatch",
+                resource_id=str(batch.id),
+                details={
+                    "batch_number": batch_num,
+                    "panel_id": current_panel.id,
+                    "stage_name": current_panel.stage_name,
+                    "athletes_count": len(entries),
+                    "chest_numbers": [e.chest_number for e in entries],
+                },
+                user=request.user
+            )
+            messages.success(request, f"Batch #{batch_num} pushed to all assigned judges! Scoring desks are now open.")
+            return redirect(redirect_url)
 
-        elif action == 'next_asana':
-            if active_batch and active_batch.current_asana_index < 7:
-                active_batch.current_asana_index += 1
-                active_batch.save()
-                messages.info(request, f"Advanced to Asana #{active_batch.current_asana_index}")
-            return redirect('stage_manager')
+        # 3. Publish approved scores
+        elif action == 'publish_batch':
+            if active_batch:
+                perfs = Performance.objects.filter(batch=active_batch)
+                for p in perfs:
+                    p.status = PerformanceStatus.PROVISIONAL_RELEASED
+                    p.chief_approved_by = current_panel.chief_judge or request.user
+                    p.chief_approved_at = timezone.now()
+                    p.save(update_fields=['status', 'chief_approved_by', 'chief_approved_at'])
+
+                # Mark master roll entries as COMPLETED
+                MasterRollEntry.objects.filter(master_roll=roll, event_entry__in=active_batch.entries.all()).update(attendance_status='COMPLETED')
+
+                active_batch.status = 'COMPLETED'
+                active_batch.save(update_fields=['status'])
+                messages.success(request, f"Provisional scores officially released and published for Batch #{active_batch.batch_number}!")
+            return redirect(redirect_url)
+
+    # Calculate real-time judge submission progress for active_batch
+    judge_progress_list = []
+    total_required_items = 7 if ev_type == 'TRADITIONAL' else 10
+    batch_entries_count = active_batch.entries.count() if active_batch else 0
+
+    if active_batch:
+        seat_definitions = [
+            ('Chief Judge', current_panel.chief_judge, 'CHIEF_JUDGE'),
+            ('D1 Judge', current_panel.d1_judge, 'D1_JUDGE'),
+            ('D2 Judge', current_panel.d2_judge, 'D2_JUDGE'),
+            ('D3 Judge', current_panel.d3_judge, 'D3_JUDGE'),
+            ('D4 Judge', current_panel.d4_judge, 'D4_JUDGE'),
+            ('Time Judge', current_panel.time_judge, 'TIME_JUDGE'),
+            ('Evaluator', current_panel.evaluator, 'EVALUATOR'),
+        ]
+        if current_panel.artistry_judge:
+            seat_definitions.append(('Artistry Judge', current_panel.artistry_judge, 'ARTISTRY_JUDGE'))
+
+        for seat_title, judge_user, role_code in seat_definitions:
+            if not judge_user:
+                judge_progress_list.append({
+                    'seat': seat_title,
+                    'judge_name': 'Unassigned',
+                    'status': 'Not Assigned',
+                    'badge_class': 'bg-slate-100 text-slate-500',
+                    'items_done': 0,
+                    'is_complete': False
+                })
+                continue
+
+            subs = JudgeSubmission.objects.filter(performance__batch=active_batch, judge_role=role_code)
+            all_submitted = subs.exists() and all(s.is_submitted for s in subs)
+            
+            # Count how many individual asana items submitted across the batch
+            items_submitted = AsanaScoreItem.objects.filter(
+                submission__in=subs,
+                is_submitted=True
+            ).count()
+            
+            # Normalize per athlete
+            items_per_athlete = (items_submitted // batch_entries_count) if batch_entries_count > 0 else 0
+
+            if all_submitted:
+                status_desc = f"{total_required_items} of {total_required_items} items (Submitted)"
+                badge_class = "bg-emerald-100 text-emerald-800"
+                is_complete = True
+            elif items_per_athlete > 0:
+                status_desc = f"{items_per_athlete} of {total_required_items} items submitted"
+                badge_class = "bg-blue-100 text-blue-800"
+                is_complete = False
+            else:
+                status_desc = "Waiting for Input"
+                badge_class = "bg-amber-100 text-amber-800"
+                is_complete = False
+
+            judge_progress_list.append({
+                'seat': seat_title,
+                'judge_name': judge_user.full_name or judge_user.email,
+                'status': status_desc,
+                'badge_class': badge_class,
+                'items_done': items_per_athlete,
+                'is_complete': is_complete
+            })
 
     return render(request, 'competition/stage_manager.html', {
         'championship': championship,
         'panels': panels,
         'current_panel': current_panel,
         'active_batch': active_batch,
-        'queued_entries': queued_entries,
+        'roll': roll,
+        'roll_entries': roll_entries,
+        'max_batch_size': max_batch_size,
+        'batch_limit_text': batch_limit_text,
+        'judge_progress_list': judge_progress_list,
+        'total_required_items': total_required_items,
     })
 
 def second_screen(request):

@@ -26,6 +26,9 @@ def get_judge_assignment_info(panel, user):
     if panel.chief_judge_id == user.id:
         seat = 'Chief Judge'
         url_name = 'scoring_chief_judge'
+    elif panel.stage_manager_id == user.id:
+        seat = 'Stage Manager'
+        url_name = 'stage_manager'
     elif panel.evaluator_id == user.id or panel.evaluator_2_id == user.id:
         seat = 'Evaluator'
         url_name = 'scoring_evaluator'
@@ -48,7 +51,9 @@ def get_judge_assignment_info(panel, user):
         seat_assign = panel.seat_assignments.filter(judge=user, is_active=True).first()
         if seat_assign:
             seat = seat_assign.get_seat_display()
-            if 'TIME' in seat_assign.seat:
+            if 'STAGE' in seat_assign.seat:
+                url_name = 'stage_manager'
+            elif 'TIME' in seat_assign.seat:
                 url_name = 'scoring_traditional_time' if ev_type == 'TRADITIONAL' else 'scoring_music_time'
             elif 'ARTISTRY' in seat_assign.seat:
                 url_name = 'scoring_artistry'
@@ -79,6 +84,7 @@ def models_q_for_judge(user):
         Q(artistry_judge=user) | Q(artistry_judge_2=user) |
         Q(evaluator=user) | Q(evaluator_2=user) |
         Q(chief_judge=user) |
+        Q(stage_manager=user) |
         Q(seat_assignments__judge=user, seat_assignments__is_active=True)
     )
 
@@ -150,7 +156,7 @@ def judge_portal(request):
                 defaults={
                     'district': getattr(request.user, 'district', 'Hyderabad') or 'Hyderabad',
                     'approval_status': ApprovalStatus.PENDING,
-                    'certification_level': CertificationLevel.STATE_LEVEL,
+                    'certification_level': CertificationLevel.STATE,
                 }
             )
         else:
