@@ -4,8 +4,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
+from django.core.paginator import Paginator
+from django.views.decorators.cache import never_cache
+from django.http import JsonResponse, HttpResponseForbidden
+from django.contrib.auth import update_session_auth_hash
+from audit.models import AuditLog
 from config.districts import TELANGANA_DISTRICTS
-from .models import UniversalJudge, CertificationLevel, ApprovalStatus
+from .models import (
+    UniversalJudge, CertificationLevel, ApprovalStatus,
+    JudgeCredential, CredentialSetupStatus, DeliveryStatus
+)
+from .crypto import decrypt_temp_password, generate_judge_temp_password, encrypt_temp_password
 from accounts.models import ScopedRole, RoleChoices
 from accounts.permissions import admin_required, get_user_roles_for_request, get_active_championship
 from competition.models import JudgePanel
@@ -50,17 +59,35 @@ def get_judge_assignment_info(panel, user):
         # Check PanelSeatAssignment
         seat_assign = panel.seat_assignments.filter(judge=user, is_active=True).first()
         if seat_assign:
-            seat = seat_assign.get_seat_display()
-            if 'STAGE' in seat_assign.seat:
+            s_code = (seat_assign.seat_name or '').upper()
+            if 'D1' in s_code:
+                seat = 'D1 Judge'
+            elif 'D2' in s_code:
+                seat = 'D2 Judge'
+            elif 'D3' in s_code:
+                seat = 'D3 Judge'
+            elif 'D4' in s_code:
+                seat = 'D4 Judge'
+            elif 'STAGE' in s_code:
+                seat = 'Stage Manager'
                 url_name = 'stage_manager'
-            elif 'TIME' in seat_assign.seat:
+            elif 'TIME' in s_code:
+                seat = 'Time Judge'
                 url_name = 'scoring_traditional_time' if ev_type == 'TRADITIONAL' else 'scoring_music_time'
-            elif 'ARTISTRY' in seat_assign.seat:
+            elif 'ARTISTRY' in s_code:
+                seat = 'Artistry Judge'
                 url_name = 'scoring_artistry'
-            elif 'EVALUATOR' in seat_assign.seat:
+            elif 'EVALUATOR' in s_code:
+                seat = 'Evaluator'
                 url_name = 'scoring_evaluator'
-            elif 'CHIEF' in seat_assign.seat:
+            elif 'CHIEF' in s_code:
+                seat = 'Chief Judge'
                 url_name = 'scoring_chief_judge'
+            elif 'JURY' in s_code:
+                seat = 'Jury Member'
+                url_name = 'jury_view'
+            else:
+                seat = s_code.replace('_', ' ').title()
                 
     if seat and not url_name:
         # D Judge
@@ -258,8 +285,27 @@ def judge_approval_queue(request):
         if decision == 'approve':
             judge.approval_status = ApprovalStatus.APPROVED
             judge.approved_by = request.user
+            judge.approved_at = timezone.now()
             judge.save()
-            messages.success(request, f"Universal Judge {judge.user.full_name or judge.user.email} officially approved and accredited.")
+
+            # Ensure initial credentials generated if not already set (preserve existing working passwords)
+            cred, created = JudgeCredential.objects.get_or_create(judge=judge)
+            if created or (cred.must_change_password and not cred.encrypted_temp_password):
+                cred.generate_new_temporary_password(admin_user=request.user)
+                AuditLog.log(
+                    action="GENERATE_INITIAL_JUDGE_CREDENTIALS",
+                    resource_type="JudgeCredential",
+                    resource_id=str(cred.id),
+                    details={
+                        "judge_name": judge.user.full_name or judge.user.email,
+                        "judge_email": judge.user.email,
+                        "judge_id": judge.judge_code,
+                        "actor": request.user.email,
+                    },
+                    user=request.user
+                )
+
+            messages.success(request, f"Universal Judge {judge.user.full_name or judge.user.email} officially approved and accredited. Initial credentials generated.")
         elif decision == 'reject':
             judge.approval_status = ApprovalStatus.REJECTED
             judge.save()
@@ -332,3 +378,258 @@ def judge_id_cards_batch_print(request):
         'print_status': print_status,
         'total_count': judges_qs.count(),
     })
+
+
+@admin_required
+def judge_credentials_admin(request):
+    """
+    Central Admin-only Judge Login Credentials Module:
+    Shows Universal Judges with login email, approval status,
+    setup status (Temporary Password Active, Password Set by Judge, Expired),
+    expiry countdown, masked temporary password with authorized Reveal/Copy controls,
+    delivery tracking, and Regenerate Password actions.
+    """
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    delivery_filter = request.GET.get('delivery', '').strip()
+    district_filter = request.GET.get('district', '').strip()
+
+    judges_qs = UniversalJudge.objects.select_related('user', 'credential').all().order_by('-id')
+
+    if q:
+        raw_num = q.replace('TYSA-JDG-', '').replace('tysa-jdg-', '').lstrip('0')
+        q_filter = Q(user__full_name__icontains=q) | Q(user__email__icontains=q) | Q(district__icontains=q) | Q(certificate_number__icontains=q)
+        if raw_num.isdigit():
+            q_filter |= Q(id=int(raw_num))
+        judges_qs = judges_qs.filter(q_filter)
+
+    if district_filter:
+        judges_qs = judges_qs.filter(district=district_filter)
+
+    total_count = judges_qs.count()
+    temp_active_count = 0
+    password_set_count = 0
+    expired_count = 0
+    pending_delivery_count = 0
+
+    judge_list = []
+    for j in judges_qs:
+        cred = getattr(j, 'credential', None)
+        if not cred:
+            cred, _ = JudgeCredential.objects.get_or_create(
+                judge=j,
+                defaults={
+                    'must_change_password': False if j.user.has_usable_password() else True,
+                    'password_changed_at': timezone.now() if j.user.has_usable_password() else None,
+                    'delivery_status': DeliveryStatus.ACKNOWLEDGED if j.user.has_usable_password() else DeliveryStatus.PENDING,
+                }
+            )
+
+        setup_st = cred.setup_status
+        if setup_st == CredentialSetupStatus.TEMPORARY_ACTIVE:
+            temp_active_count += 1
+        elif setup_st == CredentialSetupStatus.PASSWORD_SET:
+            password_set_count += 1
+        elif setup_st == CredentialSetupStatus.EXPIRED:
+            expired_count += 1
+
+        if cred.delivery_status == DeliveryStatus.PENDING:
+            pending_delivery_count += 1
+
+        # Status filter
+        if status_filter and setup_st != status_filter:
+            continue
+        # Delivery filter
+        if delivery_filter and cred.delivery_status != delivery_filter:
+            continue
+
+        judge_list.append({
+            'judge': j,
+            'credential': cred,
+            'setup_status': setup_st,
+            'setup_status_display': cred.setup_status_display,
+            'is_expired': cred.is_expired,
+            'can_reveal': True,
+        })
+
+    paginator = Paginator(judge_list, 15)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'judges/credentials_admin.html', {
+        'page_obj': page_obj,
+        'q': q,
+        'status_filter': status_filter,
+        'delivery_filter': delivery_filter,
+        'district_filter': district_filter,
+        'districts': TELANGANA_DISTRICTS,
+        'status_choices': CredentialSetupStatus.choices,
+        'delivery_choices': DeliveryStatus.choices,
+        'total_count': total_count,
+        'filtered_count': len(judge_list),
+        'temp_active_count': temp_active_count,
+        'password_set_count': password_set_count,
+        'expired_count': expired_count,
+        'pending_delivery_count': pending_delivery_count,
+    })
+
+
+@never_cache
+@admin_required
+def judge_credential_reveal(request, judge_id):
+    """
+    Secure endpoint for authorized System Admins to reveal a temporary password.
+    Requires recent admin authentication. Decrypts authenticated Fernet token.
+    Never caches sensitive response. Records audit trail without the secret.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    judge = get_object_or_404(UniversalJudge, id=judge_id)
+    cred, _ = JudgeCredential.objects.get_or_create(judge=judge)
+    if not cred.encrypted_temp_password:
+        if judge.user.check_password('judge123'):
+            cred.encrypted_temp_password = encrypt_temp_password('judge123')
+            cred.must_change_password = False
+            cred.save()
+        elif judge.user.check_password('admin123'):
+            cred.encrypted_temp_password = encrypt_temp_password('admin123')
+            cred.must_change_password = False
+            cred.save()
+        else:
+            cred.generate_new_temporary_password(admin_user=request.user)
+
+    # Re-authentication check: verified within 15 mins or verify admin_password
+    admin_auth_until = request.session.get('admin_credential_auth_until', 0)
+    now_ts = timezone.now().timestamp()
+
+    if admin_auth_until < now_ts:
+        admin_pwd = request.POST.get('admin_password', '').strip()
+        if not admin_pwd or not request.user.check_password(admin_pwd):
+            return JsonResponse({
+                'error': 'Administrator verification required. Please enter your valid admin password to reveal credentials.',
+                'requires_auth': True
+            }, status=403)
+        # Authorize admin session for 15 minutes
+        request.session['admin_credential_auth_until'] = now_ts + 900
+
+    # Decrypt temporary password
+    decrypted = decrypt_temp_password(cred.encrypted_temp_password)
+    if not decrypted:
+        return JsonResponse({'error': 'Failed to decrypt credential. The token may be corrupted.'}, status=500)
+
+    cred.last_revealed_at = timezone.now()
+    cred.last_revealed_by = request.user
+    cred.save(update_fields=['last_revealed_at', 'last_revealed_by'])
+
+    AuditLog.log(
+        action="REVEAL_JUDGE_TEMPORARY_PASSWORD",
+        resource_type="JudgeCredential",
+        resource_id=str(cred.id),
+        details={
+            "judge_name": judge.user.full_name or judge.user.email,
+            "judge_email": judge.user.email,
+            "judge_id": judge.judge_code,
+            "revealed_by": request.user.email,
+        },
+        user=request.user
+    )
+
+    response = JsonResponse({
+        'success': True,
+        'judge_id': judge.id,
+        'judge_name': judge.user.full_name or judge.user.email,
+        'judge_email': judge.user.email,
+        'temp_password': decrypted,
+        'expires_at': cred.temp_password_expires_at.strftime('%d %b %Y, %H:%M') if cred.temp_password_expires_at else 'No expiry set',
+    })
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+
+@admin_required
+def judge_credential_reset(request, judge_id):
+    """
+    Generates a new unique temporary password for a judge official.
+    Terminates their existing sessions, sets must_change_password=True,
+    and logs the reset action in AuditLog without revealing the secret.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    judge = get_object_or_404(UniversalJudge, id=judge_id)
+    cred, _ = JudgeCredential.objects.get_or_create(judge=judge)
+
+    new_plain_pwd = cred.generate_new_temporary_password(admin_user=request.user)
+
+    AuditLog.log(
+        action="REGENERATE_JUDGE_TEMPORARY_PASSWORD",
+        resource_type="JudgeCredential",
+        resource_id=str(cred.id),
+        details={
+            "judge_name": judge.user.full_name or judge.user.email,
+            "judge_email": judge.user.email,
+            "judge_id": judge.judge_code,
+            "reset_by": request.user.email,
+        },
+        user=request.user
+    )
+
+    messages.success(
+        request,
+        f"Fresh temporary password generated for {judge.user.full_name or judge.user.email}. Previous sessions revoked."
+    )
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'message': f"New temporary password generated for {judge.user.full_name or judge.user.email}."
+        })
+
+    return redirect('judge_credentials_admin')
+
+
+@admin_required
+def judge_credential_delivery(request, judge_id):
+    """
+    Updates the delivery/acknowledgement tracking status for a judge official's credentials.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    judge = get_object_or_404(UniversalJudge, id=judge_id)
+    cred = get_object_or_404(JudgeCredential, judge=judge)
+    new_delivery = request.POST.get('delivery_status')
+
+    if new_delivery in [DeliveryStatus.PENDING, DeliveryStatus.DELIVERED, DeliveryStatus.ACKNOWLEDGED]:
+        cred.delivery_status = new_delivery
+        if new_delivery in [DeliveryStatus.DELIVERED, DeliveryStatus.ACKNOWLEDGED]:
+            cred.delivered_at = timezone.now()
+            cred.delivered_by = request.user
+        cred.save(update_fields=['delivery_status', 'delivered_at', 'delivered_by'])
+
+        AuditLog.log(
+            action="UPDATE_JUDGE_CREDENTIAL_DELIVERY",
+            resource_type="JudgeCredential",
+            resource_id=str(cred.id),
+            details={
+                "judge_email": judge.user.email,
+                "delivery_status": new_delivery,
+                "updated_by": request.user.email,
+            },
+            user=request.user
+        )
+        messages.success(request, f"Updated delivery status to '{cred.get_delivery_status_display()}' for {judge.user.full_name or judge.user.email}.")
+
+    return redirect('judge_credentials_admin')
+
+
+@login_required
+def judge_change_password(request):
+    """
+    Judges do not set their own passwords. All credentials are provided directly by administration.
+    """
+    messages.info(request, "Official credentials are provided directly by administration. Personal password modification is disabled.")
+    return redirect('judge_portal')

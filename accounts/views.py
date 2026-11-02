@@ -46,8 +46,20 @@ def login_view(request):
         return redirect(landing)
 
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
+        login_input = (request.POST.get('email') or request.POST.get('username') or '').strip()
         password = request.POST.get('password', '')
+
+        # Resolve email if user entered username or shorthand
+        email = login_input
+        if email and '@' not in email:
+            candidate = User.objects.filter(email__iexact=f"{email}@tysa.org").first()
+            if candidate:
+                email = candidate.email
+            else:
+                candidate = User.objects.filter(email__istartswith=email).first()
+                if candidate:
+                    email = candidate.email
+
         user = authenticate(request, email=email, password=password)
         if user is not None:
             if not user.is_active:

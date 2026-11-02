@@ -164,8 +164,8 @@
                     <form method="POST" action="{% url 'login' %}" class="space-y-4">
                         {% csrf_token %}
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Email address</label>
-                            <input type="email" name="email" required placeholder="Enter your email" 
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Email address or Username</label>
+                            <input type="text" name="email" required placeholder="Enter email or username (e.g. stage@tysa.org or d1@tysa.org)" 
                                 class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-lg focus:border-[#00838f] focus:ring-1 focus:ring-[#00838f] outline-none transition text-slate-800 placeholder-slate-400">
                         </div>
 

@@ -238,6 +238,8 @@ def scoring_traditional_d(request):
                 sub.is_locked = True
                 sub.submitted_at = timezone.now()
                 sub.save()
+                if sub.performance:
+                    calculate_performance_score(sub.performance)
 
             messages.success(request, f"Official {seat_label} score sheet finalized and locked for all athletes in Batch #{batch.batch_number}!")
             return redirect('judge_portal')
@@ -418,6 +420,8 @@ def scoring_traditional_d_final(request):
                     sub.is_locked = True
                     sub.submitted_at = timezone.now()
                     sub.save()
+                    if sub.performance:
+                        calculate_performance_score(sub.performance)
 
             messages.success(request, f"Traditional Final {seat_label} score sheet finalized and locked for all athletes in Batch #{batch.batch_number}!")
             return redirect('judge_portal')
@@ -504,6 +508,8 @@ def scoring_artistic_single_d(request):
             sub.is_locked = True
             sub.submitted_at = datetime.datetime.now()
             sub.save()
+            if sub.performance:
+                calculate_performance_score(sub.performance)
             messages.success(request, f"Artistic Single D scores submitted and locked! Total: {total:.3f}")
             return redirect('judge_portal')
         else:
@@ -595,6 +601,8 @@ def scoring_artistic_pair_d(request):
             sub.is_locked = True
             sub.submitted_at = datetime.datetime.now()
             sub.save()
+            if sub.performance:
+                calculate_performance_score(sub.performance)
             messages.success(request, f"Artistic Pair D marks submitted and locked! Total: {total:.3f}")
             return redirect('judge_portal')
         else:
@@ -680,6 +688,8 @@ def scoring_rhythmic_pair_d(request):
             sub.is_locked = True
             sub.submitted_at = datetime.datetime.now()
             sub.save()
+            if sub.performance:
+                calculate_performance_score(sub.performance)
             messages.success(request, f"Rhythmic Pair D marks submitted and locked! Total: {total:.3f}")
             return redirect('judge_portal')
         else:
@@ -751,6 +761,8 @@ def scoring_traditional_time(request):
                 sub.raw_total = total
                 sub.effective_total = total
                 sub.save()
+                if sub.performance:
+                    calculate_performance_score(sub.performance)
             messages.success(request, "Traditional Time scores submitted and locked for batch!")
             return redirect('judge_portal')
         else:
@@ -812,6 +824,8 @@ def scoring_music_time(request):
             sub.is_locked = True
             sub.submitted_at = datetime.datetime.now()
             sub.save()
+            if sub.performance:
+                calculate_performance_score(sub.performance)
             messages.success(request, f"Music timing submitted! Duration: {routine_duration}s, Timing Score: {timing_score:.2f}")
             return redirect('judge_portal')
         else:
@@ -887,6 +901,8 @@ def scoring_artistry(request):
             sub.is_locked = True
             sub.submitted_at = datetime.datetime.now()
             sub.save()
+            if sub.performance:
+                calculate_performance_score(sub.performance)
             messages.success(request, f"Artistry scores submitted and locked! Total: {total:.2f}")
             return redirect('judge_portal')
         else:
@@ -970,6 +986,8 @@ def scoring_evaluator(request):
             sub.is_locked = True
             sub.submitted_at = datetime.datetime.now()
             sub.save()
+            if sub.performance:
+                calculate_performance_score(sub.performance)
             messages.success(request, f"Evaluator sheet submitted and locked! Invalid items flagged: {invalid_count}")
             return redirect('judge_portal')
         else:

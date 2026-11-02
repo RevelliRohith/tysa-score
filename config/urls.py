@@ -73,6 +73,11 @@ urlpatterns = [
     path('judges/id-cards/batch/', judge_views.judge_id_cards_batch_print, name='judge_id_cards_batch_print'),
     path('judges/id-cards/batch/print/', judge_views.judge_id_cards_batch_print, name='judge_id_cards_batch'),
     path('judges/approval-queue/', judge_views.judge_approval_queue, name='judge_approval_queue'),
+    path('judges/credentials/', judge_views.judge_credentials_admin, name='judge_credentials_admin'),
+    path('judges/credentials/<int:judge_id>/reveal/', judge_views.judge_credential_reveal, name='judge_credential_reveal'),
+    path('judges/credentials/<int:judge_id>/reset/', judge_views.judge_credential_reset, name='judge_credential_reset'),
+    path('judges/credentials/<int:judge_id>/delivery/', judge_views.judge_credential_delivery, name='judge_credential_delivery'),
+    path('judges/set-password/', judge_views.judge_change_password, name='judge_change_password'),
 
     # District & Venue
     path('district/approvals/', reg_views.district_approvals, name='district_approvals'),

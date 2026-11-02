@@ -154,6 +154,10 @@ def resubmit_judge_correction(user, grant_id, championship):
         grant.resubmitted_at = now
         grant.save(update_fields=['status', 'resubmitted_at'])
 
+        # Recalculate performance with authoritative calculation engine
+        from scoring.services import recalculate_performance_after_correction
+        recalculate_performance_after_correction(grant.performance)
+
         return grant, sub
 
 def finalize_performance_by_cd(user, performance_id, championship):
@@ -199,10 +203,11 @@ def finalize_performance_by_cd(user, performance_id, championship):
         perf.cd_finalized_by = user
         perf.cd_finalized_at = now
 
-        # Calculate final score if not yet set
-        if perf.final_score is None:
-            perf.final_score = perf.provisional_score or Decimal('0.000')
+        # Recalculate with authoritative scoring calculation engine
+        from scoring.services import recalculate_performance_after_correction
+        recalc_res = recalculate_performance_after_correction(perf)
+        perf.final_score = recalc_res.get('final_total', perf.provisional_score or Decimal('0.000'))
 
-        perf.save(update_fields=['status', 'cd_finalized_by', 'cd_finalized_at', 'final_score'])
+        perf.save(update_fields=['status', 'cd_finalized_by', 'cd_finalized_at', 'final_score', 'calculation_data'])
 
         return perf
