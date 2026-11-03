@@ -164,6 +164,125 @@
         </div>
     </div>
 
+
+    <!-- Active Panel Officials & Credentials (CD Direct Access Desk) -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                    <i data-lucide="key" class="w-3 h-3 text-teal-600"></i> CD Judicial Credentials Desk
+                </div>
+                <h2 class="text-base font-black text-slate-900 mt-1">Active Panels & Officials Login Passwords</h2>
+                <p class="text-xs text-slate-500">Live passwords for all assigned judging officials across current championship panels. CD can copy or distribute credentials directly.</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" 
+                        onclick="copyAllChampionshipCredentials(this)" 
+                        class="px-3.5 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-1.5"
+                        id="masterCopyBtn">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span>Copy All Officials Credentials</span>
+                </button>
+                <a href="{% url 'judge_credentials_admin' %}" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 border border-slate-200">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-slate-600"></i>
+                    <span>Central Credentials Desk</span>
+                </a>
+                <a href="{% url 'panel_assignments' %}" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-900 text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 border border-teal-200">
+                    <i data-lucide="users-round" class="w-3.5 h-3.5 text-teal-700"></i>
+                    <span>Configure Panels</span>
+                </a>
+            </div>
+        </div>
+
+        {% if active_panels_with_creds %}
+        <!-- Search & Filter Bar -->
+        <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
+            <input type="text" 
+                   id="panelCredSearch" 
+                   onkeyup="filterPanelCredentials()" 
+                   placeholder="Filter by event name, judge name, email, district, or role..." 
+                   class="bg-transparent text-xs w-full focus:outline-hidden text-slate-800 placeholder-slate-400">
+            <span class="text-[11px] font-bold text-slate-500 shrink-0 px-2 py-0.5 rounded-md bg-white border border-slate-200" id="panelCredCount">
+                {{ active_panels_with_creds|length }} Panel(s)
+            </span>
+        </div>
+
+        <div class="space-y-4" id="panelsContainer">
+            {% for item in active_panels_with_creds %}
+            <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 hover:bg-slate-50 transition space-y-3 panel-card"
+                 data-panel-text="{{ item.panel.event_config.get_event_type_display|lower }} {{ item.panel.age_category.name|lower }} {{ item.panel.get_gender_display|lower }} {{ item.panel.round_type|lower }} {% for j in item.roster %}{{ j.name|lower }} {{ j.email|lower }} {{ j.seat|lower }} {{ j.district|lower }} {% endfor %}">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-md text-xs font-extrabold bg-[#0d5c58] text-white">
+                            {{ item.panel.event_config.get_event_type_display }}
+                        </span>
+                        <span class="text-xs font-bold text-slate-800">
+                            {{ item.panel.age_category.name }} • {% if item.panel.gender == 'M' %}Male{% else %}Female{% endif %} [{{ item.panel.round_type }}]
+                        </span>
+                        <span class="text-[11px] text-slate-500 font-medium">Stage: {{ item.panel.stage_name }}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                            {{ item.roster|length }} Officials Assigned
+                        </span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" 
+                                onclick="copySinglePanelCredentials('{{ item.panel.event_config.get_event_type_display|escapejs }} ({{ item.panel.age_category.name|escapejs }}, {% if item.panel.gender == 'M' %}Male{% else %}Female{% endif %}, {{ item.panel.round_type|escapejs }})', this)" 
+                                class="px-2.5 py-1 text-[11px] font-bold text-teal-800 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition inline-flex items-center gap-1 panel-copy-btn">
+                            <i data-lucide="copy" class="w-3 h-3"></i>
+                            <span>Copy Panel Credentials</span>
+                        </button>
+                        <a href="{% url 'panel_assignments' %}?event_id={{ item.panel.event_config.id }}&cat_id={{ item.panel.age_category.id }}&gender={{ item.panel.gender }}&round_type={{ item.panel.round_type }}" 
+                           class="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition inline-flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>
+                            <span>Edit</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
+                    {% for judge in item.roster %}
+                    <div class="bg-white rounded-lg border border-slate-200 p-2.5 space-y-1.5 shadow-2xs hover:border-teal-300 transition judge-credential-card"
+                         data-seat="{{ judge.seat }}" 
+                         data-name="{{ judge.name }}" 
+                         data-email="{{ judge.email }}" 
+                         data-district="{{ judge.district }}" 
+                         data-password="{{ judge.password }}">
+                        <div class="flex items-center justify-between text-[10px]">
+                            <span class="font-black uppercase tracking-wider text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">{{ judge.seat }}</span>
+                            <span class="text-slate-400 font-semibold">{{ judge.district }}</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-900 truncate" title="{{ judge.name }}">{{ judge.name }}</div>
+                        <div class="text-[10px] text-slate-500 font-mono truncate select-all">{{ judge.email }}</div>
+                        
+                        <div class="pt-1 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <div class="flex items-center space-x-1 min-w-0">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase">Pass:</span>
+                                <code class="font-mono font-black text-xs text-teal-950 bg-amber-50 px-2 py-0.5 rounded border border-amber-300 select-all truncate">{{ judge.password }}</code>
+                            </div>
+                            <button type="button" 
+                                    onclick="copyJudgePassword('{{ judge.password|escapejs }}', this);" 
+                                    class="p-1 text-slate-400 hover:text-teal-700 hover:bg-slate-100 rounded transition" 
+                                    title="Copy Password">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-8 text-center text-xs text-slate-400 font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            No active panels with assigned judges found. Go to <a href="{% url 'panel_assignments' %}" class="text-teal-700 font-bold underline">Judge Panels</a> to assign officials.
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Operational Shortcuts & Audited Governance Card -->
     <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-4">
         <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">

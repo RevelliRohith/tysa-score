@@ -61,6 +61,41 @@ def cd_dashboard(request):
 
     district_count = championship.district_quotas.count()
 
+    # Build active panels with assigned judge credentials for CD direct access
+    active_panels_with_creds = []
+    for p in panels.select_related('event_config', 'age_category').order_by('event_config__event_type', 'gender', 'round_type', 'id'):
+        seats = [
+            ('Chief Judge', p.chief_judge),
+            ('D1 Judge', p.d1_judge),
+            ('D2 Judge', p.d2_judge),
+            ('D3 Judge', p.d3_judge),
+            ('D4 Judge', p.d4_judge),
+            ('Time Judge', p.time_judge),
+            ('Time Judge 2', p.time_judge_2),
+            ('Evaluator', p.evaluator),
+            ('Evaluator 2', p.evaluator_2),
+            ('Artistry Judge', p.artistry_judge),
+            ('Artistry Judge 2', p.artistry_judge_2),
+            ('Stage Manager', p.stage_manager),
+            ('Jury Member', p.jury_member),
+        ]
+        r_list = []
+        for s_label, u in seats:
+            if u:
+                j_prof = getattr(u, 'judge_profile', None)
+                r_list.append({
+                    'seat': s_label,
+                    'name': u.full_name or u.email,
+                    'email': u.email or u.username,
+                    'district': j_prof.district if j_prof else '',
+                    'password': get_judge_plain_password(u),
+                })
+        if r_list:
+            active_panels_with_creds.append({
+                'panel': p,
+                'roster': r_list
+            })
+
     return render(request, 'competition/cd_dashboard.html', {
         'championship': championship,
         'active_grants': active_grants,
@@ -74,6 +109,7 @@ def cd_dashboard(request):
         'scored_performances': scored_performances,
         'cd_finalized_count': cd_finalized_count,
         'district_count': district_count,
+        'active_panels_with_creds': active_panels_with_creds,
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
@@ -326,6 +362,15 @@ def master_roll(request):
         action = request.POST.get('action')
         
         if action == 'generate_roll':
+            # Authoritative Rule: Every athlete must have a chest number before roll generation
+            from .services import ensure_all_entries_have_chest_numbers
+            ensure_all_entries_have_chest_numbers(
+                championship=championship,
+                event_config=current_event,
+                age_category=current_cat,
+                gender=gender
+            )
+
             if not master_roll:
                 master_roll = MasterRoll.objects.create(
                     championship=championship,
@@ -589,6 +634,26 @@ def get_busy_judge_map(championship, current_panel_id=None):
                 }
     return busy_map
 
+def get_judge_plain_password(user):
+    """
+    Returns the decrypted plain text password for a judge user so CD and Admins
+    can view, verify, and distribute login credentials directly from panel screens.
+    """
+    if not user:
+        return ""
+    prof = getattr(user, 'judge_profile', None)
+    if not prof:
+        return ""
+    cred = getattr(prof, 'credential', None)
+    if not cred or not cred.encrypted_temp_password:
+        return "judge123"
+    try:
+        from judges.crypto import decrypt_temp_password
+        pwd = decrypt_temp_password(cred.encrypted_temp_password)
+        return pwd or "judge123"
+    except Exception:
+        return "judge123"
+
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def panel_assignments(request):
     """
@@ -619,6 +684,15 @@ def panel_assignments(request):
     # Find or auto-create panel for this specific event / category / gender / round
     current_panel = None
     if championship and current_event:
+        # Authoritative Rule: Ensure all registered athletes in this division have chest numbers
+        from .services import ensure_all_entries_have_chest_numbers
+        ensure_all_entries_have_chest_numbers(
+            championship=championship,
+            event_config=current_event,
+            age_category=current_cat,
+            gender=gender
+        )
+
         current_panel, _ = JudgePanel.objects.get_or_create(
             championship=championship,
             event_config=current_event,
@@ -767,7 +841,7 @@ def panel_assignments(request):
             writer.writerow(['Closed At', current_panel.closed_at.strftime('%Y-%m-%d %H:%M')])
             writer.writerow(['Closed By', current_panel.closed_by.full_name if current_panel.closed_by else ''])
         writer.writerow([])
-        writer.writerow(['Seat / Duty', 'Assigned Judge', 'Email', 'District', 'Certification Level'])
+        writer.writerow(['Seat / Duty', 'Assigned Judge', 'Login Email / Username', 'Password', 'District', 'Certification Level'])
         
         seats = [
             ('Chief Judge', current_panel.chief_judge),
@@ -787,15 +861,17 @@ def panel_assignments(request):
         for seat_name, judge_user in seats:
             if judge_user:
                 j_prof = getattr(judge_user, 'judge_profile', None)
+                pwd = get_judge_plain_password(judge_user)
                 writer.writerow([
                     seat_name,
                     judge_user.full_name or judge_user.email,
-                    judge_user.email,
+                    judge_user.email or judge_user.username,
+                    pwd,
                     j_prof.district if j_prof else '',
                     j_prof.get_certification_level_display() if j_prof else ''
                 ])
             else:
-                writer.writerow([seat_name, 'Unassigned', '', '', ''])
+                writer.writerow([seat_name, 'Unassigned', '', '', '', ''])
         return response
 
     busy_map = get_busy_judge_map(championship, current_panel_id=current_panel.id if current_panel else None)
@@ -809,12 +885,14 @@ def panel_assignments(request):
         uid = j.user_id
         is_busy = (uid in busy_map)
         b_info = busy_map.get(uid)
+        pwd = get_judge_plain_password(j.user)
         if is_busy:
             busy_count += 1
             busy_roster.append({
                 'judge': j,
                 'user': j.user,
-                'info': b_info
+                'info': b_info,
+                'password': pwd
             })
         else:
             available_count += 1
@@ -823,8 +901,46 @@ def panel_assignments(request):
             'obj': j,
             'user': j.user,
             'is_busy': is_busy,
-            'busy_info': b_info
+            'busy_info': b_info,
+            'password': pwd,
+            'email': j.user.email or j.user.username,
         })
+
+    # Build active assigned roster with open passwords for CD handover desk
+    assigned_roster = []
+    if current_panel:
+        panel_seat_pairs = [
+            ('Chief Judge', current_panel.chief_judge, 'chief_judge', 'CHIEF'),
+            ('D1 Judge', current_panel.d1_judge, 'd1_judge', 'D1'),
+            ('D2 Judge', current_panel.d2_judge, 'd2_judge', 'D2'),
+            ('D3 Judge', current_panel.d3_judge, 'd3_judge', 'D3'),
+            ('D4 Judge', current_panel.d4_judge, 'd4_judge', 'D4'),
+            ('Time Judge', current_panel.time_judge, 'time_judge', 'TIME_1'),
+            ('Time Judge 2', current_panel.time_judge_2, 'time_judge_2', 'TIME_2'),
+            ('Evaluator', current_panel.evaluator, 'evaluator', 'EVAL_1'),
+            ('Evaluator 2', current_panel.evaluator_2, 'evaluator_2', 'EVAL_2'),
+            ('Artistry Judge', current_panel.artistry_judge, 'artistry_judge', 'ART_1'),
+            ('Artistry Judge 2', current_panel.artistry_judge_2, 'artistry_judge_2', 'ART_2'),
+            ('Stage Manager', current_panel.stage_manager, 'stage_manager', 'STAGE'),
+            ('Jury Member', current_panel.jury_member, 'jury_member', 'JURY'),
+        ]
+        for seat_name, judge_user, field_name, seat_code in panel_seat_pairs:
+            if judge_user:
+                j_prof = getattr(judge_user, 'judge_profile', None)
+                pwd = get_judge_plain_password(judge_user)
+                assigned_roster.append({
+                    'seat_name': seat_name,
+                    'seat_code': seat_code,
+                    'field_name': field_name,
+                    'user': judge_user,
+                    'name': judge_user.full_name or judge_user.email,
+                    'email': judge_user.email or judge_user.username,
+                    'district': j_prof.district if j_prof else '',
+                    'cert_level': j_prof.get_certification_level_display() if j_prof else '',
+                    'password': pwd,
+                })
+                setattr(current_panel, f"{field_name}_password", pwd)
+                setattr(current_panel, f"{field_name}_email", judge_user.email or judge_user.username)
 
     state_logo = championship.branding_logos.filter(logo_type='STATE').first() if championship else None
     district_logo = championship.branding_logos.filter(logo_type='DISTRICT').first() if championship else None
@@ -840,6 +956,40 @@ def panel_assignments(request):
             round_type=round_type
         ).first()
 
+    all_championship_panels = []
+    if championship:
+        for p in JudgePanel.objects.filter(championship=championship).select_related('event_config', 'age_category').order_by('event_config__event_type', 'gender', 'round_type', 'id'):
+            p_assigned = []
+            for s_name, u in [
+                ('Chief Judge', p.chief_judge),
+                ('D1 Judge', p.d1_judge),
+                ('D2 Judge', p.d2_judge),
+                ('D3 Judge', p.d3_judge),
+                ('D4 Judge', p.d4_judge),
+                ('Time Judge', p.time_judge),
+                ('Time Judge 2', p.time_judge_2),
+                ('Evaluator', p.evaluator),
+                ('Evaluator 2', p.evaluator_2),
+                ('Artistry Judge', p.artistry_judge),
+                ('Artistry Judge 2', p.artistry_judge_2),
+                ('Stage Manager', p.stage_manager),
+                ('Jury Member', p.jury_member),
+            ]:
+                if u:
+                    j_prof = getattr(u, 'judge_profile', None)
+                    p_assigned.append({
+                        'seat_name': s_name,
+                        'name': u.full_name or u.email,
+                        'email': u.email or u.username,
+                        'district': j_prof.district if j_prof else '',
+                        'password': get_judge_plain_password(u),
+                    })
+            if p_assigned:
+                all_championship_panels.append({
+                    'panel': p,
+                    'roster': p_assigned,
+                })
+
     return render(request, 'competition/panel_assignments.html', {
         'championship': championship,
         'event_configs': event_configs,
@@ -849,6 +999,8 @@ def panel_assignments(request):
         'gender': gender,
         'round_type': round_type,
         'current_panel': current_panel,
+        'assigned_roster': assigned_roster,
+        'all_championship_panels': all_championship_panels,
         'existing_roll': existing_roll,
         'approved_judges': approved_judges,
         'annotated_judges': annotated_judges,
@@ -1195,4 +1347,125 @@ def second_screen(request):
         'championship': championship,
         'active_batch': active_batch,
         'released_performances': released_performances,
+    })
+
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
+def chest_number_manager(request):
+    """
+    Dedicated Chest Number Sequence & Allocation Module:
+    - View and audit chest numbers across all registered athletes.
+    - Auto-assign sequential chest numbers to unassigned athletes.
+    - Re-sequence chest numbers based on District Lottery Draw or Alphabetical order.
+    - Inline manual chest number edits and updates.
+    - Enforce rule: No athlete is allowed without a chest number.
+    """
+    championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected.")
+        return redirect('admin_dashboard')
+
+    event_configs = championship.event_configurations.filter(is_enabled=True)
+    selected_event_id = request.GET.get('event_id', '')
+    selected_cat_id = request.GET.get('cat_id', '')
+    gender = request.GET.get('gender', '')
+    district = request.GET.get('district', '')
+    filter_status = request.GET.get('status', '')  # 'unassigned', 'assigned', or ''
+
+    current_event = event_configs.filter(id=selected_event_id).first() if selected_event_id else None
+    categories = current_event.age_categories.all() if current_event else AgeCategory.objects.all().order_by('display_order')
+    current_cat = categories.filter(id=selected_cat_id).first() if selected_cat_id else None
+
+    # Base QuerySet of entries
+    qs = EventEntry.objects.filter(
+        registration__championship=championship
+    ).select_related('registration__athlete', 'partner_athlete', 'event_config', 'age_category')
+
+    if current_event:
+        qs = qs.filter(event_config=current_event)
+    if current_cat:
+        qs = qs.filter(age_category=current_cat)
+    if gender in ['M', 'F']:
+        qs = qs.filter(gender=gender)
+    if district:
+        qs = qs.filter(registration__athlete__district=district)
+
+    total_in_scope = qs.count()
+    missing_count = qs.filter(chest_number__in=['', None]).count()
+    assigned_count = total_in_scope - missing_count
+
+    if filter_status == 'unassigned':
+        display_qs = qs.filter(chest_number__in=['', None])
+    elif filter_status == 'assigned':
+        display_qs = qs.exclude(chest_number__in=['', None])
+    else:
+        display_qs = qs
+
+    display_entries = list(display_qs.order_by('chest_number', 'registration__athlete__full_name'))
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'assign_missing':
+            from .services import ensure_all_entries_have_chest_numbers
+            count = ensure_all_entries_have_chest_numbers(
+                championship=championship,
+                event_config=current_event,
+                age_category=current_cat,
+                gender=gender if gender in ['M', 'F'] else None
+            )
+            messages.success(request, f"Assigned unique sequential chest numbers to {count} athletes!")
+            return redirect(request.get_full_path())
+
+        elif action == 'resequence':
+            from .services import resequence_chest_numbers
+            start_no = int(request.POST.get('start_number', '101') or '101')
+            prefix = request.POST.get('prefix', '').strip()
+            order_by = request.POST.get('order_by', 'DRAW')
+            unassigned_only = request.POST.get('unassigned_only', 'false').lower() == 'true'
+
+            count = resequence_chest_numbers(
+                championship=championship,
+                event_config=current_event,
+                age_category=current_cat,
+                gender=gender if gender in ['M', 'F'] else None,
+                district=district or None,
+                start_number=start_no,
+                prefix=prefix,
+                order_by=order_by,
+                unassigned_only=unassigned_only
+            )
+            messages.success(request, f"Successfully re-sequenced chest numbers for {count} athletes!")
+            return redirect(request.get_full_path())
+
+        elif action == 'save_manual':
+            updated = 0
+            with transaction.atomic():
+                for key, val in request.POST.items():
+                    if key.startswith('chest_'):
+                        entry_id = key.replace('chest_', '')
+                        new_val = val.strip()
+                        entry_obj = EventEntry.objects.filter(id=entry_id, registration__championship=championship).first()
+                        if entry_obj and entry_obj.chest_number != new_val:
+                            entry_obj.chest_number = new_val
+                            entry_obj.save(update_fields=['chest_number'])
+                            updated += 1
+            messages.success(request, f"Updated chest numbers for {updated} athletes.")
+            return redirect(request.get_full_path())
+
+    return render(request, 'competition/chest_numbers.html', {
+        'championship': championship,
+        'event_configs': event_configs,
+        'categories': categories,
+        'current_event': current_event,
+        'current_cat': current_cat,
+        'selected_event_id': selected_event_id,
+        'selected_cat_id': selected_cat_id,
+        'gender': gender,
+        'district': district,
+        'districts': TELANGANA_DISTRICTS,
+        'filter_status': filter_status,
+        'total_in_scope': total_in_scope,
+        'missing_count': missing_count,
+        'assigned_count': assigned_count,
+        'display_entries': display_entries,
     })

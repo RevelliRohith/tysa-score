@@ -240,6 +240,129 @@
                 <span id="conflict-alert-msg"></span>
             </div>
 
+            <!-- CD Credentials & Handover Desk: Assigned Officials Passwords -->
+            {% if assigned_roster %}
+            <div class="bg-gradient-to-r from-slate-900 via-navy-900 to-teal-950 text-white rounded-2xl p-5 shadow-sm border border-slate-700 space-y-4 print:hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="space-y-1">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                            <i data-lucide="key" class="w-3 h-3"></i> CD Credentials & Handover Desk
+                        </div>
+                        <h3 class="text-sm font-black text-white">Assigned Panel Officials — Active Login Passwords</h3>
+                        <p class="text-xs text-slate-300 font-normal">
+                            All login passwords for officials assigned to this panel are displayed openly for Competition Director dispatch & immediate login handover.
+                        </p>
+                    </div>
+
+                    <button type="button" 
+                            onclick="copyAllPanelCredentials()" 
+                            class="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
+                            id="copyAllCredsBtn">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                        <span>Copy All Panel Credentials</span>
+                    </button>
+                </div>
+
+                <!-- Officials Credential Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
+                    {% for item in assigned_roster %}
+                    <div class="bg-white/10 border border-white/15 rounded-xl p-3 space-y-2 backdrop-blur-xs hover:border-teal-400/50 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-teal-500/20 text-teal-200 border border-teal-500/30">
+                                {{ item.seat_name }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-semibold">{{ item.district }}</span>
+                        </div>
+                        
+                        <div>
+                            <div class="text-xs font-black text-white truncate">{{ item.name }}</div>
+                            <div class="text-[10px] text-slate-300 font-mono truncate select-all">{{ item.email }}</div>
+                        </div>
+
+                        <!-- Open Password Badge with Instant Copy -->
+                        <div class="pt-1 border-t border-white/10 flex items-center justify-between gap-1">
+                            <div class="flex items-center space-x-1.5 min-w-0">
+                                <span class="text-[10px] text-teal-300 font-semibold">Pass:</span>
+                                <code class="text-xs font-mono font-black text-amber-300 bg-black/40 px-2 py-0.5 rounded border border-amber-400/40 select-all truncate">{{ item.password }}</code>
+                            </div>
+                            <button type="button" 
+                                    onclick="copySinglePassword('{{ item.password|escapejs }}', this)" 
+                                    class="p-1 text-slate-300 hover:text-white hover:bg-white/10 rounded transition" 
+                                    title="Copy Password">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+
+            <!-- All Configured Championship Panels Roster & Passwords Drawer (CD Overview) -->
+            {% if all_championship_panels %}
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3 print:hidden">
+                <div class="flex items-center justify-between cursor-pointer select-none" onclick="const d = document.getElementById('allPanelsDrawer'); d.classList.toggle('hidden'); const icon = document.getElementById('drawerIcon'); if (icon) icon.classList.toggle('rotate-180');">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-2 rounded-xl bg-teal-50 text-teal-800 border border-teal-200"><i data-lucide="key" class="w-4 h-4"></i></span>
+                        <div>
+                            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider">All Configured Championship Panels Roster & Passwords</h4>
+                            <p class="text-[11px] text-slate-500">Quick CD credential directory: {{ all_championship_panels|length }} configured panels with open passwords across this championship.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">{{ all_championship_panels|length }} Panels Assigned</span>
+                        <i data-lucide="chevron-down" id="drawerIcon" class="w-4 h-4 text-slate-400 transition transform"></i>
+                    </div>
+                </div>
+
+                <div id="allPanelsDrawer" class="hidden space-y-3 pt-3 border-t border-slate-100">
+                    {% for p_item in all_championship_panels %}
+                    <div class="bg-slate-50/70 rounded-xl p-3 border border-slate-200 space-y-2">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 rounded text-[11px] font-black bg-[#0d5c58] text-white">
+                                    {{ p_item.panel.event_config.get_event_type_display }}
+                                </span>
+                                <span class="text-xs font-bold text-slate-800">
+                                    {{ p_item.panel.age_category.name }} • {% if p_item.panel.gender == 'M' %}Male{% else %}Female{% endif %} [{{ p_item.panel.round_type }}]
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-semibold">• {{ p_item.roster|length }} Officials</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'panel_assignments' %}?event_id={{ p_item.panel.event_config.id }}&cat_id={{ p_item.panel.age_category.id }}&gender={{ p_item.panel.gender }}&round_type={{ p_item.panel.round_type }}" class="px-2.5 py-1 text-[11px] font-bold text-teal-800 hover:text-white bg-teal-50 hover:bg-teal-700 border border-teal-200 rounded-lg transition inline-flex items-center gap-1">
+                                    <span>Open This Panel</span>
+                                    <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-1">
+                            {% for j in p_item.roster %}
+                            <div class="bg-white rounded-lg p-2 border border-slate-200 text-xs space-y-1 shadow-2xs">
+                                <div class="flex items-center justify-between text-[10px]">
+                                    <span class="font-extrabold uppercase text-teal-800 bg-teal-50 px-1 py-0.5 rounded">{{ j.seat_name }}</span>
+                                    <span class="text-slate-400 font-medium">{{ j.district }}</span>
+                                </div>
+                                <div class="font-bold text-slate-900 truncate" title="{{ j.name }}">{{ j.name }}</div>
+                                <div class="text-[10px] text-slate-500 font-mono truncate select-all">{{ j.email }}</div>
+                                <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                                    <div class="flex items-center space-x-1 min-w-0">
+                                        <span class="text-[10px] text-slate-400 font-bold">Pass:</span>
+                                        <code class="font-mono font-black text-xs text-teal-950 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-300 select-all truncate">{{ j.password }}</code>
+                                    </div>
+                                    <button type="button" onclick="navigator.clipboard.writeText('{{ j.password|escapejs }}'); copySinglePassword('{{ j.password|escapejs }}', this);" class="p-1 text-slate-400 hover:text-teal-700 rounded" title="Copy Password">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Table of Seats and Assignable Officials -->
             <div class="overflow-x-auto border border-slate-900 rounded-xl print:rounded-none">
                 <table class="w-full text-left text-xs font-medium border-collapse">
@@ -247,7 +370,7 @@
                         <tr class="bg-slate-100 border-b-2 border-slate-900 text-[11px] font-black uppercase tracking-wider text-slate-900">
                             <th class="py-3 px-4 w-1/4 border-r border-slate-900">Seat / Operational Duty</th>
                             <th class="py-3 px-4 w-5/12 border-r border-slate-900">Assigned Official</th>
-                            <th class="py-3 px-4 border-r border-slate-900">District / Certification</th>
+                            <th class="py-3 px-4 border-r border-slate-900">District, Credentials & Password</th>
                             <th class="py-3 px-4 text-center w-36">Physical Signature</th>
                         </tr>
                     </thead>
@@ -263,7 +386,7 @@
                                 <select name="chief_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.chief_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.chief_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -296,7 +419,7 @@
                                 <select name="d1_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.d1_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d1_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -329,7 +452,7 @@
                                 <select name="d2_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.d2_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d2_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -362,7 +485,7 @@
                                 <select name="d3_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.d3_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d3_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -395,7 +518,7 @@
                                 <select name="d4_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.d4_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.d4_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -428,7 +551,7 @@
                                 <select name="time_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.time_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.time_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -461,7 +584,7 @@
                                 <select name="evaluator" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.evaluator_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.evaluator_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -495,7 +618,7 @@
                                 <select name="artistry_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.artistry_judge_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.artistry_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -526,7 +649,7 @@
                                 <select name="artistry_judge_2" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.artistry_judge_2_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.artistry_judge_2_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -560,7 +683,7 @@
                                 <select name="stage_manager" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— Unassigned —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.stage_manager_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.stage_manager_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -593,7 +716,7 @@
                                 <select name="jury_member" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
                                     <option value="">— None / Optional —</option>
                                     {% for item in annotated_judges %}
-                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" 
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
                                         {% if current_panel.jury_member_id == item.user.id %}selected{% endif %}
                                         {% if item.is_busy and current_panel.jury_member_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
                                         {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
@@ -682,13 +805,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const val = sel.value;
             const opt = sel.options[sel.selectedIndex];
             
-            // Sync metadata into sibling cell
+            // Sync metadata & credentials into sibling cell
             const row = sel.closest('tr');
             if (row) {
                 const detailCell = row.children[2];
                 if (detailCell) {
                     if (val && opt && opt.dataset.district) {
-                        detailCell.innerHTML = `<span class="font-bold text-slate-900">${opt.dataset.district}</span> • ${opt.dataset.cert}`;
+                        const email = opt.dataset.email || '';
+                        const pwd = opt.dataset.password || '';
+                        detailCell.innerHTML = `
+                            <div class="font-bold text-slate-900 text-xs">${opt.dataset.district} • ${opt.dataset.cert}</div>
+                            ${email ? `<div class="text-[11px] text-slate-500 font-mono mt-0.5 select-all">Login: <span class="text-slate-800 font-bold">${email}</span></div>` : ''}
+                            ${pwd ? `<div class="mt-1 flex items-center space-x-1.5"><span class="text-[10px] text-teal-800 font-bold uppercase">Password:</span><code class="text-xs font-mono font-black text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-300 select-all">${pwd}</code><button type="button" onclick="navigator.clipboard.writeText('${pwd}'); copySinglePassword('${pwd}', this);" class="p-1 text-teal-600 hover:text-teal-900 hover:bg-teal-50 rounded" title="Copy Password"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button></div>` : ''}
+                        `;
+                        if (window.lucide) lucide.createIcons();
                     } else if (!val) {
                         detailCell.innerHTML = `<span class="text-slate-400 italic">Select from approved list</span>`;
                     }
@@ -731,6 +861,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
     validateAndSync();
 });
+
+function copyAllPanelCredentials() {
+    const lines = [
+        "=== TYSA SCORE: PANEL OFFICIALS CREDENTIALS ===",
+        "Championship: {{ championship.name|escapejs }}",
+        "Event: {{ current_panel.event_config.get_event_type_display|escapejs }} ({{ gender }}, {{ round_type }})",
+        "Portal Login: http://127.0.0.1:8027/judges/portal/",
+        "-----------------------------------------------"
+    ];
+    {% for item in assigned_roster %}
+    lines.push("• {{ item.seat_name|escapejs }}: {{ item.name|escapejs }} ({{ item.district|escapejs }})");
+    lines.push("  Login: {{ item.email|escapejs }}");
+    lines.push("  Password: {{ item.password|escapejs }}");
+    lines.push("");
+    {% endfor %}
+    lines.push("===============================================");
+    
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+        const btn = document.getElementById('copyAllCredsBtn');
+        if (btn) {
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-emerald-300"></i><span>All Credentials Copied!</span>';
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => {
+                btn.innerHTML = origHTML;
+                if (window.lucide) lucide.createIcons();
+            }, 2500);
+        }
+    });
+}
+
+function copySinglePassword(pwd, btn) {
+    navigator.clipboard.writeText(pwd).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>';
+        if (window.lucide) lucide.createIcons();
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            if (window.lucide) lucide.createIcons();
+        }, 1500);
+    });
+}
+
 </script>
 
 <style>

@@ -52,13 +52,23 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-800">
                     {% for row in score_calc.d_matrix %}
-                    <tr class="hover:bg-slate-50/60 font-mono text-[11px]">
+                    <tr class="hover:bg-slate-50/60 font-mono text-[11px] {% if row.is_invalid %}bg-rose-50/40{% endif %}">
                         <td class="py-2.5 px-3 text-center font-bold text-slate-400 font-sans">
                             #{{ row.seq }}
                         </td>
                         <td class="py-2.5 px-3 font-sans">
-                            <span class="font-bold text-slate-900 font-mono text-xs">{{ row.code }}</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-bold text-slate-900 font-mono text-xs">{{ row.code }}</span>
+                                {% if row.is_invalid %}
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200" title="{{ row.invalid_reason|default:'Invalid Asana' }}">
+                                    Invalid (Total 0.000)
+                                </span>
+                                {% endif %}
+                            </div>
                             <span class="text-slate-500 text-[11px] block truncate max-w-xs">{{ row.name }}</span>
+                            {% if row.is_invalid and row.invalid_reason %}
+                            <span class="text-[10px] text-rose-600 font-medium block truncate max-w-xs">{{ row.invalid_reason }}</span>
+                            {% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-center text-slate-600 font-bold">
                             {{ row.bv }}
@@ -86,10 +96,10 @@
                         <td class="py-2.5 px-3 text-right font-bold text-teal-800">
                             {{ row.trimmed_mean|stringformat:".3f" }}
                         </td>
-                        <td class="py-2.5 px-3 text-right text-rose-600">
+                        <td class="py-2.5 px-3 text-right text-rose-600 font-bold">
                             {% if row.deduction > 0 %}-{{ row.deduction|stringformat:".2f" }}{% else %}—{% endif %}
                         </td>
-                        <td class="py-2.5 px-3 text-right font-black text-slate-900">
+                        <td class="py-2.5 px-3 text-right font-black {% if row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}">
                             {{ row.net_item_score|stringformat:".3f" }}
                         </td>
                     </tr>

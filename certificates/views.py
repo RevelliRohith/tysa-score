@@ -132,17 +132,42 @@ def generate_certificate_pdf(cert):
     return buffer.getvalue()
 
 
-def _get_next_cert_number(championship, prefix='CERT'):
+def _get_next_cert_number(championship, prefix='CERT', custom_prefix=None, start_seq=None):
     """
     Allocates an atomic sequential certificate number using dedicated
     CertificateSequence counter with row-level select_for_update.
+    Supports user-configured prefix and custom starting sequence.
     """
     champ_code = championship.code if championship else "TYSA-2026"
+    
+    if custom_prefix and custom_prefix.strip():
+        user_p = custom_prefix.strip()
+        start_val = int(start_seq) if (start_seq and str(start_seq).isdigit()) else 1000
+        seq_obj, _ = CertificateSequence.objects.select_for_update().get_or_create(
+            championship=championship,
+            prefix=user_p,
+            defaults={'last_number': max(0, start_val - 1)}
+        )
+        if start_seq and str(start_seq).isdigit() and seq_obj.last_number < (start_val - 1):
+            seq_obj.last_number = start_val - 1
+        seq_obj.last_number += 1
+        seq_obj.save(update_fields=['last_number'])
+
+        if user_p.endswith(('-', '/')):
+            return f"{user_p}{seq_obj.last_number:04d}"
+        elif '-' in user_p or '/' in user_p:
+            return f"{user_p}-{seq_obj.last_number:04d}"
+        else:
+            return f"{champ_code}-{user_p}-{seq_obj.last_number:04d}"
+
+    start_val = int(start_seq) if (start_seq and str(start_seq).isdigit()) else 1000
     seq_obj, _ = CertificateSequence.objects.select_for_update().get_or_create(
         championship=championship,
         prefix=prefix,
-        defaults={'last_number': 1000}
+        defaults={'last_number': max(0, start_val - 1)}
     )
+    if start_seq and str(start_seq).isdigit() and seq_obj.last_number < (start_val - 1):
+        seq_obj.last_number = start_val - 1
     seq_obj.last_number += 1
     seq_obj.save(update_fields=['last_number'])
     return f"{champ_code}-{prefix}-{seq_obj.last_number:04d}"
@@ -253,6 +278,8 @@ def certificate_generate(request):
         template_id = request.POST.get('template_id')
         template = CertificateTemplate.objects.filter(id=template_id).first() if template_id else CertificateTemplate.objects.first()
         recipient_source = request.POST.get('recipient_source')
+        user_prefix = request.POST.get('cert_prefix', '').strip()
+        start_seq = request.POST.get('start_seq', '').strip()
 
         if action == 'generate':
             count = 0
@@ -290,7 +317,7 @@ def certificate_generate(request):
                                         full_event_title = f"{item['event_name']} — {item['age_category_name']} ({item['gender']})"
 
                                         # Primary Athlete Certificate
-                                        cert_num_1 = _get_next_cert_number(championship, prefix='MERIT')
+                                        cert_num_1 = _get_next_cert_number(championship, prefix='MERIT', custom_prefix=user_prefix, start_seq=start_seq)
                                         IssuedCertificate.objects.get_or_create(
                                             template=template,
                                             championship=championship,
@@ -311,7 +338,7 @@ def certificate_generate(request):
 
                                         # Partner Athlete Certificate if Pair Event
                                         if item['is_pair'] and item['partner']:
-                                            cert_num_2 = _get_next_cert_number(championship, prefix='MERIT')
+                                            cert_num_2 = _get_next_cert_number(championship, prefix='MERIT', custom_prefix=user_prefix, start_seq=start_seq)
                                             IssuedCertificate.objects.get_or_create(
                                                 template=template,
                                                 championship=championship,
@@ -333,7 +360,7 @@ def certificate_generate(request):
                 elif recipient_source == 'coaches':
                     coaches = Coach.objects.filter(championship=championship)
                     for c in coaches:
-                        cert_num = _get_next_cert_number(championship, prefix='COACH')
+                        cert_num = _get_next_cert_number(championship, prefix='COACH', custom_prefix=user_prefix, start_seq=start_seq)
                         IssuedCertificate.objects.get_or_create(
                             template=template,
                             championship=championship,
@@ -353,7 +380,7 @@ def certificate_generate(request):
                 elif recipient_source == 'volunteers':
                     volunteers = Volunteer.objects.filter(championship=championship)
                     for v in volunteers:
-                        cert_num = _get_next_cert_number(championship, prefix='VOL')
+                        cert_num = _get_next_cert_number(championship, prefix='VOL', custom_prefix=user_prefix, start_seq=start_seq)
                         IssuedCertificate.objects.get_or_create(
                             template=template,
                             championship=championship,
@@ -375,7 +402,7 @@ def certificate_generate(request):
                         status__in=['DISTRICT_APPROVED', 'VENUE_CLEARED']
                     )
                     for r in regs:
-                        cert_num = _get_next_cert_number(championship, prefix='PART')
+                        cert_num = _get_next_cert_number(championship, prefix='PART', custom_prefix=user_prefix, start_seq=start_seq)
                         IssuedCertificate.objects.get_or_create(
                             template=template,
                             championship=championship,

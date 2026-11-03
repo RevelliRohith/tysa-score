@@ -229,6 +229,31 @@ def run_tests():
     assert_eq("Panel 3 average all", res_p3['retained_average'], Decimal('63.000'))
     assert_eq("Panel 3 discarded count", len(res_p3['discarded_scores']), 0)
 
+    print("\n--- 8B. PAGE 14 TRADITIONAL WORKED EXAMPLES ---")
+    # Page 14 Example 1: 5 judges with totals 50, 52, 54, 56, 58 -> remove 50 and 58 -> average = 54. Penalty of 2 gives 52.
+    ex_p5 = calculate_panel_trimmed_mean(
+        [('D1', Decimal('50.0')), ('D2', Decimal('52.0')), ('D3', Decimal('54.0')), ('D4', Decimal('56.0')), ('D5', Decimal('58.0'))],
+        confirmed_panel_size=5
+    )
+    assert_eq("Page 14 Panel 5 average before penalty", ex_p5['retained_average'], Decimal('54.000'))
+    assert_eq("Page 14 Panel 5 with penalty 2", ex_p5['retained_average'] - Decimal('2.000'), Decimal('52.000'))
+
+    # Page 14 Example 2: 4 judges with 50, 52, 54, 58 -> remove 50 and 58 -> average = 53. Penalty of 2 gives 51.
+    ex_p4 = calculate_panel_trimmed_mean(
+        [('D1', Decimal('50.0')), ('D2', Decimal('52.0')), ('D3', Decimal('54.0')), ('D4', Decimal('58.0'))],
+        confirmed_panel_size=4
+    )
+    assert_eq("Page 14 Panel 4 average before penalty", ex_p4['retained_average'], Decimal('53.000'))
+    assert_eq("Page 14 Panel 4 with penalty 2", ex_p4['retained_average'] - Decimal('2.000'), Decimal('51.000'))
+
+    # Page 14 Example 3: 3 judges with 50, 52, 54 -> keep all three -> average = 52. Penalty of 2 gives 50.
+    ex_p3 = calculate_panel_trimmed_mean(
+        [('D1', Decimal('50.0')), ('D2', Decimal('52.0')), ('D3', Decimal('54.0'))],
+        confirmed_panel_size=3
+    )
+    assert_eq("Page 14 Panel 3 average before penalty", ex_p3['retained_average'], Decimal('52.000'))
+    assert_eq("Page 14 Panel 3 with penalty 2", ex_p3['retained_average'] - Decimal('2.000'), Decimal('50.000'))
+
     print("\n--- 9. COMPOSITE FINAL SCORE REQUIRED FIXTURE ---")
     # Prompt specification: Retained D = 63, Artistry = 16, Timing = 8.5 -> 87.5 - 2 penalty = 85.500
     retained_d = res_p4['retained_average']  # 63.000
@@ -256,6 +281,89 @@ def run_tests():
     assert_eq("Unresolved rules registered count >= 4", len(UNRESOLVED_RULES_REGISTER) >= 4, True)
     for code, rule in UNRESOLVED_RULES_REGISTER.items():
         print(f"  * {code}: {rule['rule']} -> Status: {rule['status']}")
+
+    print("\n--- 12. TRADITIONAL TIMING (ANNEXURE A & B) & AUTOMATIC D-ZEROING ENGINE RULES ---")
+    from scoring.services import calculate_traditional_timing_contribution
+    
+    # --- ANNEXURE A (1st Attempt - Max 2.0) ---
+    # 60s Target:
+    assert_eq("Annexure A (60s/60s 1st attempt)", calculate_traditional_timing_contribution(Decimal('60.00'), Decimal('60.00'), 1), Decimal('2.000000'))
+    assert_eq("Annexure A (59s/60s 1st attempt)", calculate_traditional_timing_contribution(Decimal('59.00'), Decimal('60.00'), 1), Decimal('1.966667'))
+    assert_eq("Annexure A (55s/60s 1st attempt)", calculate_traditional_timing_contribution(Decimal('55.00'), Decimal('60.00'), 1), Decimal('1.833333'))
+    assert_eq("Annexure A (50s/60s 1st attempt)", calculate_traditional_timing_contribution(Decimal('50.00'), Decimal('60.00'), 1), Decimal('1.666667'))
+    assert_eq("Annexure A (45s/60s 1st attempt)", calculate_traditional_timing_contribution(Decimal('45.00'), Decimal('60.00'), 1), Decimal('1.500000'))
+    assert_eq("Annexure A (44s/60s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('44.00'), Decimal('60.00'), 1), Decimal('0.000'))
+    
+    # 45s Target:
+    assert_eq("Annexure A (45s/45s 1st attempt)", calculate_traditional_timing_contribution(Decimal('45.00'), Decimal('45.00'), 1), Decimal('2.000000'))
+    assert_eq("Annexure A (44s/45s 1st attempt)", calculate_traditional_timing_contribution(Decimal('44.00'), Decimal('45.00'), 1), Decimal('1.955556'))
+    assert_eq("Annexure A (36s/45s 1st attempt)", calculate_traditional_timing_contribution(Decimal('36.00'), Decimal('45.00'), 1), Decimal('1.600000'))
+    assert_eq("Annexure A (33s/45s 1st attempt)", calculate_traditional_timing_contribution(Decimal('33.00'), Decimal('45.00'), 1), Decimal('1.466667'))
+    assert_eq("Annexure A (32s/45s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('32.00'), Decimal('45.00'), 1), Decimal('0.000'))
+
+    # 30s Target:
+    assert_eq("Annexure A (30s/30s 1st attempt)", calculate_traditional_timing_contribution(Decimal('30.00'), Decimal('30.00'), 1), Decimal('2.000000'))
+    assert_eq("Annexure A (29s/30s 1st attempt)", calculate_traditional_timing_contribution(Decimal('29.00'), Decimal('30.00'), 1), Decimal('1.933333'))
+    assert_eq("Annexure A (22s/30s 1st attempt)", calculate_traditional_timing_contribution(Decimal('22.00'), Decimal('30.00'), 1), Decimal('1.466667'))
+    assert_eq("Annexure A (21s/30s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('21.00'), Decimal('30.00'), 1), Decimal('0.000'))
+
+    # 15s Target:
+    assert_eq("Annexure A (15s/15s 1st attempt)", calculate_traditional_timing_contribution(Decimal('15.00'), Decimal('15.00'), 1), Decimal('2.000000'))
+    assert_eq("Annexure A (14s/15s 1st attempt)", calculate_traditional_timing_contribution(Decimal('14.00'), Decimal('15.00'), 1), Decimal('1.866667'))
+    assert_eq("Annexure A (11s/15s 1st attempt)", calculate_traditional_timing_contribution(Decimal('11.00'), Decimal('15.00'), 1), Decimal('1.466667'))
+    assert_eq("Annexure A (10s/15s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('10.00'), Decimal('15.00'), 1), Decimal('0.000'))
+
+    # --- ANNEXURE B (2nd Attempt - Max 1.0) ---
+    # 60s Target:
+    assert_eq("Annexure B (60s/60s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('60.00'), Decimal('60.00'), 2), Decimal('1.000000'))
+    assert_eq("Annexure B (59s/60s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('59.00'), Decimal('60.00'), 2), Decimal('0.983333'))
+    assert_eq("Annexure B (50s/60s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('50.00'), Decimal('60.00'), 2), Decimal('0.833333'))
+    assert_eq("Annexure B (45s/60s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('45.00'), Decimal('60.00'), 2), Decimal('0.750000'))
+    assert_eq("Annexure B (44s/60s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('44.00'), Decimal('60.00'), 2), Decimal('0.000'))
+
+    # 45s Target:
+    assert_eq("Annexure B (45s/45s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('45.00'), Decimal('45.00'), 2), Decimal('1.000000'))
+    assert_eq("Annexure B (44s/45s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('44.00'), Decimal('45.00'), 2), Decimal('0.977778'))
+    assert_eq("Annexure B (36s/45s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('36.00'), Decimal('45.00'), 2), Decimal('0.800000'))
+    assert_eq("Annexure B (33s/45s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('33.00'), Decimal('45.00'), 2), Decimal('0.733333'))
+    assert_eq("Annexure B (32s/45s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('32.00'), Decimal('45.00'), 2), Decimal('0.000'))
+
+    # 30s Target:
+    assert_eq("Annexure B (30s/30s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('30.00'), Decimal('30.00'), 2), Decimal('1.000000'))
+    assert_eq("Annexure B (29s/30s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('29.00'), Decimal('30.00'), 2), Decimal('0.966667'))
+    assert_eq("Annexure B (22s/30s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('22.00'), Decimal('30.00'), 2), Decimal('0.733333'))
+    assert_eq("Annexure B (21s/30s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('21.00'), Decimal('30.00'), 2), Decimal('0.000'))
+
+    # 15s Target:
+    assert_eq("Annexure B (15s/15s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('15.00'), Decimal('15.00'), 2), Decimal('1.000000'))
+    assert_eq("Annexure B (14s/15s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('14.00'), Decimal('15.00'), 2), Decimal('0.933333'))
+    assert_eq("Annexure B (11s/15s 2nd attempt)", calculate_traditional_timing_contribution(Decimal('11.00'), Decimal('15.00'), 2), Decimal('0.733333'))
+    assert_eq("Annexure B (10s/15s below 75% cutoff)", calculate_traditional_timing_contribution(Decimal('10.00'), Decimal('15.00'), 2), Decimal('0.000'))
+
+    # --- EVALUATOR AUTHORITY & VALIDITY RULES ---
+    # When Evaluator marks VALID: item remains valid and effective score equals raw calculation
+    t_valid_res = calculate_traditional_item(
+        posture=Decimal('5.50'),
+        stability_grace=Decimal('1.80'),
+        timing_contribution=Decimal('0.00'),
+        base_value=Decimal('1.00'),
+        is_invalid=False
+    )
+    assert_eq("Traditional item when Evaluator is valid calculates effective score", t_valid_res['effective_item_score'], Decimal('7.300'))
+    assert_eq("Traditional item when Evaluator is valid preserves raw score", t_valid_res['raw_item_score'], Decimal('7.300'))
+    assert_eq("Traditional item when Evaluator is valid remains valid", t_valid_res['is_invalid'], False)
+
+    # When Evaluator marks INVALID: effective D-item score is automatically zeroed to 0.000
+    t_inv_res = calculate_traditional_item(
+        posture=Decimal('5.50'),
+        stability_grace=Decimal('1.80'),
+        timing_contribution=Decimal('2.00'),
+        base_value=Decimal('1.00'),
+        is_invalid=True
+    )
+    assert_eq("Traditional item with Evaluator invalidity zeroes effective score", t_inv_res['effective_item_score'], Decimal('0.000'))
+    assert_eq("Traditional item with Evaluator invalidity preserves raw score", t_inv_res['raw_item_score'], Decimal('9.300'))
+    assert_eq("Traditional item with Evaluator invalidity flags is_invalid", t_inv_res['is_invalid'], True)
 
     print(f"\n==========================================")
     print(f"VERIFICATION SUMMARY: {passed} PASSED, {failed} FAILED")

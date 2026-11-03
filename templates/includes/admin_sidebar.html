@@ -157,6 +157,16 @@
                 </a>
             </div>
 
+            <!-- Chest Number Sequencing & Allocation -->
+            <div>
+                <a href="{% url 'chest_number_manager' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="hash" class="w-4 h-4 text-slate-400"></i>
+                        <span class="font-semibold">Chest Numbers</span>
+                    </div>
+                </a>
+            </div>
+
             <!-- Judge Panel Assignments -->
             <div>
                 <a href="{% url 'panel_assignments' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
@@ -346,6 +356,15 @@
                     <div class="flex items-center space-x-2.5">
                         <i data-lucide="users-round" class="w-4 h-4 text-slate-400"></i>
                         <span class="font-semibold">Panel Assignments</span>
+                    </div>
+                </a>
+            </div>
+
+            <div>
+                <a href="{% url 'judge_credentials_admin' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="key" class="w-4 h-4 text-slate-400"></i>
+                        <span class="font-semibold">Judge Credentials Desk</span>
                     </div>
                 </a>
             </div>

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 
@@ -62,6 +63,9 @@ class Championship(models.Model):
     # Adjustable branding and layout configuration
     branding_layout = models.JSONField(default=dict, blank=True, help_text="Versioned branding layout config")
     branding_version = models.PositiveIntegerField(default=1, help_text="Version of the branding configuration")
+    
+    # Official Appeal Fee (COP Page 18: configurable in settings, defaults to Rs. 1,000)
+    appeal_fee = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('1000.00'), help_text="Official State Championship appeal fee (INR)")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

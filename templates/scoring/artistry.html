@@ -49,7 +49,7 @@
                 <table class="w-full text-left text-xs">
                     <thead>
                         <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
-                            <th class="py-3 px-4">Artistry Criterion</th>
+                            <th class="py-3 px-4">COP Artistry Criterion (Page 16)</th>
                             <th class="py-3 px-4 text-center w-36">Max Marks</th>
                             <th class="py-3 px-4 text-right w-48">Score Awarded</th>
                         </tr>
@@ -57,65 +57,65 @@
                     <tbody class="divide-y divide-slate-100 text-slate-800">
                         <tr class="hover:bg-slate-50/50">
                             <td class="py-3 px-4">
-                                <span class="font-bold text-slate-900 block">Presentation & Poise</span>
-                                <span class="text-slate-500 text-[11px]">Stage presence, body line posture, elegance</span>
+                                <span class="font-bold text-slate-900 block">Costume</span>
+                                <span class="text-slate-500 text-[11px]">Uniform neatness, modesty, Yogic attire specifications</span>
                             </td>
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">1.00</td>
                             <td class="py-3 px-4 text-right">
-                                <input type="number" step="0.25" min="0" max="4" name="presentation" id="presentation" 
-                                       value="{{ art_score.presentation }}" oninput="calcArtistryTotal()"
+                                <input type="number" step="0.05" min="0" max="1" name="costume" id="costume" 
+                                       value="{{ art_score.costume }}" oninput="calcArtistryTotal()"
                                        class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
                                        {% if sub.is_locked %}disabled{% endif %}>
                             </td>
                         </tr>
                         <tr class="hover:bg-slate-50/50">
                             <td class="py-3 px-4">
-                                <span class="font-bold text-slate-900 block">Synchronization & Uniformity</span>
-                                <span class="text-slate-500 text-[11px]">Movement tempo, symmetry, unison breathing</span>
+                                <span class="font-bold text-slate-900 block">Theme and Music</span>
+                                <span class="text-slate-500 text-[11px]">Suitability of musical accompaniment, theme alignment</span>
                             </td>
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">1.00</td>
                             <td class="py-3 px-4 text-right">
-                                <input type="number" step="0.25" min="0" max="4" name="synchronization" id="synchronization" 
-                                       value="{{ art_score.synchronization }}" oninput="calcArtistryTotal()"
+                                <input type="number" step="0.05" min="0" max="1" name="theme_music" id="theme_music" 
+                                       value="{{ art_score.theme_music }}" oninput="calcArtistryTotal()"
                                        class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
                                        {% if sub.is_locked %}disabled{% endif %}>
                             </td>
                         </tr>
                         <tr class="hover:bg-slate-50/50">
                             <td class="py-3 px-4">
-                                <span class="font-bold text-slate-900 block">Choreography & Musicality</span>
-                                <span class="text-slate-500 text-[11px]">Routine structure, theme alignment, timing accents</span>
+                                <span class="font-bold text-slate-900 block">Character and Expression</span>
+                                <span class="text-slate-500 text-[11px]">Facial poise, serenity, Yogic attitude, emotional resonance</span>
                             </td>
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">3.00</td>
                             <td class="py-3 px-4 text-right">
-                                <input type="number" step="0.25" min="0" max="4" name="choreography" id="choreography" 
-                                       value="{{ art_score.choreography }}" oninput="calcArtistryTotal()"
+                                <input type="number" step="0.10" min="0" max="3" name="character_expression" id="character_expression" 
+                                       value="{{ art_score.character_expression }}" oninput="calcArtistryTotal()"
                                        class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
                                        {% if sub.is_locked %}disabled{% endif %}>
                             </td>
                         </tr>
                         <tr class="hover:bg-slate-50/50">
                             <td class="py-3 px-4">
-                                <span class="font-bold text-slate-900 block">Transition Flow & Continuity</span>
-                                <span class="text-slate-500 text-[11px]">Seamless movement linking asanas, floor coverage</span>
+                                <span class="font-bold text-slate-900 block">Rhythm and Artistic Steps</span>
+                                <span class="text-slate-500 text-[11px]">Includes Synchronisation for pairs, musical accents, body rhythm</span>
                             </td>
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">10.00</td>
                             <td class="py-3 px-4 text-right">
-                                <input type="number" step="0.25" min="0" max="4" name="transition_flow" id="transition_flow" 
-                                       value="{{ art_score.transition_flow }}" oninput="calcArtistryTotal()"
+                                <input type="number" step="0.10" min="0" max="10" name="rhythm_artistic_steps" id="rhythm_artistic_steps" 
+                                       value="{{ art_score.rhythm_artistic_steps }}" oninput="calcArtistryTotal()"
                                        class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
                                        {% if sub.is_locked %}disabled{% endif %}>
                             </td>
                         </tr>
                         <tr class="hover:bg-slate-50/50">
                             <td class="py-3 px-4">
-                                <span class="font-bold text-slate-900 block">Costume, Grace & Expression</span>
-                                <span class="text-slate-500 text-[11px]">Uniform adherence, facial poise, Yogic grace</span>
+                                <span class="font-bold text-slate-900 block">Use of Floor</span>
+                                <span class="text-slate-500 text-[11px]">Arena coverage, multi-directional orientation, spatial harmony</span>
                             </td>
-                            <td class="py-3 px-4 text-center font-bold text-slate-700">4.00</td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-700">5.00</td>
                             <td class="py-3 px-4 text-right">
-                                <input type="number" step="0.25" min="0" max="4" name="costume_grace" id="costume_grace" 
-                                       value="{{ art_score.costume_grace }}" oninput="calcArtistryTotal()"
+                                <input type="number" step="0.10" min="0" max="5" name="use_of_floor" id="use_of_floor" 
+                                       value="{{ art_score.use_of_floor }}" oninput="calcArtistryTotal()"
                                        class="w-24 text-right py-1 px-2 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
                                        {% if sub.is_locked %}disabled{% endif %}>
                             </td>
@@ -123,19 +123,19 @@
                         <tr class="hover:bg-rose-50/30">
                             <td class="py-3 px-4">
                                 <span class="font-bold text-rose-800 block">Artistry Deductions</span>
-                                <span class="text-slate-500 text-[11px]">Costume violation, pause infraction, line step-out</span>
+                                <span class="text-slate-500 text-[11px]">Direct penalties: costume violation, pause infraction, boundary fault</span>
                             </td>
                             <td class="py-3 px-4 text-center font-bold text-rose-700">-</td>
                             <td class="py-3 px-4 text-right">
-                                <input type="number" step="0.25" min="0" max="10" name="deductions" id="deductions" 
-                                       value="{{ art_score.deductions }}" oninput="calcArtistryTotal()"
+                                <input type="number" step="0.25" min="0" max="10" name="artistry_deductions" id="artistry_deductions" 
+                                       value="{{ art_score.artistry_deductions }}" oninput="calcArtistryTotal()"
                                        class="w-24 text-right py-1 px-2 border border-rose-300 rounded-lg font-bold text-rose-700 outline-none focus:ring-1 focus:ring-rose-700"
                                        {% if sub.is_locked %}disabled{% endif %}>
                             </td>
                         </tr>
                         <!-- Total Highlight Row -->
                         <tr class="bg-emerald-50/70 border-t-2 border-emerald-300 text-emerald-950 font-bold">
-                            <td class="py-3.5 px-4 text-sm font-extrabold">Total Artistry Marks</td>
+                            <td class="py-3.5 px-4 text-sm font-extrabold">Net Artistry Marks (Max 20.00)</td>
                             <td class="py-3.5 px-4 text-center text-sm font-black">20.00</td>
                             <td class="py-3.5 px-4 text-right text-xl font-black text-emerald-900 font-mono" id="total_artistry_display">
                                 {{ art_score.total_artistry }}
@@ -172,13 +172,13 @@
 
 <script>
 function calcArtistryTotal() {
-    const p = parseFloat(document.getElementById('presentation').value) || 0;
-    const s = parseFloat(document.getElementById('synchronization').value) || 0;
-    const c = parseFloat(document.getElementById('choreography').value) || 0;
-    const t = parseFloat(document.getElementById('transition_flow').value) || 0;
-    const cg = parseFloat(document.getElementById('costume_grace').value) || 0;
-    const d = parseFloat(document.getElementById('deductions').value) || 0;
-    const subtotal = p + s + c + t + cg;
+    const c = parseFloat(document.getElementById('costume')?.value) || 0;
+    const tm = parseFloat(document.getElementById('theme_music')?.value) || 0;
+    const ce = parseFloat(document.getElementById('character_expression')?.value) || 0;
+    const ras = parseFloat(document.getElementById('rhythm_artistic_steps')?.value) || 0;
+    const uf = parseFloat(document.getElementById('use_of_floor')?.value) || 0;
+    const d = parseFloat(document.getElementById('artistry_deductions')?.value) || 0;
+    const subtotal = c + tm + ce + ras + uf;
     const total = Math.max(0, subtotal - d);
     document.getElementById('total_artistry_display').textContent = total.toFixed(2);
 }

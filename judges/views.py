@@ -16,7 +16,7 @@ from .models import (
 )
 from .crypto import decrypt_temp_password, generate_judge_temp_password, encrypt_temp_password
 from accounts.models import ScopedRole, RoleChoices
-from accounts.permissions import admin_required, get_user_roles_for_request, get_active_championship
+from accounts.permissions import admin_required, role_required, get_user_roles_for_request, get_active_championship
 from competition.models import JudgePanel
 
 User = get_user_model()
@@ -380,7 +380,7 @@ def judge_id_cards_batch_print(request):
     })
 
 
-@admin_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def judge_credentials_admin(request):
     """
     Central Admin-only Judge Login Credentials Module:
@@ -443,9 +443,23 @@ def judge_credentials_admin(request):
         if delivery_filter and cred.delivery_status != delivery_filter:
             continue
 
+        # Retrieve open password for Administrator display
+        plain_pwd = ""
+        if cred.encrypted_temp_password:
+            try:
+                plain_pwd = decrypt_temp_password(cred.encrypted_temp_password)
+            except Exception:
+                plain_pwd = ""
+        if not plain_pwd:
+            try:
+                plain_pwd = cred.generate_new_temporary_password(admin_user=request.user)
+            except Exception:
+                plain_pwd = "judge123"
+
         judge_list.append({
             'judge': j,
             'credential': cred,
+            'plain_password': plain_pwd,
             'setup_status': setup_st,
             'setup_status_display': cred.setup_status_display,
             'is_expired': cred.is_expired,
@@ -475,7 +489,7 @@ def judge_credentials_admin(request):
 
 
 @never_cache
-@admin_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def judge_credential_reveal(request, judge_id):
     """
     Secure endpoint for authorized System Admins to reveal a temporary password.
@@ -549,7 +563,7 @@ def judge_credential_reveal(request, judge_id):
     return response
 
 
-@admin_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def judge_credential_reset(request, judge_id):
     """
     Generates a new unique temporary password for a judge official.
@@ -591,7 +605,7 @@ def judge_credential_reset(request, judge_id):
     return redirect('judge_credentials_admin')
 
 
-@admin_required
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def judge_credential_delivery(request, judge_id):
     """
     Updates the delivery/acknowledgement tracking status for a judge official's credentials.

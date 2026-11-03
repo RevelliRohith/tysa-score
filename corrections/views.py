@@ -243,7 +243,9 @@ def jury_view(request):
         performances = performances.filter(
             Q(event_entry__chest_number__iexact=query) |
             Q(event_entry__registration__athlete__first_name__icontains=query) |
-            Q(event_entry__registration__athlete__last_name__icontains=query)
+            Q(event_entry__registration__athlete__last_name__icontains=query) |
+            Q(event_entry__partner_athlete__first_name__icontains=query) |
+            Q(event_entry__partner_athlete__last_name__icontains=query)
         )
     if district:
         performances = performances.filter(event_entry__registration__athlete__district=district)
@@ -369,9 +371,11 @@ def appeal_create(request):
         is_within_window = True
         if perf and perf.chief_approved_at:
             first_pub = perf.chief_approved_at
-            # Window check: 30 minutes
+            # Window check Page 18: strictly within 10 minutes of score display
             diff_minutes = (now - first_pub).total_seconds() / 60
-            is_within_window = (diff_minutes <= 30)
+            is_within_window = (diff_minutes <= 10)
+
+        fee_amount = championship.appeal_fee if (championship and championship.appeal_fee) else Decimal('1000.00')
 
         appeal = Appeal.objects.create(
             championship=championship,
@@ -382,6 +386,7 @@ def appeal_create(request):
             applicant_role=applicant_role,
             applicant_mobile=applicant_mobile,
             applicant_email=applicant_email,
+            appeal_fee_amount=fee_amount,
             intake_at=now,
             first_score_published_at=first_pub,
             is_within_window=is_within_window,
@@ -391,13 +396,14 @@ def appeal_create(request):
             form_document=request.FILES.get('form_document'),
             evidence_file=request.FILES.get('evidence_file')
         )
-        messages.success(request, f"Appeal #{appeal.id} registered successfully for Chest {chest}.")
+        messages.success(request, f"Appeal #{appeal.id} registered successfully for Chest {chest} (Fee: Rs. {fee_amount:.0f}).")
         return redirect('appeal_detail', appeal_id=appeal.id)
 
     return render(request, 'corrections/appeal_create.html', {
         'championship': championship,
         'matched_perf': matched_perf,
         'chest_prefill': chest_prefill,
+        'appeal_fee': championship.appeal_fee if (championship and championship.appeal_fee) else Decimal('1000.00'),
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.JURY, RoleChoices.CD)

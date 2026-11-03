@@ -85,6 +85,7 @@ urlpatterns = [
 
     # Competition Operations
     path('competition/draw/', comp_views.district_draw, name='district_draw'),
+    path('competition/chest-numbers/', comp_views.chest_number_manager, name='chest_number_manager'),
     path('competition/master-roll/', comp_views.master_roll, name='master_roll'),
     path('competition/panels/', comp_views.panel_assignments, name='panel_assignments'),
     path('competition/stage/', comp_views.stage_manager, name='stage_manager'),

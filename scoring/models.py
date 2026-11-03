@@ -126,6 +126,10 @@ class AsanaScoreItem(models.Model):
     
     # Time Judge inputs
     hold_duration_seconds = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    attempt_number = models.PositiveSmallIntegerField(default=1, help_text="Attempt 1 or 2 under COP second-attempt rules")
+    timing_penalty = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('0.00'), help_text="Manual penalty amount from Traditional T penalty box")
+    timing_penalty_reason = models.CharField(max_length=200, blank=True, help_text="Reason for T penalty box deduction")
+    timing_penalty_scope = models.CharField(max_length=50, default='ITEM', choices=[('ITEM', 'Item Deduction'), ('PERFORMANCE', 'Performance Deduction')])
     
     # Evaluator inputs
     is_valid = models.BooleanField(default=True)
@@ -174,3 +178,70 @@ class PerformanceArtistryScore(models.Model):
             legacy_subtotal = self.presentation + self.synchronization + self.choreography + self.transition_flow + self.costume_grace
             self.total_artistry = max(Decimal('0.00'), legacy_subtotal - self.deductions)
         return self.total_artistry
+
+
+class IncidentType(models.TextChoices):
+    SEQUENCE_CHANGE = 'SEQUENCE_CHANGE', 'Sequence Change (COP: 1st=2, 2nd=4, 3rd=6, >3=DQ)'
+    EXTRA_ASANA = 'EXTRA_ASANA', 'Music Extra Asana (COP: 1st=5, 2nd=DQ)'
+    MISSING_SUBCATEGORY = 'MISSING_SUBCATEGORY', 'Missing Subcategory (Single/Rhythmic COP: 1/2/3=5/10/15, >3=DQ)'
+    MAJOR_CATEGORY_DEFICIT = 'MAJOR_CATEGORY_DEFICIT', 'Major Category Deficit (Artistic Pair: 2 each, 5/occurrence, >3=DQ)'
+    INVALID_ASANA = 'INVALID_ASANA', 'Confirmed Invalid Asana (Zeroes complete D item across all D judges)'
+    FORMATION_INFRACTION = 'FORMATION_INFRACTION', 'Artistic Pair Formation / Support Infraction'
+    OTHER_RULE = 'OTHER_RULE', 'Other Technical Rule Infraction'
+
+
+class EvaluatorIncident(models.Model):
+    """
+    Implements Page 17 (Evaluator decisions and sequence records):
+    Performance/chest number; declared position/code/BV; observed position/code;
+    P1/P2/both; incident type; affected item numbers; evidence note/time;
+    reporting evaluator; Chief decision.
+    """
+    performance = models.ForeignKey(Performance, on_delete=models.CASCADE, related_name='evaluator_incidents')
+    chest_number = models.CharField(max_length=50)
+    reporting_evaluator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    evaluator_seat = models.CharField(max_length=30, default='EVALUATOR', choices=[
+        ('EVALUATOR', 'Evaluator (Solo/Rhythmic/Traditional)'),
+        ('EVALUATOR_1', 'Evaluator 1 (P1 Specialist)'),
+        ('EVALUATOR_2', 'Evaluator 2 (P2 Specialist)')
+    ])
+    player_target = models.CharField(max_length=20, default='SOLO', choices=[
+        ('SOLO', 'Solo Athlete'),
+        ('P1', 'Player 1'),
+        ('P2', 'Player 2'),
+        ('BOTH', 'Both Players (Shared/Pair)')
+    ])
+    incident_type = models.CharField(max_length=40, choices=IncidentType.choices, default=IncidentType.INVALID_ASANA)
+    
+    # Sequence / Asana Details
+    declared_position = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Declared item sequence (1-10)")
+    declared_code = models.CharField(max_length=50, blank=True)
+    declared_bv = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('0.80'))
+    observed_position = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Observed performed sequence (1-10)")
+    observed_code = models.CharField(max_length=50, blank=True)
+    affected_item_numbers = models.CharField(max_length=100, blank=True, help_text="e.g. 2, 3 or linked swap")
+    
+    # Penalties & Invalidation
+    penalty_marks = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('0.00'), help_text="Numeric Penalty Marks deducted once from composite score")
+    zeroes_item = models.BooleanField(default=False, help_text="Confirmed Invalid Asana zeroes that complete item across all D judges")
+    
+    # Notes & Evidence
+    evidence_notes = models.TextField(blank=True, help_text="Details, video time, or infraction observation notes")
+    evidence_time = models.CharField(max_length=50, blank=True, help_text="Routine timestamp e.g. 01:23")
+    
+    # Chief Decision
+    chief_decision = models.CharField(max_length=30, default='PENDING', choices=[
+        ('PENDING', 'Pending Chief Decision'),
+        ('APPROVED', 'Approved by Chief'),
+        ('REJECTED', 'Rejected by Chief')
+    ])
+    chief_decision_notes = models.TextField(blank=True)
+    chief_decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.get_incident_type_display()} on Chest {self.chest_number} ({self.chief_decision})"
+

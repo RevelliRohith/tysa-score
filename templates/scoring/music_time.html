@@ -22,63 +22,125 @@
                 <span class="font-bold text-slate-900 text-base font-mono">{{ entry.chest_number|default:"--" }}</span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Target Window</span>
-                <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono font-bold">120s – 150s</span>
+                <span class="text-slate-400 block font-medium">Timing Target</span>
+                <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono font-bold">150s – 180s (Max 10 Holds)</span>
             </div>
         </div>
     </div>
 
     <form method="POST">
         {% csrf_token %}
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-8 shadow-xs space-y-8">
-            <!-- Whole Routine Stopwatch -->
-            <div class="text-center space-y-4">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Whole Routine Monotonic Timer</span>
-                
-                <div class="inline-block bg-slate-950 px-12 py-6 rounded-3xl border-4 border-slate-800 shadow-inner">
-                    <span class="text-6xl sm:text-7xl font-black text-emerald-400 font-mono tracking-wider" id="routine_display">
-                        {{ sub.raw_total|default:"0.0" }}s
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-8">
+            <!-- PART 1: TW Whole Performance Timer -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">1. TW — Whole Performance Duration (Max 5.00 Marks)</span>
+                    <span class="text-xs text-teal-800 font-semibold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-md">
+                        Below 150s = 0 | 150–160s = 3 | 161–170s = 4 | 171–180s = 5
                     </span>
                 </div>
 
-                <div class="flex items-center justify-center space-x-3 pt-2">
-                    <button type="button" onclick="startRoutineTimer()"
-                            class="px-6 py-3 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-sm font-bold flex items-center space-x-2 shadow-xs transition">
-                        <i data-lucide="play" class="w-4 h-4"></i><span>Start Clock</span>
-                    </button>
-                    <button type="button" onclick="pauseRoutineTimer()"
-                            class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center space-x-2 transition">
-                        <i data-lucide="pause" class="w-4 h-4"></i><span>Pause</span>
-                    </button>
-                    <button type="button" onclick="resetRoutineTimer()"
-                            class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center space-x-2 transition">
-                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i><span>Reset</span>
-                    </button>
+                <div class="text-center space-y-4 pt-2">
+                    <div class="inline-block bg-slate-950 px-10 py-5 rounded-3xl border-4 border-slate-800 shadow-inner">
+                        <span class="text-5xl sm:text-6xl font-black text-emerald-400 font-mono tracking-wider" id="routine_display">
+                            {{ sub.raw_total|default:"165.0" }}s
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-center space-x-3">
+                        <button type="button" onclick="startRoutineTimer()"
+                                class="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-xs transition cursor-pointer">
+                            <i data-lucide="play" class="w-4 h-4"></i><span>Start Timer</span>
+                        </button>
+                        <button type="button" onclick="pauseRoutineTimer()"
+                                class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer">
+                            <i data-lucide="pause" class="w-4 h-4"></i><span>Pause</span>
+                        </button>
+                        <button type="button" onclick="resetRoutineTimer()"
+                                class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i><span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-slate-700">Exact Routine Duration (Whole Seconds with 0.5 rounded up)</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" step="0.1" min="0" max="300" 
+                                   name="routine_duration" id="routine_duration"
+                                   value="{{ sub.raw_total|default:'165.0' }}"
+                                   oninput="updateDurationDisplay()"
+                                   class="w-full text-lg font-bold px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-1 focus:ring-teal-700 font-mono">
+                            <span class="text-xs font-bold text-slate-500">Sec</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-[11px] space-y-1 text-slate-600">
+                        <span class="font-bold text-slate-900 block">COP Timing Reconciliation Rules (Page 16):</span>
+                        <p>• <strong>150s Margin Rule:</strong> 3-second grace if one reading is &lt;150s and other &ge;150s (e.g. 148s/150s treated as 150s).</p>
+                        <p>• <strong>Overtime:</strong> After 180s, 0.5 marks per extra second deducted once.</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Manual Override & Rules -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
-                <div class="space-y-3">
-                    <label class="block text-xs font-bold text-slate-700">Elapsed Routine Duration (Seconds)</label>
-                    <div class="flex items-center space-x-2">
-                        <input type="number" step="0.1" min="0" max="300" 
-                               name="routine_duration" id="routine_duration"
-                               value="{{ sub.raw_total|default:'145.0' }}"
-                               oninput="updateDurationDisplay()"
-                               class="w-full text-xl font-bold px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700 font-mono">
-                        <span class="text-sm font-bold text-slate-500">Sec</span>
+            <!-- PART 2: TA 10 Asana Holds -->
+            <div class="space-y-4 pt-6 border-t border-slate-200">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div>
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">2. TA — 10 Asana Holds (Max 5.00 Marks)</span>
+                        <span class="text-[11px] text-slate-400">Each hold &ge; 5s = 0.50 marks. Below 5s = 0 TA and zeroes complete item for all 4 D-Judges.</span>
                     </div>
-                    <p class="text-[11px] text-slate-400">Timer syncs live to field. Exact wall-clock elapsed time recorded.</p>
+                    <span class="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-md">
+                        Pair hold measured as one shared unit
+                    </span>
                 </div>
 
-                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2 text-xs">
-                    <span class="font-bold text-slate-900 block">COP Music Timing Rules:</span>
-                    <ul class="list-disc pl-4 space-y-1 text-slate-600">
-                        <li>Standard duration: <strong>120 to 150 seconds</strong>.</li>
-                        <li>Overtime penalty: <strong>-0.5 points per 5 seconds</strong> beyond 150s.</li>
-                        <li>Base Timing mark is <strong>10.00</strong> minus overtime penalties.</li>
-                    </ul>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {% for itm in items %}
+                    <div class="border rounded-xl p-3 bg-slate-50/50 space-y-2 text-xs border-slate-200" id="card_hold_{{ itm.sequence_order }}">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900">Item #{{ itm.sequence_order }}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {% if itm.hold_duration_seconds >= 5 %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %}" id="badge_hold_{{ itm.sequence_order }}">
+                                {% if itm.hold_duration_seconds >= 5 %}Valid (+0.5){% else %}Invalid (0.0){% endif %}
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <input type="number" step="0.5" min="0" max="60" 
+                                   name="hold_{{ itm.sequence_order }}" id="hold_{{ itm.sequence_order }}"
+                                   value="{{ itm.hold_duration_seconds }}"
+                                   oninput="updateHoldItem({{ itm.sequence_order }})"
+                                   class="w-full text-right px-2 py-1 border border-slate-300 rounded font-mono font-bold outline-none focus:ring-1 focus:ring-teal-700">
+                            <span class="text-[10px] text-slate-400">sec</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                            <button type="button" onclick="setHoldValue({{ itm.sequence_order }}, 5.0)" class="text-teal-700 font-bold hover:underline cursor-pointer">5s Valid</button>
+                            <button type="button" onclick="setHoldValue({{ itm.sequence_order }}, 4.0)" class="text-rose-600 font-bold hover:underline cursor-pointer">&lt;5s Fail</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- PART 3: Combined Timing Summary Row -->
+            <div class="bg-teal-50 border border-teal-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-center space-x-6">
+                    <div>
+                        <span class="text-slate-500 block">TW Whole Marks:</span>
+                        <span class="text-lg font-black text-slate-900 font-mono" id="summary_tw">4.00</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">TA Valid Holds:</span>
+                        <span class="text-lg font-black text-slate-900 font-mono" id="summary_ta">4.50 / 5.00</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">Overtime Deduction:</span>
+                        <span class="text-lg font-black text-rose-700 font-mono" id="summary_ot">-0.00</span>
+                    </div>
+                </div>
+                <div class="text-right sm:border-l sm:border-teal-200 sm:pl-6">
+                    <span class="text-teal-900 font-bold block text-[11px] uppercase tracking-wider">Total Timing Score</span>
+                    <span class="text-2xl font-black text-teal-950 font-mono" id="summary_total">8.50 / 10.00</span>
                 </div>
             </div>
         </div>
@@ -139,6 +201,61 @@ function resetRoutineTimer() {
 function updateDurationDisplay() {
     const val = parseFloat(document.getElementById('routine_duration').value) || 0;
     document.getElementById('routine_display').textContent = val.toFixed(1) + 's';
+    recalcCombinedTiming();
 }
+
+function setHoldValue(seq, val) {
+    const el = document.getElementById('hold_' + seq);
+    if (el) {
+        el.value = val.toFixed(1);
+        updateHoldItem(seq);
+    }
+}
+
+function updateHoldItem(seq) {
+    const el = document.getElementById('hold_' + seq);
+    const badge = document.getElementById('badge_hold_' + seq);
+    const val = parseFloat(el.value) || 0;
+    if (val >= 5.0) {
+        badge.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800";
+        badge.textContent = "Valid (+0.5)";
+    } else {
+        badge.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800";
+        badge.textContent = "Invalid (0.0)";
+    }
+    recalcCombinedTiming();
+}
+
+function recalcCombinedTiming() {
+    const d = Math.round(parseFloat(document.getElementById('routine_duration')?.value) || 0);
+    let tw = 0.0;
+    if (d < 150) {
+        tw = 0.0;
+    } else if (d <= 160) {
+        tw = 3.0;
+    } else if (d <= 170) {
+        tw = 4.0;
+    } else {
+        tw = 5.0;
+    }
+
+    const otSecs = Math.max(0, d - 180);
+    const otDed = otSecs * 0.5;
+
+    let taCount = 0;
+    for (let i = 1; i <= 10; i++) {
+        const h = parseFloat(document.getElementById('hold_' + i)?.value) || 0;
+        if (h >= 5.0) taCount++;
+    }
+    const ta = taCount * 0.5;
+    const total = Math.max(0, tw + ta - otDed);
+
+    document.getElementById('summary_tw').textContent = tw.toFixed(2);
+    document.getElementById('summary_ta').textContent = ta.toFixed(2) + ' / 5.00';
+    document.getElementById('summary_ot').textContent = (otDed > 0 ? '-' + otDed.toFixed(2) : '-0.00');
+    document.getElementById('summary_total').textContent = total.toFixed(2) + ' / 10.00';
+}
+
+document.addEventListener('DOMContentLoaded', recalcCombinedTiming);
 </script>
 {% endblock %}

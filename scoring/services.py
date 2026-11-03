@@ -110,6 +110,102 @@ UNRESOLVED_RULES_REGISTER = {
 
 
 # ============================================================================
+# COP CHAPTER 4 ANNEXURE A & B TIMING TABLES
+# ============================================================================
+# Annexure A: Reference table with marks and time in seconds (75%) for asana in 1st Attempt (Max 2.0)
+ANNEXURE_A_TABLE = {
+    60: {
+        60: Decimal('2.000000'), 59: Decimal('1.966667'), 58: Decimal('1.933333'), 57: Decimal('1.900000'),
+        56: Decimal('1.866667'), 55: Decimal('1.833333'), 54: Decimal('1.800000'), 53: Decimal('1.766667'),
+        52: Decimal('1.733333'), 51: Decimal('1.700000'), 50: Decimal('1.666667'), 49: Decimal('1.633333'),
+        48: Decimal('1.600000'), 47: Decimal('1.566667'), 46: Decimal('1.533333'), 45: Decimal('1.500000'),
+    },
+    45: {
+        45: Decimal('2.000000'), 44: Decimal('1.955556'), 43: Decimal('1.911111'), 42: Decimal('1.866667'),
+        41: Decimal('1.822222'), 40: Decimal('1.777778'), 39: Decimal('1.733333'), 38: Decimal('1.688889'),
+        37: Decimal('1.644444'), 36: Decimal('1.600000'), 35: Decimal('1.555556'), 34: Decimal('1.511111'),
+        33: Decimal('1.466667'),
+    },
+    30: {
+        30: Decimal('2.000000'), 29: Decimal('1.933333'), 28: Decimal('1.866667'), 27: Decimal('1.800000'),
+        26: Decimal('1.733333'), 25: Decimal('1.666667'), 24: Decimal('1.600000'), 23: Decimal('1.533333'),
+        22: Decimal('1.466667'),
+    },
+    15: {
+        15: Decimal('2.000000'), 14: Decimal('1.866667'), 13: Decimal('1.733333'), 12: Decimal('1.600000'),
+        11: Decimal('1.466667'),
+    }
+}
+
+# Annexure B: Reference table with marks and time in seconds (75%) for asana in 2nd Attempt (Max 1.0)
+ANNEXURE_B_TABLE = {
+    60: {
+        60: Decimal('1.000000'), 59: Decimal('0.983333'), 58: Decimal('0.966667'), 57: Decimal('0.950000'),
+        56: Decimal('0.933333'), 55: Decimal('0.916667'), 54: Decimal('0.900000'), 53: Decimal('0.883333'),
+        52: Decimal('0.866667'), 51: Decimal('0.850000'), 50: Decimal('0.833333'), 49: Decimal('0.816667'),
+        48: Decimal('0.800000'), 47: Decimal('0.783333'), 46: Decimal('0.766667'), 45: Decimal('0.750000'),
+    },
+    45: {
+        45: Decimal('1.000000'), 44: Decimal('0.977778'), 43: Decimal('0.955556'), 42: Decimal('0.933333'),
+        41: Decimal('0.911111'), 40: Decimal('0.888889'), 39: Decimal('0.866667'), 38: Decimal('0.844444'),
+        37: Decimal('0.822222'), 36: Decimal('0.800000'), 35: Decimal('0.777778'), 34: Decimal('0.755556'),
+        33: Decimal('0.733333'),
+    },
+    30: {
+        30: Decimal('1.000000'), 29: Decimal('0.966667'), 28: Decimal('0.933333'), 27: Decimal('0.900000'),
+        26: Decimal('0.866667'), 25: Decimal('0.833333'), 24: Decimal('0.800000'), 23: Decimal('0.766667'),
+        22: Decimal('0.733333'),
+    },
+    15: {
+        15: Decimal('1.000000'), 14: Decimal('0.933333'), 13: Decimal('0.866667'), 12: Decimal('0.800000'),
+        11: Decimal('0.733333'),
+    }
+}
+
+
+def calculate_traditional_timing_contribution(
+    hold_seconds: Decimal,
+    target_hold: Decimal,
+    attempt: int = 1
+) -> Decimal:
+    """
+    COP Chapter 4 Annexure A & B Timing calculation:
+    - Attempt 1: Annexure A (Target hold = 2.0 marks, down to 75% cutoff; below cutoff = 0).
+    - Attempt 2: Annexure B (Target hold = 1.0 mark, down to 75% cutoff; below cutoff = 0).
+    - When hold is 0 or contribution is 0, D scores for that asana become zero.
+    """
+    hold_seconds = to_decimal(hold_seconds)
+    target_hold = to_decimal(target_hold)
+    if hold_seconds <= Decimal('0.00') or target_hold <= Decimal('0.00'):
+        return Decimal('0.000')
+
+    # Match target table (60, 45, 30, 15)
+    target_int = int(round(float(target_hold)))
+    table_family = ANNEXURE_B_TABLE if attempt == 2 else ANNEXURE_A_TABLE
+    table = table_family.get(target_int)
+
+    # Whole seconds rounded with ROUND_HALF_UP per COP standard
+    sec_int = int(hold_seconds.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+    if table:
+        if sec_int >= target_int:
+            return table[target_int]
+        if sec_int in table:
+            return table[sec_int]
+        return Decimal('0.000')
+
+    # Fallback formula if custom non-standard target:
+    max_marks = Decimal('1.00') if attempt == 2 else Decimal('2.00')
+    cutoff_75 = target_hold * Decimal('0.75')
+    if hold_seconds >= target_hold:
+        return max_marks
+    elif hold_seconds >= cutoff_75:
+        return quantize_score(max_marks * (hold_seconds / target_hold), 3)
+    else:
+        return Decimal('0.000')
+
+
+# ============================================================================
 # 1. TRADITIONAL YOGASANA CALCULATIONS
 # ============================================================================
 def calculate_traditional_item(
@@ -131,6 +227,7 @@ def calculate_traditional_item(
     If detailed microfields provided, they form an alternative breakdown of execution /8:
     (Accuracy /4 + Mounting/Dismounting /2 + Stability /1 + Grace /1).
     item_score = (execution + approved_time_marks /2) * BV.
+    If is_invalid is True OR timing_contribution <= 0, effective_item_score is strictly 0.000.
     """
     posture = to_decimal(posture)
     stability_grace = to_decimal(stability_grace)
@@ -154,7 +251,11 @@ def calculate_traditional_item(
     time_clamped = min(Decimal('2.00'), max(Decimal('0.00'), timing_contribution))
 
     raw_item = (execution + time_clamped) * base_value
-    effective_item = Decimal('0.000') if is_invalid else raw_item
+    # Evaluator is the authoritative decider of asana validity
+    if is_invalid:
+        effective_item = Decimal('0.000')
+    else:
+        effective_item = raw_item
 
     return {
         'execution': execution,
@@ -465,9 +566,9 @@ def calculate_panel_trimmed_mean(
     if n < confirmed_panel_size:
         return {
             'retained_average': Decimal('0.000'),
-            'retained_scores': sorted_entries,
+            'retained_scores': [{'role': x[0], 'score': quantize_score(x[1])} for x in sorted_entries],
             'discarded_scores': [],
-            'all_scores': sorted_entries,
+            'all_scores': [{'role': x[0], 'score': quantize_score(x[1])} for x in sorted_entries],
             'is_incomplete': True,
             'formula_display': f'Incomplete Panel ({n}/{confirmed_panel_size} submitted)',
         }
@@ -526,7 +627,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     """
     Authoritative server-side scoring calculation for a performance.
     Runs on server for all screens, exports, live scoreboard, and CD review.
-    
+
     Order of operations:
     1. Resolve confirmed panel & required seats.
     2. Check for missing submissions (Missing != 0).
@@ -619,19 +720,22 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     invalid_item_sequences = set()
     invalid_reasons = {}
 
-    # Check Evaluator submissions
-    eval1 = sub_by_role.get('EVALUATOR')
-    eval2 = sub_by_role.get('EVALUATOR_2')
-    for ev in [eval1, eval2]:
-        if ev:
-            for itm in ev.items.filter(is_valid=False):
-                invalid_item_sequences.add(itm.sequence_order)
-                invalid_reasons[itm.sequence_order] = itm.invalid_reason or "Evaluator Confirmed Invalid Asana"
+    # Check Evaluator submissions (respects invalid decisions across both live draft and submitted sheets)
+    eval_subs = JudgeSubmission.objects.filter(
+        performance=performance,
+        judge_role__in=['EVALUATOR', 'EVALUATOR_1', 'EVALUATOR_2']
+    )
+    eval1 = eval_subs.filter(judge_role__in=['EVALUATOR', 'EVALUATOR_1']).first()
+    eval2 = eval_subs.filter(judge_role='EVALUATOR_2').first()
+    for ev in eval_subs:
+        for itm in ev.items.filter(is_valid=False):
+            invalid_item_sequences.add(itm.sequence_order)
+            invalid_reasons[itm.sequence_order] = itm.invalid_reason or "Evaluator Confirmed Invalid Asana"
 
-    # Check Time Judges holds for music events
+    # Check Time Judges holds
     reconciled_timing_data = {}
-    time_judge_1 = sub_by_role.get('TIME_JUDGE')
-    time_judge_2 = sub_by_role.get('TIME_JUDGE_2')
+    time_judge_1 = JudgeSubmission.objects.filter(performance=performance, judge_role='TIME_JUDGE').first()
+    time_judge_2 = JudgeSubmission.objects.filter(performance=performance, judge_role='TIME_JUDGE_2').first()
 
     if not is_traditional and time_judge_1 and time_judge_2:
         t1_holds = [itm.hold_duration_seconds for itm in time_judge_1.items.all().order_by('sequence_order')]
@@ -646,18 +750,31 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
             invalid_reasons[inv_seq] = "Accepted Hold Duration Below 5 Seconds"
 
     # Step 4: Calculate D Judges items and totals
+    from registrations.models import AsanaSequenceItem
+    declared_seqs = {
+        asi.sequence_order: asi
+        for asi in AsanaSequenceItem.objects.filter(event_entry=event_entry, round_type=round_type)
+    }
+    if not declared_seqs and event_entry:
+        declared_seqs = {
+            asi.sequence_order: asi
+            for asi in AsanaSequenceItem.objects.filter(event_entry=event_entry)
+        }
+
     d_judge_totals = []
     compulsory_d_judge_totals = [] # For Traditional tie-break
     d_matrix = []
     sequence_count = 7 if is_traditional else 10
 
     # Number of compulsory asanas in Traditional
-    compulsory_count = 5
+    ev_cfg = event_entry.event_config if event_entry else None
     if is_traditional:
-        if round_type == 'FINAL':
-            compulsory_count = 4
+        if ev_cfg and hasattr(ev_cfg, 'final_compulsory_count'):
+            compulsory_count = ev_cfg.final_compulsory_count if round_type == 'FINAL' else ev_cfg.prelim_compulsory_count
         else:
-            compulsory_count = 5
+            compulsory_count = 2 if round_type == 'FINAL' else 4
+    else:
+        compulsory_count = 0
 
     for d_role in required_d_roles:
         d_sub = sub_by_role.get(d_role)
@@ -674,12 +791,34 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
             is_inv = (seq in invalid_item_sequences)
 
             if is_traditional:
-                is_comp = (seq <= compulsory_count)
+                decl = declared_seqs.get(seq)
+                if decl and hasattr(decl, 'is_compulsory') and decl.is_compulsory is not None:
+                    is_comp = decl.is_compulsory
+                else:
+                    is_comp = (seq <= compulsory_count)
+
+                if is_comp:
+                    resolved_bv = Decimal('1.00')
+                elif decl and decl.declared_bv:
+                    resolved_bv = decl.declared_bv
+                elif itm.base_value and itm.base_value > Decimal('0.00'):
+                    resolved_bv = itm.base_value
+                else:
+                    resolved_bv = Decimal('0.80')
+
+                itm.base_value = resolved_bv
+
+                time_contrib = itm.timing_contribution
+                if time_judge_1:
+                    tj_itm = time_judge_1.items.filter(sequence_order=seq).first()
+                    if tj_itm is not None:
+                        time_contrib = tj_itm.timing_contribution
+
                 calc_res = calculate_traditional_item(
                     posture=itm.posture_score,
                     stability_grace=itm.stability_score,
-                    timing_contribution=itm.timing_contribution,
-                    base_value=itm.base_value,
+                    timing_contribution=time_contrib,
+                    base_value=resolved_bv,
                     detailed_accuracy=itm.detailed_accuracy,
                     detailed_mounting_dismounting=itm.detailed_mounting_dismounting,
                     detailed_stability=itm.detailed_stability,
@@ -715,6 +854,9 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
             itm.is_valid = not is_inv
             if is_inv:
                 itm.invalid_reason = invalid_reasons.get(seq, 'Invalid Asana')
+            else:
+                itm.invalid_reason = ''
+            itm.save(update_fields=['base_value', 'raw_item_score', 'effective_item_score', 'is_valid', 'invalid_reason'])
 
             judge_raw_total += calc_res['raw_item_score']
             judge_effective_total += calc_res['effective_item_score']
@@ -725,16 +867,11 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         # Update submission totals
         d_sub.raw_total = quantize_score(judge_raw_total)
         d_sub.effective_total = quantize_score(judge_effective_total)
+        d_sub.save(update_fields=['raw_total', 'effective_total'])
         d_judge_totals.append((d_role, quantize_score(judge_effective_total)))
         compulsory_d_judge_totals.append((d_role, quantize_score(judge_compulsory_total)))
 
     # Assemble Asana-by-Asana matrix across all submitted D judges
-    from registrations.models import AsanaSequenceItem
-    declared_seqs = {
-        asi.sequence_order: asi
-        for asi in AsanaSequenceItem.objects.filter(event_entry=event_entry, round_type=round_type)
-    }
-
     items_by_role_seq = {}
     for d_role in required_d_roles:
         d_sub = sub_by_role.get(d_role)
@@ -752,13 +889,41 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
 
         code = decl.declared_code if decl and decl.declared_code else f"A{seq}"
         name = decl.declared_name if decl and decl.declared_name else f"Item {seq}"
-        bv = first_itm.base_value if first_itm else (decl.declared_bv if decl else (Decimal('1.00') if (is_traditional and seq <= compulsory_count) else Decimal('0.80')))
+        if is_traditional:
+            is_seq_comp = decl.is_compulsory if (decl and hasattr(decl, 'is_compulsory') and decl.is_compulsory is not None) else (seq <= compulsory_count)
+            if is_seq_comp:
+                bv = Decimal('1.00')
+            elif decl and decl.declared_bv:
+                bv = decl.declared_bv
+            elif first_itm and first_itm.base_value:
+                bv = first_itm.base_value
+            else:
+                bv = Decimal('0.80')
+        else:
+            bv = first_itm.base_value if (first_itm and first_itm.base_value) else (decl.declared_bv if decl else Decimal('0.80'))
 
-        d1_val = items_by_role_seq.get(('D1_JUDGE', seq)).effective_item_score if ('D1_JUDGE', seq) in items_by_role_seq else Decimal('0.000')
-        d2_val = items_by_role_seq.get(('D2_JUDGE', seq)).effective_item_score if ('D2_JUDGE', seq) in items_by_role_seq else Decimal('0.000')
-        d3_val = items_by_role_seq.get(('D3_JUDGE', seq)).effective_item_score if ('D3_JUDGE', seq) in items_by_role_seq else Decimal('0.000')
-        d4_val = items_by_role_seq.get(('D4_JUDGE', seq)).effective_item_score if ('D4_JUDGE', seq) in items_by_role_seq else Decimal('0.000')
-        d5_val = items_by_role_seq.get(('D5_JUDGE', seq)).effective_item_score if ('D5_JUDGE', seq) in items_by_role_seq else Decimal('0.000')
+        def _get_item_mark(itm):
+            if not itm:
+                return Decimal('0.000')
+            if itm.raw_item_score > Decimal('0.000'):
+                return itm.raw_item_score
+            if itm.posture_score > Decimal('0.00') or itm.stability_score > Decimal('0.00'):
+                return quantize_score(itm.posture_score + itm.stability_score + (itm.timing_contribution or Decimal('0.00')))
+            if itm.execution_score > Decimal('0.00'):
+                return quantize_score(itm.execution_score * itm.base_value)
+            return itm.effective_item_score
+
+        d1_itm = items_by_role_seq.get(('D1_JUDGE', seq))
+        d2_itm = items_by_role_seq.get(('D2_JUDGE', seq))
+        d3_itm = items_by_role_seq.get(('D3_JUDGE', seq))
+        d4_itm = items_by_role_seq.get(('D4_JUDGE', seq))
+        d5_itm = items_by_role_seq.get(('D5_JUDGE', seq))
+
+        d1_val = _get_item_mark(d1_itm)
+        d2_val = _get_item_mark(d2_itm)
+        d3_val = _get_item_mark(d3_itm)
+        d4_val = _get_item_mark(d4_itm)
+        d5_val = _get_item_mark(d5_itm)
 
         all_d_at_seq = [d1_val, d2_val, d3_val, d4_val]
         if confirmed_d_count >= 5:
@@ -778,7 +943,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
             'd4': d4_val,
             'd5': d5_val,
             'trimmed_mean': item_mean,
-            'deduction': Decimal('0.00') if not is_seq_invalid else item_mean,
+            'deduction': item_mean if is_seq_invalid else Decimal('0.00'),
             'net_item_score': Decimal('0.000') if is_seq_invalid else item_mean,
             'is_invalid': is_seq_invalid,
             'invalid_reason': invalid_reasons.get(seq, '')
@@ -838,19 +1003,64 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         elif time_judge_1:
             timing_score = time_judge_1.effective_total
 
-    # Step 9: Evaluator Penalties (Applied Once, Separate from Invalidity)
+    # Step 9: Evaluator & T-Box Penalties (Applied Once, Separate from Invalidity)
     evaluator_penalties = Decimal('0.000')
     evaluator_incidents = []
+
+    # 1. From EvaluatorIncident model (Page 17)
+    from scoring.models import EvaluatorIncident
+    db_incidents = EvaluatorIncident.objects.filter(performance=performance)
+    seen_incidents = set()
+    for inc in db_incidents:
+        if inc.zeroes_item and inc.affected_item_numbers:
+            for itm_str in inc.affected_item_numbers.split(','):
+                try:
+                    invalid_item_sequences.add(int(itm_str.strip()))
+                    invalid_reasons[int(itm_str.strip())] = f"Evaluator: {inc.get_incident_type_display()}"
+                except ValueError:
+                    pass
+
+        # Deduplicate shared incidents between E1 and E2 (Page 17: Shared incidents are not charged twice)
+        inc_key = (inc.incident_type, inc.affected_item_numbers, inc.declared_code)
+        if inc_key not in seen_incidents and inc.chief_decision != 'REJECTED':
+            seen_incidents.add(inc_key)
+            evaluator_penalties += inc.penalty_marks
+            evaluator_incidents.append({
+                'id': inc.id,
+                'type': inc.get_incident_type_display(),
+                'penalty': str(inc.penalty_marks),
+                'player': inc.player_target,
+                'evaluator': inc.evaluator_seat,
+                'reason': inc.evidence_notes or inc.get_incident_type_display(),
+                'status': inc.chief_decision
+            })
+
+    # 2. From metadata on submissions (backward compatible)
     for ev in [eval1, eval2]:
         if ev and hasattr(ev, 'calculation_metadata'):
             incidents = ev.calculation_metadata.get('penalties', [])
             for inc in incidents:
-                # Deduplicate identical incidents between E1 and E2
                 inc_id = inc.get('id')
                 if not any(x.get('id') == inc_id for x in evaluator_incidents):
                     pts = to_decimal(inc.get('points', 0))
                     evaluator_penalties += pts
                     evaluator_incidents.append(inc)
+
+    # 3. Traditional T Penalties from Time Judge (Page 14)
+    if is_traditional and time_judge_1:
+        tj_meta = time_judge_1.calculation_metadata or {}
+        for tp in tj_meta.get('traditional_t_penalties', []):
+            p_val = to_decimal(tp.get('penalty_amount', 0))
+            if p_val > Decimal('0.00'):
+                evaluator_penalties += p_val
+                evaluator_incidents.append({
+                    'type': 'Traditional T Penalty Box',
+                    'penalty': str(p_val),
+                    'player': 'SOLO',
+                    'evaluator': 'TIME_JUDGE',
+                    'reason': tp.get('reason', 'Time judge deduction'),
+                    'status': 'CHIEF_REVIEW'
+                })
 
     # Step 10: Final Composite Score
     # Required fixture verification:
@@ -929,7 +1139,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         'd4_total': d4_total,
         'd5_total': d5_total,
         'penalties': evaluator_penalties,
-        'd_trimmed_scores': [x['score'] for x in panel_result.get('retained_scores', [])],
+        'd_trimmed_scores': [x['score'] if isinstance(x, dict) else quantize_score(x[1]) for x in panel_result.get('retained_scores', [])],
         'provisional_total': final_composite,
         'final_total': final_composite,
         'can_release': can_release,
@@ -998,7 +1208,7 @@ def calculate_event_division_standings(
 
         calc = p.calculation_data or {}
         score = p.final_score if p.final_score is not None else (p.provisional_score or Decimal('0.000'))
-        
+
         # Tie break score
         is_trad = 'TRADITIONAL' in (p.event_entry.event_config.event_type.upper() if p.event_entry.event_config else '')
         if is_trad:

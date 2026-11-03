@@ -7,24 +7,40 @@
 <div class="max-w-[1600px] mx-auto space-y-6 py-2">
     <!-- Top Metadata Card matching 33_Traditional_Time_Judge.png -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex items-center space-x-4">
-            <span class="text-xl font-black text-slate-900 tracking-tight">Traditional Time Judge</span>
-            <span class="text-slate-300">|</span>
-            <span class="text-base font-bold text-slate-700">Batch #{{ batch.batch_number|default:"1" }}</span>
+        <div class="space-y-1">
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'judge_portal' %}#panels" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Assigned Panels</span>
+                </a>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                    Traditional Time Judge
+                </span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                    {{ round_type }}
+                </span>
+            </div>
+            <div class="flex items-center space-x-3 pt-1">
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Active Batch #{{ batch.batch_number|default:"1" }}</h1>
+                <span class="text-slate-300">•</span>
+                <span class="text-xs font-bold text-slate-500 font-mono">{{ entries|length }} Competitors on Stage</span>
+            </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-6 text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200/80">
             <div>
                 <span class="text-slate-400 block font-medium">Event</span>
-                <span class="font-bold text-slate-900 text-sm">{{ batch.panel.event_config.get_event_type_display|default:"Traditional Yogasana" }}</span>
+                <span class="font-bold text-slate-900 truncate block">{{ batch.panel.event_config.get_event_type_display|default:"Traditional Yogasana" }}</span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Round</span>
-                <span class="font-bold text-slate-900 text-sm">{{ batch.panel.get_round_type_display|default:"Preliminary" }}</span>
+                <span class="text-slate-400 block font-medium">Required Hold (Item {{ current_seq }})</span>
+                <span class="px-2.5 py-1 rounded bg-teal-800 text-white font-mono font-bold block truncate">
+                    {% if is_compulsory %}Compulsory {{ target_hold|floatformat:0 }}s{% else %}Optional {{ target_hold|floatformat:0 }}s{% endif %}
+                </span>
             </div>
             <div>
-                <span class="text-slate-400 block font-medium">Hold Requirement</span>
-                <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono font-bold">15 Seconds Min</span>
+                <span class="text-slate-400 block font-medium">Rule Warning</span>
+                <span class="font-bold text-rose-700 block">0s Hold zeroes D-Score</span>
             </div>
         </div>
     </div>
@@ -32,7 +48,7 @@
     <!-- Sequence & Pose Bar -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center space-x-3">
-            <span class="text-sm font-bold text-slate-900">Round Sequence <span class="text-slate-500 font-normal">(7 asanas)</span></span>
+            <span class="text-sm font-bold text-slate-900">Round Sequence <span class="text-slate-500 font-normal">(7 asanas)</span>:</span>
             <div class="flex items-center space-x-2">
                 {% for seq_num in "1234567"|make_list %}
                 <a href="?seq={{ seq_num }}" class="w-8 h-8 rounded-full {% if current_seq|stringformat:'s' == seq_num %}bg-teal-800 text-white shadow-xs{% else %}border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %} font-bold flex items-center justify-center text-xs transition">
@@ -42,10 +58,10 @@
             </div>
         </div>
 
-        <div class="flex items-center space-x-3">
-            <span class="text-xs font-bold text-slate-500">Active Scoring Asana:</span>
-            <span class="px-3 py-1 bg-amber-50 border border-amber-200 text-amber-900 font-bold rounded-lg text-xs">
-                Asana {{ current_seq }} of 7
+        <div class="flex items-center space-x-3 text-xs">
+            <span class="text-slate-400">Timing Standard:</span>
+            <span class="px-3 py-1 bg-teal-50 border border-teal-200 text-teal-900 font-semibold rounded-lg">
+                Asana-hold timing only • Annexure A/B Scoring
             </span>
         </div>
     </div>
@@ -55,60 +71,128 @@
         <!-- Athlete Cards Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ entries|length|default:1 }} gap-4">
             {% for s in submissions.values %}
-            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="text-xs text-slate-400 block font-medium">Chest</span>
-                        <span class="text-2xl font-black text-slate-900 font-mono">{{ s.entry.chest_number }}</span>
-                    </div>
-                    {% if s.sub.is_locked %}
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Locked</span>
-                    {% else %}
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Draft</span>
-                    {% endif %}
-                </div>
-
-                <!-- Live Timer Display -->
-                <div class="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
-                    <span class="text-3xl font-black text-emerald-400 font-mono" id="display_{{ s.entry.id }}">
-                        {{ s.item.hold_duration_seconds|stringformat:"05.2f" }}s
-                    </span>
-                </div>
-
-                <!-- Stopwatch Controls -->
-                <div class="grid grid-cols-3 gap-1">
-                    <button type="button" onclick="startTimer('{{ s.entry.id }}')" 
-                            class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
-                        <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
-                    </button>
-                    <button type="button" onclick="pauseTimer('{{ s.entry.id }}')" 
-                            class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
-                        <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
-                    </button>
-                    <button type="button" onclick="resetTimer('{{ s.entry.id }}')" 
-                            class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
-                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i><span>Reset</span>
-                    </button>
-                </div>
-
-                <div class="pt-2 border-t border-slate-100 space-y-2 text-xs">
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-medium">Hold Seconds:</span>
-                        <input type="number" step="0.1" min="0" max="60" 
-                               name="hold_{{ s.entry.id }}" id="input_{{ s.entry.id }}" 
-                               value="{{ s.item.hold_duration_seconds }}" 
-                               oninput="updateDisplayFromInput('{{ s.entry.id }}')"
-                               class="w-20 text-right px-2 py-1 border border-slate-300 rounded font-bold font-mono outline-none focus:ring-1 focus:ring-teal-700">
+            <div class="bg-white rounded-2xl border-2 border-slate-200 p-4 shadow-xs space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div>
+                            <span class="text-xs text-slate-400 block font-medium">Chest No.</span>
+                            <span class="text-2xl font-black text-slate-900 font-mono">#{{ s.entry.chest_number }}</span>
+                            <div class="text-[11px] font-bold text-slate-700">{{ s.entry.athlete.name }}</div>
+                        </div>
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if is_compulsory %}bg-indigo-100 text-indigo-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                                {% if is_compulsory %}Compulsory ({{ target_hold|floatformat:0 }}s){% else %}Optional ({{ target_hold|floatformat:0 }}s){% endif %}
+                            </span>
+                            {% if s.sub.is_locked %}
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Locked</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Active</span>
+                            {% endif %}
+                        </div>
                     </div>
 
-                    <div class="flex items-center justify-between bg-teal-50/70 p-2 rounded-lg text-teal-900 font-bold">
-                        <span>Contribution:</span>
-                        <span class="font-mono">{{ s.item.timing_contribution }} / 2.0</span>
+                    <!-- Asana Name, Code, BV Clearly Visible -->
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                        <div class="min-w-0 pr-2">
+                            <span class="text-[9px] font-black uppercase text-slate-400 block">Declared Asana</span>
+                            <span class="font-bold text-slate-900 truncate block text-xs">{{ s.pose.declared_name|default:"Declared Asana" }}</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5 shrink-0">
+                            <span class="px-2 py-0.5 rounded bg-slate-900 text-white font-mono font-bold text-[10px]">{{ s.pose.declared_code|default:"ASANA" }}</span>
+                            <span class="px-2 py-0.5 rounded {% if s.is_compulsory %}bg-indigo-100 text-indigo-800{% else %}bg-teal-100 text-teal-800{% endif %} font-bold text-[10px]">
+                                BV: {{ s.base_value|default:s.pose.declared_bv|default:"1.00" }} {% if s.is_compulsory %}(Compulsory){% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Live Timer Display -->
+                    <div class="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+                        <span class="text-3xl font-black text-emerald-400 font-mono" id="display_{{ s.entry.id }}">
+                            {{ s.item.hold_duration_seconds|stringformat:"05.2f" }}s
+                        </span>
+                    </div>
+
+                    <!-- Stopwatch Controls -->
+                    <div class="grid grid-cols-3 gap-1">
+                        <button type="button" onclick="startTimer('{{ s.entry.id }}')" 
+                                class="py-1.5 px-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1 cursor-pointer">
+                            <i data-lucide="play" class="w-3 h-3"></i><span>Start</span>
+                        </button>
+                        <button type="button" onclick="pauseTimer('{{ s.entry.id }}')" 
+                                class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center space-x-1 cursor-pointer">
+                            <i data-lucide="pause" class="w-3 h-3"></i><span>Pause</span>
+                        </button>
+                        <button type="button" onclick="resetTimer('{{ s.entry.id }}')" 
+                                class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center space-x-1 cursor-pointer">
+                            <i data-lucide="rotate-ccw" class="w-3 h-3"></i><span>Reset</span>
+                        </button>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 space-y-2 text-xs">
+                        <!-- Manual Second Entry -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600 font-medium">Hold Seconds (Manual Edit):</span>
+                            <input type="number" step="0.1" min="0" max="120" 
+                                   name="hold_{{ s.entry.id }}" id="input_{{ s.entry.id }}" 
+                                   value="{{ s.item.hold_duration_seconds }}" 
+                                   oninput="updateDisplayFromInput('{{ s.entry.id }}')"
+                                   class="w-24 text-right px-2.5 py-1 border border-slate-300 rounded font-bold font-mono outline-none focus:ring-1 focus:ring-teal-700 bg-white">
+                        </div>
+
+                        <!-- Attempt Selector -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600 font-medium">Attempt:</span>
+                            <select name="attempt_{{ s.entry.id }}" id="attempt_{{ s.entry.id }}" 
+                                    onchange="updateDisplayFromInput('{{ s.entry.id }}')"
+                                    class="text-xs px-2 py-1 border border-slate-300 rounded font-semibold bg-white outline-none">
+                                <option value="1" {% if s.item.attempt_number == 1 %}selected{% endif %}>Attempt 1 (Standard)</option>
+                                <option value="2" {% if s.item.attempt_number == 2 %}selected{% endif %}>Attempt 2 (-0.50 deduction)</option>
+                            </select>
+                        </div>
+
+                        <!-- Calculated Timing Marks -->
+                        <div class="flex items-center justify-between bg-teal-50/80 p-2.5 rounded-lg text-teal-950 font-bold border border-teal-100">
+                            <span>Timing Contribution:</span>
+                            <span class="font-mono text-sm" id="contrib_{{ s.entry.id }}">{{ s.item.timing_contribution }} / 2.0</span>
+                        </div>
+
+                        <!-- 0s Hold / 0 Contribution Alert -->
+                        <div id="warning_{{ s.entry.id }}" class="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold text-center {% if s.item.hold_duration_seconds > 0 and s.item.timing_contribution > 0 %}hidden{% endif %}">
+                            ⏱️ Under 75% Hold / 0.0s = 0.000 Timing Marks (Posture & Stability evaluated by D-Judges)
+                        </div>
+
+                        <!-- Traditional T penalty box (Page 14) -->
+                        <div class="p-2.5 rounded-lg border border-amber-200 bg-amber-50/60 space-y-2">
+                            <span class="text-[11px] font-bold text-amber-900 flex items-center justify-between">
+                                <span>Traditional T Penalty Box</span>
+                                <span class="text-[9px] text-amber-700 font-normal">Chief Reviews</span>
+                            </span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[10px] text-slate-500 block">Deduction (Marks)</label>
+                                    <input type="number" step="0.25" min="0" max="5" 
+                                           name="penalty_{{ s.entry.id }}" 
+                                           value="{{ s.item.timing_penalty|default:'0.00' }}"
+                                           class="w-full text-right px-2 py-0.5 border border-slate-300 rounded text-xs font-mono bg-white">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-slate-500 block">Scope</label>
+                                    <select name="penalty_scope_{{ s.entry.id }}" class="w-full text-[11px] px-1 py-0.5 border border-slate-300 rounded bg-white">
+                                        <option value="ITEM" {% if s.item.timing_penalty_scope == 'ITEM' %}selected{% endif %}>Item Deduction</option>
+                                        <option value="PERFORMANCE" {% if s.item.timing_penalty_scope == 'PERFORMANCE' %}selected{% endif %}>Performance Deduction</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <input type="text" name="penalty_reason_{{ s.entry.id }}" 
+                                   value="{{ s.item.timing_penalty_reason|default:'' }}"
+                                   placeholder="Penalty reason / attempt details..."
+                                   class="w-full px-2 py-1 border border-slate-300 rounded text-[11px] bg-white outline-none">
+                        </div>
                     </div>
                 </div>
             </div>
             {% empty %}
-            <div class="col-span-full py-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+            <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
                 No active competitor batch on stage.
             </div>
             {% endfor %}
@@ -116,19 +200,19 @@
 
         <!-- Action Bar -->
         <div class="flex items-center justify-between pt-6">
-            <a href="{% url 'judge_portal' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900">
+            <a href="{% url 'judge_portal' %}#panels" class="text-xs font-bold text-slate-600 hover:text-slate-900">
                 ← Back to Portal
             </a>
 
             <div class="flex items-center space-x-3">
                 <button type="submit" name="action" value="save_draft"
-                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition cursor-pointer">
                     <i data-lucide="save" class="w-4 h-4"></i>
                     <span>Save Draft (Item {{ current_seq }})</span>
                 </button>
 
                 <button type="submit" name="action" value="submit_timing"
-                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition cursor-pointer">
                     <i data-lucide="send" class="w-4 h-4"></i>
                     <span>Submit & Lock Timing</span>
                 </button>
@@ -138,7 +222,63 @@
 </div>
 
 <script>
+const targetHold = parseFloat("{{ target_hold }}") || 60.0;
 const timers = {};
+
+// Official COP Chapter 4 Annexure A & B timing tables
+const ANNEXURE_A = {
+    60: { 60: 2.000000, 59: 1.966667, 58: 1.933333, 57: 1.900000, 56: 1.866667, 55: 1.833333, 54: 1.800000, 53: 1.766667, 52: 1.733333, 51: 1.700000, 50: 1.666667, 49: 1.633333, 48: 1.600000, 47: 1.566667, 46: 1.533333, 45: 1.500000 },
+    45: { 45: 2.000000, 44: 1.955556, 43: 1.911111, 42: 1.866667, 41: 1.822222, 40: 1.777778, 39: 1.733333, 38: 1.688889, 37: 1.644444, 36: 1.600000, 35: 1.555556, 34: 1.511111, 33: 1.466667 },
+    30: { 30: 2.000000, 29: 1.933333, 28: 1.866667, 27: 1.800000, 26: 1.733333, 25: 1.666667, 24: 1.600000, 23: 1.533333, 22: 1.466667 },
+    15: { 15: 2.000000, 14: 1.866667, 13: 1.733333, 12: 1.600000, 11: 1.466667 }
+};
+
+const ANNEXURE_B = {
+    60: { 60: 1.000000, 59: 0.983333, 58: 0.966667, 57: 0.950000, 56: 0.933333, 55: 0.916667, 54: 0.900000, 53: 0.883333, 52: 0.866667, 51: 0.850000, 50: 0.833333, 49: 0.816667, 48: 0.800000, 47: 0.783333, 46: 0.766667, 45: 0.750000 },
+    45: { 45: 1.000000, 44: 0.977778, 43: 0.955556, 42: 0.933333, 41: 0.911111, 40: 0.888889, 39: 0.866667, 38: 0.844444, 37: 0.822222, 36: 0.800000, 35: 0.777778, 34: 0.755556, 33: 0.733333 },
+    30: { 30: 1.000000, 29: 0.966667, 28: 0.933333, 27: 0.900000, 26: 0.866667, 25: 0.833333, 24: 0.800000, 23: 0.766667, 22: 0.733333 },
+    15: { 15: 1.000000, 14: 0.933333, 13: 0.866667, 12: 0.800000, 11: 0.733333 }
+};
+
+function calculateContribution(seconds, attempt) {
+    if (seconds <= 0 || targetHold <= 0) return 0.00;
+    const targetInt = Math.round(targetHold);
+    const secInt = Math.round(seconds);
+    const table = (attempt === 2) ? ANNEXURE_B[targetInt] : ANNEXURE_A[targetInt];
+    const maxMarks = (attempt === 2) ? 1.00 : 2.00;
+
+    if (table) {
+        if (secInt >= targetInt) return maxMarks;
+        if (secInt in table) return table[secInt];
+        return 0.00;
+    }
+
+    if (seconds >= targetHold) return maxMarks;
+    if (seconds >= targetHold * 0.75) return Math.round((maxMarks * (seconds / targetHold)) * 1000) / 1000;
+    return 0.00;
+}
+
+function updateCardDisplay(id, seconds) {
+    const input = document.getElementById('input_' + id);
+    const display = document.getElementById('display_' + id);
+    const contribEl = document.getElementById('contrib_' + id);
+    const warningEl = document.getElementById('warning_' + id);
+    const attemptEl = document.getElementById('attempt_' + id);
+    const attempt = attemptEl ? parseInt(attemptEl.value) : 1;
+
+    input.value = seconds.toFixed(1);
+    display.textContent = seconds.toFixed(2) + 's';
+
+    const contrib = calculateContribution(seconds, attempt);
+    const maxMarks = (attempt === 2) ? '1.0' : '2.0';
+    contribEl.textContent = contrib.toFixed(3) + ' / ' + maxMarks;
+
+    if (seconds <= 0 || contrib <= 0) {
+        warningEl.classList.remove('hidden');
+    } else {
+        warningEl.classList.add('hidden');
+    }
+}
 
 function startTimer(id) {
     if (timers[id] && timers[id].interval) return;
@@ -149,8 +289,7 @@ function startTimer(id) {
         startTime: performance.now() - (seconds * 1000),
         interval: setInterval(() => {
             const elapsed = (performance.now() - timers[id].startTime) / 1000;
-            input.value = elapsed.toFixed(1);
-            document.getElementById('display_' + id).textContent = elapsed.toFixed(2) + 's';
+            updateCardDisplay(id, elapsed);
         }, 50)
     };
 }
@@ -164,14 +303,12 @@ function pauseTimer(id) {
 
 function resetTimer(id) {
     pauseTimer(id);
-    const input = document.getElementById('input_' + id);
-    input.value = '0.0';
-    document.getElementById('display_' + id).textContent = '00.00s';
+    updateCardDisplay(id, 0.0);
 }
 
 function updateDisplayFromInput(id) {
     const val = parseFloat(document.getElementById('input_' + id).value) || 0;
-    document.getElementById('display_' + id).textContent = val.toFixed(2) + 's';
+    updateCardDisplay(id, val);
 }
 </script>
 {% endblock %}

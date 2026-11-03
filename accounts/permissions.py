@@ -486,6 +486,7 @@ def get_role_navigation_items(user, championship, current_url_name=''):
             {'label': 'CD Dashboard', 'url': '/cd/dashboard/', 'url_name': 'cd_dashboard', 'icon': 'home'},
             {'label': 'Draw & Master Roll', 'url': '/competition/draw/', 'url_name': 'district_draw', 'icon': 'shuffle'},
             {'label': 'Panel Assignments', 'url': '/competition/panels/', 'url_name': 'panel_assignments', 'icon': 'users-round'},
+            {'label': 'Judge Credentials Desk', 'url': '/judges/credentials/', 'url_name': 'judge_credentials_admin', 'icon': 'key'},
             {'label': 'Stage Progress', 'url': '/competition/stage/', 'url_name': 'stage_manager', 'icon': 'sliders'},
             {'label': 'Correction Access', 'url': '/cd/corrections/', 'url_name': 'cd_corrections', 'icon': 'file-edit'},
             {'label': 'Trophies & Standings', 'url': '/reports/trophies/', 'url_name': 'report_trophies', 'icon': 'trophy'},

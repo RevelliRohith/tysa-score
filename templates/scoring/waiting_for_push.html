@@ -1,32 +1,47 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Waiting for Stage Manager Push — TYSA Score{% endblock %}
+{% block title %}{% if has_submitted_previous %}Batch Submitted — Waiting for Next Push{% else %}Waiting for Stage Manager Push{% endif %} — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="min-h-[80vh] flex items-center justify-center -m-6 sm:-m-8 p-6">
-    <div class="max-w-xl w-full bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center space-y-6">
+<div class="min-h-[82vh] flex items-center justify-center -m-6 sm:-m-8 p-4 sm:p-6">
+    <div class="max-w-2xl w-full bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm text-center space-y-6">
         
-        <!-- Live Waiting Animation -->
+        <!-- Live Waiting Pulse Icon -->
         <div class="relative w-20 h-20 mx-auto">
-            <div class="absolute inset-0 rounded-full bg-teal-100 animate-ping opacity-60"></div>
-            <div class="relative w-20 h-20 rounded-full bg-teal-50 border-2 border-[#00838f] flex items-center justify-center text-[#00838f]">
+            <div class="absolute inset-0 rounded-full {% if has_submitted_previous %}bg-emerald-100{% else %}bg-teal-100{% endif %} animate-ping opacity-60"></div>
+            <div class="relative w-20 h-20 rounded-full {% if has_submitted_previous %}bg-emerald-50 border-2 border-emerald-600 text-emerald-700{% else %}bg-teal-50 border-2 border-[#00838f] text-[#00838f]{% endif %} flex items-center justify-center">
+                {% if has_submitted_previous %}
+                <i data-lucide="check-circle-2" class="w-10 h-10"></i>
+                {% else %}
                 <i data-lucide="radio" class="w-9 h-9 animate-pulse"></i>
+                {% endif %}
             </div>
         </div>
 
         <div class="space-y-2">
+            {% if has_submitted_previous %}
+            <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>Batch #{{ submitted_batch_number }} Scores Submitted & Locked</span>
+            </span>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Waiting for Stage Manager to Push Next Athletes</h1>
+            <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
+                Your scores for the previous batch are committed. Once the Stage Manager pushes the next athlete(s) to this stage, your desk will open automatically.
+            </p>
+            {% else %}
             <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
                 <span class="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
                 <span>Judging Desk Ready & Synchronized</span>
             </span>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Waiting for Stage Manager Push</h1>
-            <p class="text-xs text-slate-500 max-w-md mx-auto">
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Waiting for Stage Manager Push</h1>
+            <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
                 Your assigned scoring desk is connected. The Stage Manager has not yet pushed the next athlete batch to this arena.
             </p>
+            {% endif %}
         </div>
 
-        <!-- Assigned Panel Context (No upcoming athlete details) -->
+        <!-- Assigned Panel Context -->
         <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-4 text-left grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
                 <span class="text-[10px] text-slate-400 font-bold uppercase block">Stage / Arena</span>
@@ -46,28 +61,67 @@
             </div>
         </div>
 
+        {% if next_athletes %}
+        <!-- Upcoming Athletes Preview -->
+        <div class="bg-amber-50/80 rounded-2xl border border-amber-200/90 p-4 text-left space-y-3">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center space-x-1.5">
+                    <i data-lucide="users" class="w-4 h-4 text-amber-700"></i>
+                    <span>Next Athletes in Queue (Awaiting Stage Call)</span>
+                </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900">
+                    {{ next_athletes|length }} upcoming
+                </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-{{ next_athletes|length|default:1 }} gap-2.5">
+                {% for na in next_athletes %}
+                <div class="bg-white rounded-xl border border-amber-200 p-2.5 shadow-xs flex items-center space-x-3">
+                    <span class="text-xl font-black font-mono text-slate-900">#{{ na.chest_number }}</span>
+                    <div class="min-w-0">
+                        <div class="text-xs font-bold text-slate-800 truncate">{{ na.display_names }}</div>
+                        <div class="text-[10px] text-slate-500 truncate">{{ na.registration.district.name|default:"State Unit" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <p class="text-[11px] text-amber-800/90 font-medium text-center pt-1">
+                Once the Stage Manager clicks <strong>"Push Batch"</strong>, your desk will automatically load their declared routine.
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
         <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 text-xs">
-            <button onclick="window.location.reload()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#00838f] hover:bg-[#006978] text-white font-bold transition flex items-center justify-center space-x-1.5 shadow-xs">
+            <button onclick="window.location.reload()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#00838f] hover:bg-[#006978] text-white font-bold transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer">
                 <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                 <span>Check for Pushed Batch</span>
             </button>
-            <a href="{% url 'judge_portal' %}#panels" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center justify-center space-x-1.5">
+            
+            {% if has_submitted_previous and submitted_batch_number %}
+            <a href="?review=1" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                <span>Review Batch #{{ submitted_batch_number }}</span>
+            </a>
+            {% endif %}
+
+            <a href="{% url 'judge_portal' %}#panels" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold transition flex items-center justify-center space-x-1.5">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                <span>Return to Assigned Panels</span>
+                <span>Assigned Panels</span>
             </a>
         </div>
 
-        <div class="text-[11px] text-slate-400 pt-2 flex items-center justify-center space-x-2">
+        <!-- Live Listener Pulse Indicator -->
+        <div class="text-[11px] text-slate-400 pt-1 flex items-center justify-center space-x-2">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Auto-listening for Stage Manager push events...</span>
+            <span>Auto-listening for Stage Manager push events (checking every 3s)...</span>
         </div>
     </div>
 </div>
 
 <script>
-    // Auto-reload check every 4 seconds
+    // Auto-reload check every 3 seconds to catch Stage Manager push instantly
     setTimeout(function() {
         window.location.reload();
-    }, 4000);
+    }, 3000);
 </script>
 {% endblock %}

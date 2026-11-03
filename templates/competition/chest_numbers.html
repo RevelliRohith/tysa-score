@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chest Number Sequencing & Allocation — TYSA Score{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Banner & Breadcrumb -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs text-slate-500 mb-1">
+                <a href="{% url 'admin_dashboard' %}" class="hover:text-teal-700">Dashboard</a>
+                <span>/</span>
+                <span class="text-slate-800 font-semibold">Competition Operations</span>
+                <span>/</span>
+                <span class="text-teal-700 font-bold">Chest Numbers</span>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+                <span class="p-2 bg-teal-50 text-teal-700 rounded-xl border border-teal-200">
+                    <i data-lucide="hash" class="w-6 h-6"></i>
+                </span>
+                <span>Chest Number Sequencing & Allocation</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                Authoritative chest number allocation module. Every athlete must possess a unique chest number prior to master roll generation and stage calling.
+            </p>
+        </div>
+
+        <!-- Quick Op Links -->
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'district_draw' %}" class="px-3 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                <i data-lucide="shuffle" class="w-4 h-4 text-slate-500"></i>
+                <span>District Draw</span>
+            </a>
+            <a href="{% url 'master_roll' %}" class="px-3 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                <i data-lucide="list-ordered" class="w-4 h-4 text-slate-500"></i>
+                <span>Master Roll</span>
+            </a>
+            <a href="{% url 'panel_assignments' %}" class="px-3 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                <i data-lucide="users-round" class="w-4 h-4 text-slate-500"></i>
+                <span>Judge Panels</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Summary Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Entries In Scope</span>
+                <span class="p-2 rounded-xl bg-slate-100 text-slate-600">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-black text-slate-900 mt-2">{{ total_in_scope }}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">Eligible athletes in current filter</div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Chest Numbers</span>
+                <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-black text-emerald-700 mt-2">{{ assigned_count }}</div>
+            <div class="text-[11px] text-emerald-600 mt-0.5">Ready for master roll & judging</div>
+        </div>
+
+        <div class="bg-white rounded-2xl border {% if missing_count > 0 %}border-amber-300 bg-amber-50/20{% else %}border-slate-200{% endif %} p-4 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider {% if missing_count > 0 %}text-amber-800{% else %}text-slate-500{% endif %}">Missing Chest Numbers</span>
+                <span class="p-2 rounded-xl {% if missing_count > 0 %}bg-amber-100 text-amber-700{% else %}bg-slate-100 text-slate-400{% endif %}">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-black {% if missing_count > 0 %}text-amber-700{% else %}text-slate-700{% endif %} mt-2">{{ missing_count }}</div>
+            <div class="text-[11px] {% if missing_count > 0 %}text-amber-700 font-bold{% else %}text-slate-500{% endif %} mt-0.5">
+                {% if missing_count > 0 %}Requires immediate allocation{% else %}All athletes numbered{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Scope Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Event</label>
+                <select name="event_id" onchange="this.form.submit()" class="w-full text-xs font-bold rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800 outline-none focus:border-teal-600">
+                    <option value="">All Events</option>
+                    {% for ev in event_configs %}
+                    <option value="{{ ev.id }}" {% if selected_event_id == ev.id|stringformat:"s" %}selected{% endif %}>
+                        {{ ev.get_event_type_display }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Age Category</label>
+                <select name="cat_id" onchange="this.form.submit()" class="w-full text-xs font-bold rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800 outline-none focus:border-teal-600">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_cat_id == cat.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Gender</label>
+                <select name="gender" onchange="this.form.submit()" class="w-full text-xs font-bold rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800 outline-none focus:border-teal-600">
+                    <option value="">All Genders</option>
+                    <option value="M" {% if gender == 'M' %}selected{% endif %}>Male</option>
+                    <option value="F" {% if gender == 'F' %}selected{% endif %}>Female</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">District</label>
+                <select name="district" onchange="this.form.submit()" class="w-full text-xs font-bold rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800 outline-none focus:border-teal-600">
+                    <option value="">All Districts</option>
+                    {% for d in districts %}
+                    <option value="{{ d }}" {% if district == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Allocation Status</label>
+                <select name="status" onchange="this.form.submit()" class="w-full text-xs font-bold rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800 outline-none focus:border-teal-600">
+                    <option value="">All Entries</option>
+                    <option value="unassigned" {% if filter_status == 'unassigned' %}selected{% endif %}>Missing Only</option>
+                    <option value="assigned" {% if filter_status == 'assigned' %}selected{% endif %}>Assigned Only</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sequencing Action Hub -->
+    <div class="bg-gradient-to-r from-slate-900 via-navy-900 to-teal-950 text-white rounded-2xl p-5 shadow-sm border border-slate-700">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    <i data-lucide="cog" class="w-3 h-3"></i> Automated Sequence Engine
+                </div>
+                <h2 class="text-sm font-extrabold text-white">Chest Number Generation & Sequencing Policy</h2>
+                <p class="text-xs text-slate-300 font-normal max-w-2xl">
+                    Configure start number, prefix, and sorting criteria. You can safely auto-assign numbers only to unassigned athletes, or perform a full re-sequence across this division.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- 1-Click Auto-Assign Missing -->
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign_missing">
+                    <button type="submit" class="px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-sm transition flex items-center space-x-1.5">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        <span>Auto-Assign Missing ({{ missing_count }})</span>
+                    </button>
+                </form>
+
+                <!-- Toggle Re-sequence Controls Drawer -->
+                <button type="button" onclick="document.getElementById('resequenceConfigBox').classList.toggle('hidden')" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition flex items-center space-x-1.5">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4 text-teal-300"></i>
+                    <span>Re-Sequence Options</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Collapsible Re-sequence Form -->
+        <div id="resequenceConfigBox" class="mt-4 pt-4 border-t border-slate-700 hidden">
+            <form method="post" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resequence">
+                
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 mb-1">Starting Number</label>
+                    <input type="number" name="start_number" value="101" min="1" class="w-full text-xs font-mono font-bold rounded-xl border border-slate-600 bg-slate-800 text-white px-3 py-2 outline-none focus:border-teal-400">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 mb-1">Prefix (Optional)</label>
+                    <input type="text" name="prefix" placeholder="e.g. T- or blank" class="w-full text-xs font-mono font-bold rounded-xl border border-slate-600 bg-slate-800 text-white px-3 py-2 outline-none focus:border-teal-400">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 mb-1">Sorting Order</label>
+                    <select name="order_by" class="w-full text-xs font-bold rounded-xl border border-slate-600 bg-slate-800 text-white px-3 py-2 outline-none focus:border-teal-400">
+                        <option value="DRAW">District Lottery Draw Order</option>
+                        <option value="DISTRICT">District Alphabetical</option>
+                        <option value="NAME">Athlete Name Alphabetical</option>
+                        <option value="ID">Registration Order</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit" onclick="return confirm('Are you sure you want to re-sequence chest numbers for this selection?');" class="w-full px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-sm transition flex items-center justify-center space-x-1.5">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span>Apply Re-Sequence</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Athletes Table & Inline Manual Editor -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_manual">
+
+            <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold text-slate-700">Displaying {{ display_entries|length }} Athletes</span>
+                    <span class="text-[11px] text-slate-400">| Inline editing active</span>
+                </div>
+                <button type="submit" class="px-4 py-1.5 bg-[#0d5c58] hover:bg-[#09403d] text-white font-bold text-xs rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span>Save Manual Chest Numbers</span>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider text-[10px] font-black border-b border-slate-200">
+                        <tr>
+                            <th class="py-3 px-4 w-12 text-center">#</th>
+                            <th class="py-3 px-4 w-36">Chest No</th>
+                            <th class="py-3 px-4">Athlete / Pair Info</th>
+                            <th class="py-3 px-4">District</th>
+                            <th class="py-3 px-4">Event & Division</th>
+                            <th class="py-3 px-4 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
+                        {% for entry in display_entries %}
+                        <tr class="hover:bg-slate-50/80 transition {% if not entry.chest_number %}bg-amber-50/30{% endif %}">
+                            <td class="py-3 px-4 text-center text-slate-400 font-mono text-[11px]">{{ forloop.counter }}</td>
+                            
+                            <!-- Inline Chest Input -->
+                            <td class="py-3 px-4">
+                                <div class="flex items-center space-x-1.5">
+                                    <input type="text" 
+                                           name="chest_{{ entry.id }}" 
+                                           value="{{ entry.chest_number|default:'' }}" 
+                                           placeholder="Assign"
+                                           class="w-28 font-mono text-xs font-black text-slate-900 bg-white border {% if entry.chest_number %}border-teal-300 bg-teal-50/30{% else %}border-amber-300 bg-amber-50/50{% endif %} rounded-lg px-2.5 py-1 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition">
+                                </div>
+                            </td>
+
+                            <!-- Athlete Name / Pair Info -->
+                            <td class="py-3 px-4">
+                                <div class="font-extrabold text-slate-900 text-sm">
+                                    {{ entry.registration.athlete.full_name }}
+                                </div>
+                                {% if entry.is_pair and entry.partner_athlete %}
+                                <div class="text-[11px] text-teal-800 font-bold flex items-center space-x-1 mt-0.5">
+                                    <i data-lucide="users" class="w-3 h-3 text-teal-600"></i>
+                                    <span>Partner: {{ entry.partner_athlete.full_name }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">
+                                    ID: {{ entry.registration.athlete.public_athlete_id }}
+                                </div>
+                            </td>
+
+                            <!-- District -->
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {{ entry.district }}
+                                </span>
+                            </td>
+
+                            <!-- Event & Division -->
+                            <td class="py-3 px-4">
+                                <div class="font-bold text-slate-800">{{ entry.event_config.get_event_type_display }}</div>
+                                <div class="text-[11px] text-slate-500 font-medium">
+                                    {{ entry.age_category.name }} • {% if entry.gender == 'M' %}Male{% else %}Female{% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Status Badge -->
+                            <td class="py-3 px-4 text-center">
+                                {% if entry.chest_number %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <i data-lucide="check" class="w-3 h-3 mr-1"></i> Ready
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                                    <i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i> Missing
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-slate-400 text-xs font-semibold">
+                                No athlete entries found matching the selected filters.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if display_entries %}
+            <div class="p-4 border-t border-slate-200 flex justify-end bg-slate-50/70">
+                <button type="submit" class="px-5 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center space-x-1.5">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Manual Chest Numbers</span>
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+</div>
+{% endblock %}

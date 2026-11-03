@@ -93,9 +93,11 @@ if DATABASE_URL:
         def _neon_resilient_getaddrinfo(host, port, *args, **kwargs):
             try:
                 return _orig_getaddrinfo(host, port, *args, **kwargs)
-            except socket.gaierror:
-                if host and 'ep-' in str(host) and 'neon.tech' in str(host):
-                    return _orig_getaddrinfo('c-2.ap-southeast-1.aws.neon.tech', port, *args, **kwargs)
+            except (socket.gaierror, Exception):
+                if host and 'neon.tech' in str(host):
+                    # Fallback to known Neon pooler IPs when local Wi-Fi/router DNS blocks/refuses resolution
+                    for fallback_ip in ['13.251.17.193', '18.138.49.39', '3.0.167.45']:
+                        return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (fallback_ip, port))]
                 raise
         socket.getaddrinfo = _neon_resilient_getaddrinfo
     except Exception:
@@ -213,6 +215,14 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://localhost:8000',
 ]
+# Automatically permit local machine LAN IPs and private network origins
+try:
+    import socket
+    for _ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+        if _ip not in ('127.0.0.1',):
+            CSRF_TRUSTED_ORIGINS.extend([f'http://{_ip}:8027', f'http://{_ip}:8000'])
+except Exception:
+    pass
 
 # Production Security Flags
 if not DEBUG and os.environ.get('SECURE_SSL_ENABLED', 'False').lower() in ('true', '1', 'yes'):

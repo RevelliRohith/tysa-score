@@ -146,13 +146,27 @@
                         <div class="text-xs font-bold text-slate-900 truncate">
                             {{ s.pose.declared_name|default:"Declared Asana" }}
                         </div>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px] font-black">
-                            BV: {{ s.pose.declared_bv|default:"0.80" }}
+                        <div class="inline-flex items-center px-2 py-0.5 rounded {% if s.is_compulsory %}bg-indigo-100 text-indigo-800{% else %}bg-teal-100 text-teal-800{% endif %} text-[10px] font-black">
+                            BV: {{ s.base_value|default:s.item.base_value|default:s.pose.declared_bv|default:"1.00" }} {% if s.is_compulsory %}(Compulsory){% else %}(Optional){% endif %}
                         </div>
                     </div>
                 </div>
 
                 <input type="hidden" name="submission_{{ s.entry.id }}" value="{{ s.submission.id }}">
+                <input type="hidden" id="is_invalid_{{ s.entry.id }}" value="{% if s.is_invalid %}true{% else %}false{% endif %}">
+                <input type="hidden" id="time_contrib_{{ s.entry.id }}" value="{{ s.timing_contribution|default:'2.00' }}">
+                <input type="hidden" id="bv_{{ s.entry.id }}" value="{{ s.base_value|default:s.item.base_value|default:'1.00' }}">
+
+                {% if s.is_invalid %}
+                <div class="bg-rose-50 border-2 border-rose-300 rounded-xl p-3 text-center space-y-1">
+                    <span class="inline-flex items-center text-xs font-black text-rose-800 uppercase tracking-wider">
+                        <i data-lucide="alert-octagon" class="w-4 h-4 mr-1 text-rose-600"></i>
+                        ASANA INVALID — ITEM TOTAL: 0.000
+                    </span>
+                    <p class="text-[11px] text-rose-700 font-medium">{{ s.invalid_reason|default:"Evaluator Confirmed Invalid Asana" }}</p>
+                    <span class="text-[10px] text-rose-600 font-medium block">Evaluator invalidated asana. Item effective score is 0.000</span>
+                </div>
+                {% endif %}
 
                 <!-- Scoring Inputs -->
                 <div class="space-y-3 text-xs pt-1">
@@ -186,19 +200,26 @@
                             <span class="text-[10px] text-slate-400">Fixed hold benchmark</span>
                         </div>
                         <span class="w-24 text-right px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-mono font-bold text-xs text-slate-700">
-                            {{ s.item.timing_contribution|default:"2.00" }}
+                            {{ s.timing_contribution|default:s.item.timing_contribution|default:"2.00" }}
                         </span>
                     </div>
 
                     <!-- Calculated Item Total -->
-                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 bg-teal-50/70 p-3 rounded-xl border border-teal-100">
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 {% if s.is_invalid %}bg-rose-50/70 border border-rose-200{% else %}bg-teal-50/70 border border-teal-100{% endif %} p-3 rounded-xl">
                         <div>
-                            <span class="font-black text-teal-950 text-xs block">Item Total</span>
-                            <span class="text-[10px] text-teal-700">Posture + Stability + Time</span>
+                            <span class="font-black {% if s.is_invalid %}text-rose-950{% else %}text-teal-950{% endif %} text-xs block">Item Total</span>
+                            <span class="text-[10px] {% if s.is_invalid %}text-rose-700{% else %}text-teal-700{% endif %}">
+                                {% if s.is_invalid %}Automatic Zero (Evaluator Invalidated Asana){% else %}(Posture + Stability + Time) × BV{% endif %}
+                            </span>
                         </div>
-                        <span class="text-2xl font-black text-teal-900 font-mono" id="total_{{ s.entry.id }}">
-                            {{ s.item.effective_item_score|default:"8.50" }}
-                        </span>
+                        <div class="text-right">
+                            <span class="text-2xl font-black {% if s.is_invalid %}text-rose-700{% else %}text-teal-900{% endif %} font-mono block" id="total_{{ s.entry.id }}">
+                                {% if s.is_invalid %}0.000{% else %}{{ s.item.effective_item_score|default:"8.50" }}{% endif %}
+                            </span>
+                            <span class="text-[10px] text-slate-500 font-mono block {% if not s.is_invalid %}hidden{% endif %}" id="raw_mark_{{ s.entry.id }}">
+                                Raw Mark: {{ s.item.raw_item_score|default:"0.00" }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -240,17 +261,37 @@
 
 <script>
 function calculateTotal(entryId) {
+    const isInvalid = document.getElementById('is_invalid_' + entryId)?.value === 'true';
+    const totalEl = document.getElementById('total_' + entryId);
+    const rawEl = document.getElementById('raw_mark_' + entryId);
+    if (!totalEl) return;
+
     const pInput = document.getElementById('posture_' + entryId);
     const sInput = document.getElementById('stability_' + entryId);
-    const totalEl = document.getElementById('total_' + entryId);
-    if (!pInput || !sInput || !totalEl) return;
+    const timeInput = document.getElementById('time_contrib_' + entryId);
+    const bvInput = document.getElementById('bv_' + entryId);
 
-    let p = parseFloat(pInput.value) || 0;
-    let s = parseFloat(sInput.value) || 0;
+    let p = parseFloat(pInput?.value) || 0;
+    let s = parseFloat(sInput?.value) || 0;
+    let t = timeInput ? (parseFloat(timeInput.value) || 0) : 2.0;
+    let bv = bvInput ? (parseFloat(bvInput.value) || 1.0) : 1.0;
     p = Math.min(6.0, Math.max(0, p));
     s = Math.min(2.0, Math.max(0, s));
-    const total = p + s + 2.0;
-    totalEl.textContent = total.toFixed(2);
+    const rawTotal = (p + s + t) * bv;
+
+    if (isInvalid) {
+        totalEl.textContent = '0.000';
+        if (rawEl) {
+            rawEl.textContent = 'Raw Mark: ' + rawTotal.toFixed(3);
+            rawEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (rawEl) {
+        rawEl.classList.add('hidden');
+    }
+    totalEl.textContent = rawTotal.toFixed(3);
 }
 </script>
 {% endblock %}
