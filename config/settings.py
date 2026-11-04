@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -160,6 +161,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (Uploads, Certificates, Pose photos)
 MEDIA_URL = '/media/'
@@ -215,6 +217,19 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://localhost:8000',
 ]
+# Support custom CSRF trusted origins from environment (comma-separated, e.g. https://tysa-score.onrender.com)
+_env_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS')
+if _env_csrf:
+    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in _env_csrf.split(',') if origin.strip()])
+
+# Render.com default host support
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    _render_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
+    if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 # Automatically permit local machine LAN IPs and private network origins
 try:
     import socket
