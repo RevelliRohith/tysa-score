@@ -159,6 +159,7 @@ def universal_judge_register(request):
 
     return render(request, 'judges/register.html', {
         'cert_levels': CertificationLevel.choices,
+        'districts': TELANGANA_DISTRICTS,
     })
 
 @login_required

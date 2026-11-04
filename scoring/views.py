@@ -214,6 +214,7 @@ def scoring_traditional_d(request):
     if current_asana_seq > total_items:
         current_asana_seq = total_items
 
+    round_type = current_panel.round_type if current_panel else 'PRELIMINARY'
     judge_role = seat_label.replace(' ', '_').upper()
     if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE']:
         judge_role = 'D1_JUDGE'
@@ -484,6 +485,7 @@ def scoring_traditional_d_final(request):
     if current_asana_seq > total_items:
         current_asana_seq = total_items
 
+    round_type = current_panel.round_type if current_panel else 'PRELIMINARY'
     judge_role = seat_label.replace(' ', '_').upper()
     if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE']:
         judge_role = 'D1_JUDGE'
@@ -1025,7 +1027,8 @@ def scoring_traditional_time(request):
     round_type = batch.panel.round_type if (batch and batch.panel) else 'PRELIMINARY'
     # Default target hold based on round_type and seq
     default_is_comp = (current_seq <= 2) if round_type == 'FINAL' else (current_seq <= 4)
-    target_hold = Decimal('45.00') if default_is_comp else Decimal('30.00')
+    is_compulsory = default_is_comp
+    target_hold = Decimal('45.00') if is_compulsory else Decimal('30.00')
 
     submissions = {}
     for e in entries:
