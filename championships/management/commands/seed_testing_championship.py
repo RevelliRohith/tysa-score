@@ -674,6 +674,7 @@ class Command(BaseCommand):
                 d2_judge=judges_pool[1],        # R. Venkatraman
                 d3_judge=judges_pool[2],        # Dr. Sunita Reddy
                 d4_judge=judges_pool[3],        # M. Ramesh
+                d5_judge=judges_pool[6],
                 time_judge=judges_pool[4],      # K. Prakash
                 evaluator=judges_pool[5],       # Priya Varun
                 stage_manager=stage_user,
@@ -685,6 +686,7 @@ class Command(BaseCommand):
             for s_name, j_user in [
                 ('CHIEF_JUDGE', panel1.chief_judge), ('D1_JUDGE', panel1.d1_judge), ('D2_JUDGE', panel1.d2_judge),
                 ('D3_JUDGE', panel1.d3_judge), ('D4_JUDGE', panel1.d4_judge), ('TIME_JUDGE', panel1.time_judge),
+                ('D5_JUDGE', panel1.d5_judge),
                 ('EVALUATOR', panel1.evaluator), ('STAGE_MANAGER', panel1.stage_manager), ('JURY_MEMBER', panel1.jury_member)
             ]:
                 PanelSeatAssignment.objects.create(panel=panel1, seat_name=s_name, judge=j_user, assigned_by=cd_user, is_active=True)
@@ -704,9 +706,10 @@ class Command(BaseCommand):
                 d2_judge=judges_pool[10],       # Manjula Goud
                 d3_judge=judges_pool[12],       # Rekha Sharma
                 d4_judge=judges_pool[13],       # V. Madhav
+                d5_judge=judges_pool[17],
                 time_judge=judges_pool[14],     # Geetha Rani
                 evaluator=judges_pool[15],      # K. Ravinder
-                stage_manager=stage_user,
+                stage_manager=judges_pool[18],
                 jury_member=judges_pool[16],    # Sujatha Varma
                 is_active=True,
                 is_closed=False
@@ -714,6 +717,7 @@ class Command(BaseCommand):
             for s_name, j_user in [
                 ('CHIEF_JUDGE', panel2.chief_judge), ('D1_JUDGE', panel2.d1_judge), ('D2_JUDGE', panel2.d2_judge),
                 ('D3_JUDGE', panel2.d3_judge), ('D4_JUDGE', panel2.d4_judge), ('TIME_JUDGE', panel2.time_judge),
+                ('D5_JUDGE', panel2.d5_judge),
                 ('EVALUATOR', panel2.evaluator), ('STAGE_MANAGER', panel2.stage_manager), ('JURY_MEMBER', panel2.jury_member)
             ]:
                 PanelSeatAssignment.objects.create(panel=panel2, seat_name=s_name, judge=j_user, assigned_by=cd_user, is_active=True)

@@ -1,0 +1,93 @@
+﻿{% extends "base.html" %}
+{% block title %}Judge Score Sheet - TYSA{% endblock %}
+{% block content %}
+<section class="max-w-6xl mx-auto space-y-5">
+<h1 class="text-2xl font-bold">{{ role }} · {{ panel.event_config.get_event_type_display }}</h1>
+<p>{{ panel.age_category.name }} · {{ panel.get_round_type_display }} · {{ panel.stage_name }}</p>
+<p>Scores save automatically as drafts. Review the complete athlete sheet before final submission.</p>
+<div id="desk" class="bg-white border rounded-xl p-5 space-y-4">
+<label>Athlete <select id="athlete" class="border rounded p-2"></select></label>
+<strong id="sheet-status" role="status"></strong><div id="sequences" class="flex flex-wrap gap-2"></div>
+<h2 id="pose" class="font-bold"></h2><form id="inputs" class="grid grid-cols-2 gap-4"></form>
+<div class="flex gap-3"><button id="previous" class="border rounded p-2">Previous asana</button><button id="next" class="border rounded p-2">Next asana</button><button id="review" class="bg-teal-800 text-white rounded p-2">Review complete score sheet</button></div>
+<p id="save-status" role="status" aria-live="polite"></p><div id="review-area" hidden class="overflow-auto"></div>
+{% if is_evaluator %}
+<fieldset class="border rounded p-3 space-y-2"><legend>Report evaluator incident for this asana</legend>
+<select id="incident-type" class="border p-2">{% for code,label in incident_types %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+<input id="incident-penalty" class="border p-2" type="number" min="0" max="99" step="0.01" value="0" aria-label="Penalty marks">
+<input id="incident-reason" class="border p-2" placeholder="Incident reason and evidence" aria-label="Incident reason">
+<button id="report-incident" class="border p-2">Report incident for Chief decision</button></fieldset>
+{% endif %}
+<button id="submit" hidden class="bg-teal-800 text-white rounded p-3">Submit this athlete's entire score sheet and lock</button>
+</div></section>
+{{ athletes|json_script:"athlete-data" }}{{ fields|json_script:"field-data" }}
+<form hidden>{% csrf_token %}</form>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+const athletes=JSON.parse(document.getElementById('athlete-data').textContent), fields=JSON.parse(document.getElementById('field-data').textContent);
+const $=id=>document.getElementById(id), token=document.querySelector('[name=csrfmiddlewaretoken]').value;
+let active=0, sequence=1, queue=Promise.resolve(), failed=false;
+const runningTimers=new Set();const stopTimers=()=>{for(const stop of [...runningTimers])stop();};
+const human=s=>s.replaceAll('_',' '), say=s=>$('save-status').textContent=s;
+if(!athletes.length){$('desk').textContent='Waiting for the Stage Manager to push an active batch.';setTimeout(()=>location.reload(),5000);return;}
+athletes.forEach((a,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`Chest ${a.chest} · ${a.name}`;$('athlete').append(o);});
+function valuesFor(a,n){
+ const sheet=a.sheet, entered=sheet?.metadata?.entered_fields?.[String(n)]||[];
+ const item=sheet?.items?.find(i=>i.sequence_order===n)||sheet?.artistry?.[0]||{};
+ const result={}; for(const key of Object.keys(fields)){if(key==='routine_duration' && sheet?.metadata?.routine_duration!==undefined)result[key]=sheet.metadata.routine_duration;else if(entered.includes(key))result[key]=item[key];} return result;
+}
+function render(){
+ const a=athletes[active], locked=a.sheet?.locked;
+ $('sheet-status').textContent=locked?'Submitted and locked':'Editable draft';$('inputs').replaceChildren();$('sequences').replaceChildren();
+ $('review-area').hidden=true;$('submit').hidden=true;
+ for(const n of a.orders){const b=document.createElement('button');b.className='border rounded p-2';b.textContent=`Asana ${n}${n===sequence?' •':''}`;b.onclick=()=>navigate(n);$('sequences').append(b);}
+ const pose=a.poses.find(p=>p.sequence_order===sequence);$('pose').textContent=`Asana ${sequence}${pose?' · '+pose.declared_name:''}`;
+ const values=valuesFor(a,sequence);
+ for(const [key,limit] of Object.entries(fields)){
+  const label=document.createElement('label');label.textContent=human(key);label.className='block';
+  let input=document.createElement(limit==='bool'?'select':'input');input.name=key;input.className='block border rounded p-2 w-full';input.disabled=!!locked;
+  if(limit==='bool'){for(const [v,t] of [['','Choose decision'],['true','Valid'],['false','Invalid']]){const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);}input.value=values[key]===undefined?'':String(values[key]);}
+  else {input.type=limit==='text'?'text':'number';if(limit!=='text'){input.min=0;input.max=limit;input.step=key==='attempt_number'?1:0.01;}input.value=values[key]??'';}
+  input.addEventListener('input',()=>saveInput(a,sequence,input,key,limit));label.append(input);
+  if(['hold_duration_seconds','routine_duration'].includes(key)){
+   const start=document.createElement('button'),stop=document.createElement('button');start.type=stop.type='button';start.textContent='Start timer';stop.textContent='Stop and save';stop.disabled=true;start.disabled=!!locked;
+   let started=0,tick;start.onclick=()=>{started=Date.now();start.disabled=true;stop.disabled=false;tick=setInterval(()=>{input.value=((Date.now()-started)/1000).toFixed(2);},100);};
+   const stopTimer=()=>{clearInterval(tick);input.value=((Date.now()-started)/1000).toFixed(2);input.dispatchEvent(new Event('input'));start.disabled=false;stop.disabled=true;runningTimers.delete(stopTimer);};
+   start.addEventListener('click',()=>runningTimers.add(stopTimer));stop.onclick=stopTimer;label.append(start,stop);
+  }
+  $('inputs').append(label);
+ }
+ $('previous').disabled=sequence===a.orders[0];$('next').disabled=sequence===a.orders.at(-1);
+}
+function saveInput(a,n,input,key,limit){
+ $('review-area').hidden=true;$('submit').hidden=true;
+ if(input.value===''||!input.checkValidity()){say('Enter a valid value; this field has not been saved.');return;}
+ const value=limit==='bool'?input.value==='true':input.value;
+ say('Saving draft…');
+ queue=queue.then(async()=>{
+  const response=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':token},body:JSON.stringify({performance_id:a.id,sequence:n,action:'draft',values:{[key]:value}})});
+  const data=await response.json();if(!response.ok)throw Error(data.error||'Save failed');a.sheet=data.sheet;failed=false;say('Draft saved in database.');
+ }).catch(e=>{failed=true;say('Save failed: '+e.message+' Re-enter the field to retry.');});
+}
+async function navigate(n){stopTimers();await queue;if(failed)return;sequence=n;render();}
+$('athlete').onchange=async e=>{stopTimers();const desired=Number(e.target.value);await queue;if(failed){e.target.value=active;return;}active=desired;sequence=athletes[active].orders[0];render();};
+$('previous').onclick=()=>navigate(athletes[active].orders[athletes[active].orders.indexOf(sequence)-1]);
+$('next').onclick=()=>navigate(athletes[active].orders[athletes[active].orders.indexOf(sequence)+1]);
+$('inputs').onsubmit=e=>e.preventDefault();
+if($('report-incident'))$('report-incident').onclick=async()=>{await queue;const a=athletes[active];try{const r=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':token},body:JSON.stringify({performance_id:a.id,sequence,action:'incident',incident:{type:$('incident-type').value,penalty:$('incident-penalty').value,reason:$('incident-reason').value}})});const data=await r.json();if(!r.ok)throw Error(data.error||'Incident could not be saved');say('Evaluator incident recorded for Chief decision.');}catch(e){say(e.message);}};
+$('review').onclick=async()=>{
+ stopTimers();await queue;if(failed)return;const a=athletes[active];$('review-area').replaceChildren();
+ const table=document.createElement('table');table.className='w-full border';const header=document.createElement('tr');
+ for(const text of ['Asana',...Object.keys(fields).map(human)]){const th=document.createElement('th');th.className='border p-2';th.textContent=text;header.append(th);}table.append(header);
+ for(const n of a.orders){const row=document.createElement('tr'),values=valuesFor(a,n);for(const text of [n,...Object.keys(fields).map(k=>values[k]??'Missing')]){const td=document.createElement('td');td.className='border p-2';td.textContent=String(text);row.append(td);}table.append(row);}
+ $('review-area').append(table);$('review-area').hidden=false;$('submit').hidden=!!a.sheet?.locked;
+};
+$('submit').onclick=async()=>{await queue;if(failed)return;const a=athletes[active];$('submit').disabled=true;
+ try{const r=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':token},body:JSON.stringify({performance_id:a.id,sequence:sequence,action:'submit',values:{}})});const data=await r.json();if(!r.ok)throw Error(data.error||'Submission failed');a.sheet=data.sheet;render();say('Complete score sheet submitted and locked.');}
+ catch(e){say(e.message);}finally{$('submit').disabled=false;}};
+window.addEventListener('beforeunload',e=>{if($('save-status').textContent.startsWith('Saving')||failed){e.preventDefault();e.returnValue='';}});render();
+})();
+</script>
+{% endblock %}

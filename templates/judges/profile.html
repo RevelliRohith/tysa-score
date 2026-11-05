@@ -4,6 +4,10 @@
 {% block title %}Judge Portal — TYSA Score{% endblock %}
 
 {% block content %}
+{% for grant in open_corrections %}
+<p class="bg-amber-50 border rounded p-4">Correction reopened: Chest {{ grant.performance.chest_number }} · {{ grant.judge_submission.judge_role }} · {{ grant.reason }}
+<a class="underline" href="/scoring/reopened-desk/?submission_id={{ grant.judge_submission_id }}">Open score sheet</a></p>
+{% endfor %}
 <div class="max-w-6xl mx-auto space-y-8 py-2">
     <!-- Top Judge Info Card -->
     <div id="profile" class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 sm:p-8">

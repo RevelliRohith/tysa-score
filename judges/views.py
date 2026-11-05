@@ -53,6 +53,8 @@ def get_judge_assignment_info(panel, user):
         seat = 'D2 Judge'
     elif panel.d3_judge_id == user.id:
         seat = 'D3 Judge'
+    elif panel.d5_judge_id == user.id:
+        seat = 'D5 Judge'
     elif panel.d4_judge_id == user.id:
         seat = 'D4 Judge'
     else:
@@ -106,7 +108,7 @@ def get_judge_assignment_info(panel, user):
 
 def models_q_for_judge(user):
     return (
-        Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) |
+        Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user) |
         Q(time_judge=user) | Q(time_judge_2=user) |
         Q(artistry_judge=user) | Q(artistry_judge_2=user) |
         Q(evaluator=user) | Q(evaluator_2=user) |
@@ -209,9 +211,11 @@ def judge_portal(request):
                 'scoring_url_name': scoring_url_name or 'scoring_traditional_d',
             })
 
+    from corrections.models import CDCorrectionGrant
     return render(request, 'judges/profile.html', {
         'judge': judge,
         'assigned_panels': assigned_panels,
+        'open_corrections': CDCorrectionGrant.objects.filter(judge_submission__judge=request.user, status='OPEN', performance__event_entry__registration__championship=champ).select_related('judge_submission', 'performance__event_entry'),
         'is_approved': (judge.approval_status == ApprovalStatus.APPROVED),
         'is_pending': (judge.approval_status == ApprovalStatus.PENDING),
         'is_rejected': (judge.approval_status == ApprovalStatus.REJECTED),

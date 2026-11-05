@@ -1,0 +1,50 @@
+﻿.F...........F..F.................................................       [100%]
+================================== FAILURES ===================================
+_ ChampionshipLifecycleAndDataIntegrityTest.test_certificate_issuance_and_public_verification _
+tests\test_championship_lifecycle.py:142: in test_certificate_issuance_and_public_verification
+    response = self.client.get(f"/certificates/verify/{first_cert.verification_uuid}/")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\django\test\client.py:1129: in get
+    response = super().get(
+venv\Lib\site-packages\django\test\client.py:479: in get
+    return self.generic(
+venv\Lib\site-packages\django\test\client.py:676: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\django\test\client.py:1092: in request
+    self.check_exception(response)
+venv\Lib\site-packages\django\test\client.py:805: in check_exception
+    raise exc_value
+venv\Lib\site-packages\django\core\handlers\exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\django\core\handlers\base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: certificate_verify_qr() got an unexpected keyword argument 'uuid'
+------------------------------ Captured log call ------------------------------
+ERROR    django.request:log.py:253 Internal Server Error: /certificates/verify/27c31280-6ae0-4f4d-9cac-c8597c07e025/
+Traceback (most recent call last):
+  File "C:\Users\My Files\Desktop\tysa-score\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\My Files\Desktop\tysa-score\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+TypeError: certificate_verify_qr() got an unexpected keyword argument 'uuid'
+_ TestCompleteE2EWorkflows.test_workflow_registration_approval_venue_clearance _
+tests\test_e2e_workflows.py:100: in test_workflow_registration_approval_venue_clearance
+    assert reg.status == RegistrationStatus.DISTRICT_APPROVED
+E   AssertionError: assert 'SUBMITTED' == RegistrationS...TRICT_APPROVED
+E     
+E     - DISTRICT_APPROVED
+E     + SUBMITTED
+________ TestCompleteE2EWorkflows.test_workflow_jury_read_only_access _________
+tests\test_e2e_workflows.py:188: in test_workflow_jury_read_only_access
+    assert resp.status_code == 200
+E   assert 302 == 200
+E    +  where 302 = <HttpResponseRedirect status_code=302, "text/html; charset=utf-8", url="/accounts/no-role/">.status_code
+=========================== short test summary info ===========================
+FAILED tests/test_championship_lifecycle.py::ChampionshipLifecycleAndDataIntegrityTest::test_certificate_issuance_and_public_verification
+FAILED tests/test_e2e_workflows.py::TestCompleteE2EWorkflows::test_workflow_registration_approval_venue_clearance
+FAILED tests/test_e2e_workflows.py::TestCompleteE2EWorkflows::test_workflow_jury_read_only_access
+3 failed, 63 passed, 70 warnings in 46.49s
+

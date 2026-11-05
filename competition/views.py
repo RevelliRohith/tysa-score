@@ -7,6 +7,7 @@ import csv
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import transaction
 from .models import DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, StageBatch, PanelSeatAssignment
 from championships.models import Championship, EventConfiguration, AgeCategory, EventType
 from registrations.models import EventEntry, RegistrationStatus
@@ -14,7 +15,7 @@ from judges.models import UniversalJudge, ApprovalStatus
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem
 from accounts.models import RoleChoices, ScopedRole
 from audit.models import AuditLog
-from accounts.permissions import get_active_championship, role_required
+from accounts.permissions import get_active_championship, role_required, is_system_admin
 from config.districts import TELANGANA_DISTRICTS
 
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
@@ -70,6 +71,7 @@ def cd_dashboard(request):
             ('D2 Judge', p.d2_judge),
             ('D3 Judge', p.d3_judge),
             ('D4 Judge', p.d4_judge),
+            ('D5 Judge', p.d5_judge),
             ('Time Judge', p.time_judge),
             ('Time Judge 2', p.time_judge_2),
             ('Evaluator', p.evaluator),
@@ -594,7 +596,7 @@ def master_roll(request):
 def get_busy_judge_map(championship, current_panel_id=None):
     """
     Returns a dict mapping judge_user_id -> dict of info about the OPEN event panel they are assigned to.
-    Only panels where is_active=True and is_closed=False are considered open.
+    Open panels reserve their assigned officials while the CD completes the roster.
     If current_panel_id is provided, assignments on that panel are excluded.
     """
     if not championship:
@@ -602,7 +604,6 @@ def get_busy_judge_map(championship, current_panel_id=None):
 
     open_panels = JudgePanel.objects.filter(
         championship=championship,
-        is_active=True,
         is_closed=False
     ).select_related('event_config', 'age_category')
 
@@ -655,6 +656,7 @@ def get_judge_plain_password(user):
         return "judge123"
 
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
+@transaction.atomic
 def panel_assignments(request):
     """
     Implements 15_CD_Judge_Panel_Assignment.png:
@@ -702,7 +704,7 @@ def panel_assignments(request):
             defaults={
                 'stage_name': 'Stage 1',
                 'session_name': 'Morning Session',
-                'is_active': True,
+                'is_active': False,
                 'is_closed': False,
             }
         )
@@ -710,7 +712,7 @@ def panel_assignments(request):
     # Handle Close / Re-open / Save POST actions
     if request.method == 'POST':
         target_panel_id = request.POST.get('panel_id')
-        panel = get_object_or_404(JudgePanel, id=target_panel_id, championship=championship)
+        panel = get_object_or_404(JudgePanel.objects.select_for_update(), id=target_panel_id, championship=championship)
         action = request.POST.get('action', 'save_panel')
 
         redirect_url = f"/competition/panels/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}"
@@ -720,6 +722,8 @@ def panel_assignments(request):
             panel.closed_at = timezone.now()
             panel.closed_by = request.user
             panel.save(update_fields=['is_closed', 'closed_at', 'closed_by'])
+            StageBatch.objects.filter(panel=panel, status='ACTIVE').update(status='COMPLETED')
+            AuditLog.log('PANEL_CLOSED', 'JudgePanel', panel.id, user=request.user)
 
             # Synchronize PanelSeatAssignment
             PanelSeatAssignment.objects.filter(panel=panel).update(is_active=False)
@@ -742,11 +746,19 @@ def panel_assignments(request):
                     conflict_warnings.append(f"{name} (in '{busy_map[uid]['panel_desc']}')")
 
             panel.is_closed = False
+            panel.is_active = not panel.composition_errors
             panel.closed_at = None
             panel.closed_by = None
             panel.save(update_fields=['is_closed', 'closed_at', 'closed_by'])
 
-            PanelSeatAssignment.objects.filter(panel=panel).update(is_active=True)
+            # Preserve historical assignments; only the latest record for each current seat is live.
+            PanelSeatAssignment.objects.filter(panel=panel).update(is_active=False)
+            for field in JudgePanel.SEAT_FIELDS:
+                uid = getattr(panel, field + '_id')
+                latest = panel.seat_assignments.filter(judge_id=uid, seat_name=JudgePanel.SEAT_LABELS[field]).order_by('-pk').first() if uid else None
+                if latest:
+                    latest.is_active = panel.is_active
+                    latest.save(update_fields=['is_active'])
 
             if conflict_warnings:
                 messages.warning(
@@ -805,13 +817,23 @@ def panel_assignments(request):
                 messages.error(request, err)
             return redirect(redirect_url)
 
+        previous_seats = {f: getattr(panel, f + '_id') for f in JudgePanel.SEAT_FIELDS}
         # Update panel fields
         for field, uid in seat_values.items():
             setattr(panel, f"{field}_id", uid)
+        approved_ids = set(approved_judges.filter(user__is_active=True).values_list('user_id', flat=True))
+        if any(uid and uid not in approved_ids for uid in seat_values.values()):
+            messages.error(request, 'Assign active, approved officials only.')
+            return redirect(redirect_url)
+        panel.is_active = not panel.composition_errors
         panel.save()
+        AuditLog.log('PANEL_OFFICIALS_UPDATED', 'JudgePanel', panel.id,
+                     {'previous': previous_seats, 'assigned': seat_values, 'active': panel.is_active}, request.user)
+        if panel.composition_errors:
+            messages.warning(request, 'Panel saved as incomplete: ' + '; '.join(panel.composition_errors))
 
         # Synchronize PanelSeatAssignment records
-        PanelSeatAssignment.objects.filter(panel=panel).delete()
+        PanelSeatAssignment.objects.filter(panel=panel).update(is_active=False)
         for field, uid in seat_values.items():
             if uid:
                 PanelSeatAssignment.objects.create(
@@ -819,7 +841,7 @@ def panel_assignments(request):
                     seat_name=JudgePanel.SEAT_LABELS.get(field, field.upper()),
                     judge_id=uid,
                     assigned_by=request.user,
-                    is_active=True
+                    is_active=panel.is_active
                 )
 
         messages.success(request, f"Judge panel successfully confirmed & saved for {panel.event_config.get_event_type_display()} ({gender}, {round_type}).")
@@ -836,7 +858,7 @@ def panel_assignments(request):
         writer.writerow(['Category', current_cat.name if current_cat else ''])
         writer.writerow(['Gender', 'Male' if gender == 'M' else 'Female'])
         writer.writerow(['Round', round_type])
-        writer.writerow(['Status', 'CLOSED' if current_panel.is_closed else 'OPEN / ACTIVE'])
+        writer.writerow(['Status', current_panel.status_display])
         if current_panel.is_closed and current_panel.closed_at:
             writer.writerow(['Closed At', current_panel.closed_at.strftime('%Y-%m-%d %H:%M')])
             writer.writerow(['Closed By', current_panel.closed_by.full_name if current_panel.closed_by else ''])
@@ -849,6 +871,7 @@ def panel_assignments(request):
             ('D2 Judge', current_panel.d2_judge),
             ('D3 Judge', current_panel.d3_judge),
             ('D4 Judge', current_panel.d4_judge),
+            ('D5 Judge', current_panel.d5_judge),
             ('Time Judge', current_panel.time_judge),
             ('Time Judge 2', current_panel.time_judge_2),
             ('Evaluator', current_panel.evaluator),
@@ -915,6 +938,7 @@ def panel_assignments(request):
             ('D2 Judge', current_panel.d2_judge, 'd2_judge', 'D2'),
             ('D3 Judge', current_panel.d3_judge, 'd3_judge', 'D3'),
             ('D4 Judge', current_panel.d4_judge, 'd4_judge', 'D4'),
+            ('D5 Judge', current_panel.d5_judge, 'd5_judge', 'D5'),
             ('Time Judge', current_panel.time_judge, 'time_judge', 'TIME_1'),
             ('Time Judge 2', current_panel.time_judge_2, 'time_judge_2', 'TIME_2'),
             ('Evaluator', current_panel.evaluator, 'evaluator', 'EVAL_1'),
@@ -966,6 +990,7 @@ def panel_assignments(request):
                 ('D2 Judge', p.d2_judge),
                 ('D3 Judge', p.d3_judge),
                 ('D4 Judge', p.d4_judge),
+                ('D5 Judge', p.d5_judge),
                 ('Time Judge', p.time_judge),
                 ('Time Judge 2', p.time_judge_2),
                 ('Evaluator', p.evaluator),
@@ -984,11 +1009,10 @@ def panel_assignments(request):
                         'district': j_prof.district if j_prof else '',
                         'password': get_judge_plain_password(u),
                     })
-            if p_assigned:
-                all_championship_panels.append({
-                    'panel': p,
-                    'roster': p_assigned,
-                })
+            all_championship_panels.append({
+                'panel': p,
+                'roster': p_assigned,
+            })
 
     return render(request, 'competition/panel_assignments.html', {
         'championship': championship,
@@ -999,6 +1023,7 @@ def panel_assignments(request):
         'gender': gender,
         'round_type': round_type,
         'current_panel': current_panel,
+        'required_seat_rows': [{'field': f, 'label': ('Stage Manager and Announcer' if f == 'stage_manager' else JudgePanel.SEAT_LABELS[f]), 'user_id': getattr(current_panel, f + '_id'), 'user': getattr(current_panel, f)} for f in current_panel.required_seats + ['jury_member']] if current_panel else [],
         'assigned_roster': assigned_roster,
         'all_championship_panels': all_championship_panels,
         'existing_roll': existing_roll,
@@ -1015,6 +1040,7 @@ def panel_assignments(request):
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.STAGE_MANAGER, RoleChoices.CD)
+@transaction.atomic
 def stage_manager(request):
     """
     Stage Manager Workspace & Inside-Panel Stage Control:
@@ -1027,6 +1053,8 @@ def stage_manager(request):
     """
     championship = get_active_championship(request)
     panels = JudgePanel.objects.filter(championship=championship, is_active=True).select_related('event_config', 'age_category', 'stage_manager')
+    if not is_system_admin(request.user) and not ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists():
+        panels = panels.filter(stage_manager=request.user)
     panel_id = request.GET.get('panel_id')
     
     # Prioritize user's own assigned panel if judge
@@ -1039,13 +1067,18 @@ def stage_manager(request):
         current_panel = panels.first()
 
     if not current_panel:
-        messages.info(request, "No active panels configured for this championship yet.")
-        return redirect('judge_portal')
+        return render(request, 'scoring/no_panel_assigned.html', {'championship': championship})
+
+    if request.method == 'POST':
+        current_panel = JudgePanel.objects.select_for_update().get(pk=current_panel.pk)
+        if not current_panel.is_active or current_panel.is_closed:
+            return HttpResponse('This panel is not active.', status=409)
 
     # Security check: If user is pure Stage Manager judge (not admin/CD), ensure panel is assigned to them
-    if not request.user.is_superuser and not ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists():
-        if current_panel.stage_manager != request.user and user_panels.exists():
-            current_panel = user_panels.first()
+    if not is_system_admin(request.user) and not ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists():
+        if current_panel.stage_manager != request.user:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied('This stage is assigned to another official.')
 
     # Active batch on stage for this specific panel
     active_batch = StageBatch.objects.filter(panel=current_panel, status='ACTIVE').first()
@@ -1122,7 +1155,7 @@ def stage_manager(request):
         if action == 'update_entry_status':
             entry_id = request.POST.get('roll_entry_id')
             new_status = request.POST.get('status')
-            roll_entry = get_object_or_404(MasterRollEntry, id=entry_id, master_roll__championship=championship)
+            roll_entry = get_object_or_404(MasterRollEntry, id=entry_id, master_roll=roll)
 
             if new_status == 'DISQUALIFIED':
                 reason = request.POST.get('disqualification_reason', '').strip()
@@ -1180,6 +1213,13 @@ def stage_manager(request):
                 messages.error(request, "Please select at least 1 Present athlete to push to stage.")
                 return redirect(redirect_url)
 
+            if current_panel.composition_errors or current_panel.is_closed:
+                messages.error(request, 'Complete the required panel before pushing athletes.')
+                return redirect(redirect_url)
+            if roll_entries.filter(event_entry_id__in=selected_entry_ids).count() != len(set(selected_entry_ids)):
+                messages.error(request, 'Athletes must belong to this panel master roll.')
+                return redirect(redirect_url)
+
             # Enforce batch limit
             if len(selected_entry_ids) > max_batch_size:
                 messages.error(request, f"Cannot push more than {max_batch_size} athletes. {batch_limit_text}")
@@ -1203,7 +1243,7 @@ def stage_manager(request):
                 status='ACTIVE',
                 current_asana_index=1
             )
-            entries = EventEntry.objects.filter(id__in=selected_entry_ids)
+            entries = EventEntry.objects.filter(id__in=roll_entries.filter(event_entry_id__in=selected_entry_ids).values('event_entry_id'))
             batch.entries.set(entries)
 
             # Create or bind Performance records
@@ -1237,11 +1277,9 @@ def stage_manager(request):
         elif action == 'publish_batch':
             if active_batch:
                 perfs = Performance.objects.filter(batch=active_batch)
-                for p in perfs:
-                    p.status = PerformanceStatus.PROVISIONAL_RELEASED
-                    p.chief_approved_by = current_panel.chief_judge or request.user
-                    p.chief_approved_at = timezone.now()
-                    p.save(update_fields=['status', 'chief_approved_by', 'chief_approved_at'])
+                if perfs.exclude(status__in=[PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED]).exists():
+                    messages.error(request, 'The Chief Judge must release each score before completing the batch.')
+                    return redirect(redirect_url)
 
                 # Mark master roll entries as COMPLETED
                 MasterRollEntry.objects.filter(master_roll=roll, event_entry__in=active_batch.entries.all()).update(attendance_status='COMPLETED')

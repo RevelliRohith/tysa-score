@@ -8,6 +8,14 @@ from scoring.models import Performance, PerformanceStatus, JudgeSubmission
 from accounts.models import RoleChoices
 from accounts.permissions import user_can_grant_correction
 
+
+def lock_grant_performance(grant_id, championship):
+    """Use the same performance-first lock order as the scoring desks."""
+    performance_id = CDCorrectionGrant.objects.filter(pk=grant_id,
+        performance__event_entry__registration__championship=championship).values_list('performance_id', flat=True).first()
+    if performance_id:
+        Performance.objects.select_for_update().get(pk=performance_id)
+
 def grant_correction_access(user, performance_id, submission_id, reason, championship):
     """
     Transactional service to grant correction access:
@@ -59,9 +67,25 @@ def grant_correction_access(user, performance_id, submission_id, reason, champio
             status=GrantStatus.OPEN
         )
 
+        from audit.models import AuditLog
+        import json
+        from django.core.serializers.json import DjangoJSONEncoder
+        snapshot = {'submission': {'id': sub.id, 'version': sub.version,
+                    'judge_id': sub.judge_id, 'judge_role': sub.judge_role,
+                    'submitted_at': sub.submitted_at, 'is_submitted': sub.is_submitted,
+                    'is_locked': sub.is_locked, 'is_draft': sub.is_draft,
+                    'raw_total': sub.raw_total, 'effective_total': sub.effective_total,
+                    'metadata': sub.calculation_metadata},
+                    'items': list(sub.items.values()),
+                    'artistry': list(sub.artistry_breakdown.__class__.objects.filter(submission=sub).values()) if hasattr(sub, 'artistry_breakdown') else []}
+        AuditLog.log('CD_REOPEN_SCORE', 'JudgeSubmission', sub.id,
+                     {'reason': reason, 'grant_id': grant.id,
+                      'snapshot': json.loads(json.dumps(snapshot, cls=DjangoJSONEncoder))}, user)
+        sub.items.update(is_locked=False, is_submitted=False, is_draft=True)
+        sub.is_submitted = False
         sub.is_locked = False
         sub.is_draft = True
-        sub.save(update_fields=['is_locked', 'is_draft'])
+        sub.save(update_fields=['is_locked', 'is_draft', 'is_submitted'])
 
         return grant
 
@@ -77,6 +101,7 @@ def revoke_correction_access(user, grant_id, championship):
         raise PermissionDenied("Only an officially assigned Competition Director (CD) on this championship can revoke correction access.")
 
     with transaction.atomic():
+        lock_grant_performance(grant_id, championship)
         grant = CDCorrectionGrant.objects.select_for_update().filter(
             id=grant_id,
             performance__event_entry__registration__championship=championship
@@ -95,8 +120,32 @@ def revoke_correction_access(user, grant_id, championship):
         grant.save(update_fields=['status', 'revoked_at', 'revoked_by'])
 
         sub = grant.judge_submission
+        from audit.models import AuditLog
+        import json
+        from django.core.serializers.json import DjangoJSONEncoder
+        AuditLog.log('CD_CORRECTION_REVOKED', 'JudgeSubmission', sub.id,
+                     {'grant_id': grant.id, 'abandoned_draft': json.loads(json.dumps(
+                         {'items': list(sub.items.values()), 'metadata': sub.calculation_metadata},
+                         cls=DjangoJSONEncoder))}, user)
+        original = AuditLog.objects.filter(action='CD_REOPEN_SCORE', resource_type='JudgeSubmission',
+            resource_id=str(sub.pk), details__grant_id=grant.pk).first()
+        if original:
+            snapshot = original.details['snapshot']
+            for item in snapshot['items']:
+                values = {key: value for key, value in item.items() if key not in ('id', 'submission_id')}
+                sub.items.filter(pk=item['id']).update(**values)
+            if snapshot.get('artistry'):
+                from scoring.models import PerformanceArtistryScore
+                values = {key: value for key, value in snapshot['artistry'][0].items() if key not in ('id', 'submission_id')}
+                PerformanceArtistryScore.objects.filter(submission=sub).update(**values)
+            sub.raw_total = snapshot['submission']['raw_total']
+            sub.effective_total = snapshot['submission']['effective_total']
+            sub.calculation_metadata = snapshot['submission']['metadata']
+        sub.is_draft = False
+        sub.is_submitted = True
         sub.is_locked = True
-        sub.save(update_fields=['is_locked'])
+        sub.items.update(is_draft=False, is_submitted=True, is_locked=True)
+        sub.save(update_fields=['is_locked', 'is_draft', 'is_submitted', 'raw_total', 'effective_total', 'calculation_metadata'])
 
         return grant
 
@@ -111,6 +160,7 @@ def resubmit_judge_correction(user, grant_id, championship):
     - Automatically relocks the submission and marks grant RESUBMITTED.
     """
     with transaction.atomic():
+        lock_grant_performance(grant_id, championship)
         grant = CDCorrectionGrant.objects.select_for_update().filter(
             id=grant_id,
             performance__event_entry__registration__championship=championship
@@ -134,7 +184,8 @@ def resubmit_judge_correction(user, grant_id, championship):
         now = timezone.now()
 
         # Update submission with immutable incremented version
-        sub.version += 1
+        latest = JudgeSubmission.objects.filter(performance=sub.performance, judge_role=sub.judge_role).aggregate(models.Max('version'))['version__max']
+        sub.version = latest + 1
         sub.is_draft = False
         sub.is_submitted = True
         sub.is_locked = True
@@ -142,12 +193,18 @@ def resubmit_judge_correction(user, grant_id, championship):
 
         # Recalculate raw and effective total from items
         items = sub.items.all()
-        if items.exists():
+        if sub.judge_role.startswith('TIME') and sub.performance.event_entry.event_config.event_type != 'TRADITIONAL':
+            from scoring.services import calculate_tw_marks
+            if 'routine_duration' in sub.calculation_metadata:
+                sub.raw_total = Decimal(sub.calculation_metadata['routine_duration'])
+                sub.effective_total = calculate_tw_marks(sub.raw_total) + Decimal('0.5') * items.filter(hold_duration_seconds__gte=5).count()
+        elif items.exists():
             total = sum(item.effective_item_score for item in items)
             sub.raw_total = total
             sub.effective_total = total
 
         sub.save()
+        items.update(is_draft=False, is_submitted=True, is_locked=True, submitted_at=now)
 
         # Mark grant as resubmitted
         grant.status = GrantStatus.RESUBMITTED

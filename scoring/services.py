@@ -657,7 +657,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     from scoring.models import JudgeSubmission, PerformanceStatus
     from registrations.models import AsanaSequenceItem
 
-    panel = JudgePanel.objects.filter(
+    panel = performance.batch.panel if performance.batch_id else JudgePanel.objects.filter(
         championship=championship,
         event_config=event_config,
         age_category=event_entry.age_category,
@@ -666,11 +666,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         is_active=True
     ).first()
 
-    # Confirmed D count from panel or default
-    if panel and panel.d_judges_count in [3, 4, 5]:
-        confirmed_d_count = panel.d_judges_count
-    else:
-        confirmed_d_count = 5 if is_traditional else 4
+    confirmed_d_count = 5 if is_traditional else 4
 
     # Build list of required roles
     required_d_roles = [f"D{i}_JUDGE" for i in range(1, confirmed_d_count + 1)]
@@ -687,10 +683,16 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
 
     # Fetch submissions
     submissions = list(JudgeSubmission.objects.filter(
-        performance=performance,
-        is_submitted=True
+        performance=performance
     ).select_related('judge').prefetch_related('items'))
+    submissions.sort(key=lambda s: s.version)
     sub_by_role = {s.judge_role: s for s in submissions}
+    if panel:
+        role_fields = {'TIME_JUDGE': 'time_judge', 'TIME_JUDGE_2': 'time_judge_2', 'EVALUATOR': 'evaluator', 'EVALUATOR_2': 'evaluator_2', 'ARTISTRY_JUDGE': 'artistry_judge', 'ARTISTRY_JUDGE_2': 'artistry_judge_2'}
+        role_fields.update({f'D{i}_JUDGE': f'd{i}_judge' for i in range(1, 6)})
+        sub_by_role = {r: sub for r, sub in sub_by_role.items() if sub.judge_id == getattr(panel, role_fields.get(r, 'chief_judge') + '_id')}
+    current_by_role = dict(sub_by_role)
+    sub_by_role = {r: sub for r, sub in current_by_role.items() if sub.is_submitted and not sub.is_draft}
 
     # Seat status tracking
     seat_status = []
@@ -721,10 +723,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     invalid_reasons = {}
 
     # Check Evaluator submissions (respects invalid decisions across both live draft and submitted sheets)
-    eval_subs = JudgeSubmission.objects.filter(
-        performance=performance,
-        judge_role__in=['EVALUATOR', 'EVALUATOR_1', 'EVALUATOR_2']
-    )
+    eval_subs = JudgeSubmission.objects.filter(pk__in=[s.pk for r, s in current_by_role.items() if r.startswith('EVALUATOR')])
     eval1 = eval_subs.filter(judge_role__in=['EVALUATOR', 'EVALUATOR_1']).first()
     eval2 = eval_subs.filter(judge_role='EVALUATOR_2').first()
     for ev in eval_subs:
@@ -734,8 +733,8 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
 
     # Check Time Judges holds
     reconciled_timing_data = {}
-    time_judge_1 = JudgeSubmission.objects.filter(performance=performance, judge_role='TIME_JUDGE').first()
-    time_judge_2 = JudgeSubmission.objects.filter(performance=performance, judge_role='TIME_JUDGE_2').first()
+    time_judge_1 = current_by_role.get('TIME_JUDGE')
+    time_judge_2 = current_by_role.get('TIME_JUDGE_2')
 
     if not is_traditional and time_judge_1 and time_judge_2:
         t1_holds = [itm.hold_duration_seconds for itm in time_judge_1.items.all().order_by('sequence_order')]

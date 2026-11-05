@@ -11,7 +11,7 @@ import athletes.views as athlete_views
 import judges.views as judge_views
 import registrations.views as reg_views
 import competition.views as comp_views
-import scoring.views as scoring_views
+import scoring.panel_views as panel_scoring_views
 import corrections.views as corr_views
 import results.views as result_views
 import certificates.views as cert_views
@@ -92,17 +92,18 @@ urlpatterns = [
     path('competition/stage-manager/', comp_views.stage_manager, name='stage_manager_alt'),
     path('display/second-screen/', comp_views.second_screen, name='second_screen'),
 
+    path('scoring/reopened-desk/', panel_scoring_views.score_desk, name='reopened_score_desk'),
     # Scoring Desks
-    path('scoring/traditional-d/', scoring_views.scoring_traditional_d, name='scoring_traditional_d'),
-    path('scoring/traditional-d-final/', scoring_views.scoring_traditional_d_final, name='scoring_traditional_d_final'),
-    path('scoring/artistic-single-d/', scoring_views.scoring_artistic_single_d, name='scoring_artistic_single_d'),
-    path('scoring/artistic-pair-d/', scoring_views.scoring_artistic_pair_d, name='scoring_artistic_pair_d'),
-    path('scoring/rhythmic-pair-d/', scoring_views.scoring_rhythmic_pair_d, name='scoring_rhythmic_pair_d'),
-    path('scoring/traditional-time/', scoring_views.scoring_traditional_time, name='scoring_traditional_time'),
-    path('scoring/music-time/', scoring_views.scoring_music_time, name='scoring_music_time'),
-    path('scoring/artistry/', scoring_views.scoring_artistry, name='scoring_artistry'),
-    path('scoring/evaluator/', scoring_views.scoring_evaluator, name='scoring_evaluator'),
-    path('scoring/chief-judge/', scoring_views.scoring_chief_judge, name='scoring_chief_judge'),
+    path('scoring/traditional-d/', panel_scoring_views.score_desk, name='scoring_traditional_d'),
+    path('scoring/traditional-d-final/', panel_scoring_views.score_desk, name='scoring_traditional_d_final'),
+    path('scoring/artistic-single-d/', panel_scoring_views.score_desk, name='scoring_artistic_single_d'),
+    path('scoring/artistic-pair-d/', panel_scoring_views.score_desk, name='scoring_artistic_pair_d'),
+    path('scoring/rhythmic-pair-d/', panel_scoring_views.score_desk, name='scoring_rhythmic_pair_d'),
+    path('scoring/traditional-time/', panel_scoring_views.score_desk, name='scoring_traditional_time'),
+    path('scoring/music-time/', panel_scoring_views.score_desk, name='scoring_music_time'),
+    path('scoring/artistry/', panel_scoring_views.score_desk, name='scoring_artistry'),
+    path('scoring/evaluator/', panel_scoring_views.score_desk, name='scoring_evaluator'),
+    path('scoring/chief-judge/', panel_scoring_views.chief_dashboard, name='scoring_chief_judge'),
 
     # CD Corrections & Jury & Appeals
     path('cd/corrections/', corr_views.cd_corrections, name='cd_corrections'),

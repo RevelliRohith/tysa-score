@@ -172,7 +172,7 @@ class PerformanceArtistryScore(models.Model):
     def calculate_total(self):
         # Check if official COP criteria fields are provided
         cop_sum = self.costume + self.theme_music + self.character_expression + self.rhythm_artistic_steps + self.use_of_floor
-        if cop_sum > Decimal('0.00') or self.artistry_deductions > Decimal('0.00'):
+        if cop_sum > Decimal('0.00') or self.artistry_deductions > Decimal('0.00') or self.submission.calculation_metadata.get('uses_cop_artistry', False):
             self.total_artistry = max(Decimal('0.00'), cop_sum - self.artistry_deductions)
         else:
             legacy_subtotal = self.presentation + self.synchronization + self.choreography + self.transition_flow + self.costume_grace

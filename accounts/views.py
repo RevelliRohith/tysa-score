@@ -56,10 +56,13 @@ def login_view(request):
             if candidate:
                 email = candidate.email
             else:
-                candidate = User.objects.filter(email__istartswith=email).first()
+                matches = User.objects.filter(email__istartswith=email)
+                candidate = matches.first() if matches.count() == 1 else None
                 if candidate:
                     email = candidate.email
 
+        candidate = User.objects.filter(email__iexact=email).first()
+        email = candidate.email if candidate else email
         user = authenticate(request, email=email, password=password)
         if user is not None:
             if not user.is_active:

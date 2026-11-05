@@ -77,6 +77,7 @@ class JudgePanel(models.Model):
     d2_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d2_panels')
     d3_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d3_panels')
     d4_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d4_panels')
+    d5_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d5_panels')
     time_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='time_panels')
     time_judge_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='time_panels_2')
     evaluator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluator_panels')
@@ -94,14 +95,14 @@ class JudgePanel(models.Model):
     version = models.PositiveIntegerField(default=1)
     d_judges_count = models.PositiveIntegerField(default=4, help_text="Configurable D-seats: typically 4 for Traditional")
 
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=False)
     is_closed = models.BooleanField(default=False, help_text="Once closed, assigned judges are freed to be assigned to other events")
     closed_at = models.DateTimeField(null=True, blank=True)
     closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='closed_panels')
     created_at = models.DateTimeField(auto_now_add=True)
 
     SEAT_FIELDS = [
-        'chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge',
+        'chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'd5_judge',
         'time_judge', 'time_judge_2', 'evaluator', 'evaluator_2',
         'artistry_judge', 'artistry_judge_2', 'stage_manager', 'jury_member'
     ]
@@ -112,6 +113,7 @@ class JudgePanel(models.Model):
         'd2_judge': 'D2 Judge',
         'd3_judge': 'D3 Judge',
         'd4_judge': 'D4 Judge',
+        'd5_judge': 'D5 Judge',
         'time_judge': 'Time Judge',
         'time_judge_2': 'Time Judge 2',
         'evaluator': 'Evaluator',
@@ -121,6 +123,46 @@ class JudgePanel(models.Model):
         'stage_manager': 'Stage Manager',
         'jury_member': 'Jury Member',
     }
+
+    @property
+    def required_seats(self):
+        seats = ['chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge',
+                 'time_judge', 'evaluator', 'stage_manager']
+        if self.event_config.event_type == 'TRADITIONAL':
+            seats.append('d5_judge')
+        else:
+            seats += ['artistry_judge', 'artistry_judge_2', 'time_judge_2']
+            if self.event_config.event_type == 'ARTISTIC_PAIR':
+                seats.append('evaluator_2')
+        return seats
+
+    @property
+    def composition_errors(self):
+        errors = []
+        if not self.age_category_id:
+            errors.append('Age category is required')
+        ids = []
+        for seat in self.required_seats:
+            uid = getattr(self, seat + '_id')
+            if not uid:
+                errors.append('Missing ' + self.SEAT_LABELS[seat])
+            else:
+                ids.append(uid)
+        if len(ids) != len(set(ids)):
+            errors.append('Each official must occupy a separate seat')
+        for seat in set(self.SEAT_FIELDS) - set(self.required_seats) - {'jury_member'}:
+            if getattr(self, seat + '_id'):
+                errors.append('Not applicable: ' + self.SEAT_LABELS[seat])
+        return errors
+
+    def save(self, *args, **kwargs):
+        # Incomplete assignments can be saved for later; they cannot run a stage.
+        self.d_judges_count = 5 if self.event_config.event_type == 'TRADITIONAL' else 4
+        if self.composition_errors or self.is_closed:
+            self.is_active = False
+        if kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'is_active', 'd_judges_count'}
+        super().save(*args, **kwargs)
 
     def get_assigned_judge_ids(self):
         ids = set()
@@ -142,7 +184,7 @@ class JudgePanel(models.Model):
     def status_display(self):
         if self.is_closed:
             return "CLOSED"
-        return "OPEN"
+        return "ACTIVE" if self.is_active else "INCOMPLETE"
 
     def __str__(self):
         cat_str = f" - {self.age_category.name}" if self.age_category else ""

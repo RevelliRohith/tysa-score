@@ -1,0 +1,24 @@
+﻿{% extends "base.html" %}
+{% block title %}Chief Judge Live Panel - TYSA{% endblock %}
+{% block content %}
+<section class="max-w-7xl mx-auto space-y-4"><h1 class="text-2xl font-bold">Chief Judge · Live Panel</h1>
+{% if panel %}<p>{{ panel.stage_name }} · {{ panel.age_category.name }} · {{ panel.event_config.get_event_type_display }} · {{ panel.get_round_type_display }}</p>{% endif %}
+<p>Read-only judge scores · Updates every two seconds</p><div id="live" class="space-y-4"></div><p id="live-status" role="status"></p></section>
+{{ live|json_script:"live-data" }}
+<form hidden>{% csrf_token %}</form>
+{% endblock %}
+{% block extra_js %}<script>
+(()=>{const root=document.getElementById('live');
+function node(tag,text,parent){const e=document.createElement(tag);e.textContent=text;parent.append(e);return e;}
+function draw(data){root.replaceChildren();if(!data.athletes.length){node('p','Waiting for active athletes pushed by the Stage Manager.',root);return;}
+for(const a of data.athletes){const card=node('article','',root);card.className='bg-white border rounded-xl p-5 space-y-3';node('h2',`Batch ${a.batch} · Chest ${a.chest} · ${a.name}`,card).className='font-bold text-xl';
+for(const j of a.judges){const details=node('details','',card);details.open=true;node('summary',`${j.role} · ${j.name} · ${j.sheet?.submitted?'Submitted':'Draft / Pending'} · Total ${j.sheet?.total??'Pending'}`,details);
+node('p','Missing fields: '+(Object.entries(j.missing).map(([n,fields])=>`Asana ${n}: ${fields.join(', ')}`).join(' | ')||'None'),details);
+if(j.sheet){const table=node('table','',details);table.className='w-full text-sm';for(const item of [...j.sheet.items,...j.sheet.artistry]){const row=node('tr','',table);node('td',item.sequence_order??'Routine',row);node('td',Object.entries(item).filter(([k])=>!['id','submission_id'].includes(k)).map(([k,v])=>`${k.replaceAll('_',' ')}: ${v}`).join(' · '),row);}
+if(j.sheet.metadata.routine_duration)node('p','Routine duration: '+j.sheet.metadata.routine_duration+' seconds',details);}}
+for(const incident of a.incidents){node('p',JSON.stringify(incident),card);if(incident.chief_decision==='PENDING')for(const decision of ['APPROVED','REJECTED']){const b=node('button',decision,card);b.className='border rounded p-2';b.onclick=async()=>{b.disabled=true;const r=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value},body:new URLSearchParams({performance_id:a.id,action:'incident_decision',incident_id:incident.id,decision})});document.getElementById('live-status').textContent=r.ok?'Incident decision recorded.':'Incident decision failed.';};}}
+const release=node('button','Release provisional score',card);release.className='bg-teal-800 text-white rounded p-2';release.disabled=a.judges.some(j=>!j.sheet?.submitted||Object.keys(j.missing).length);
+release.onclick=async()=>{release.disabled=true;try{const r=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value},body:new URLSearchParams({performance_id:a.id,action:'provisional_release'})});if(!r.ok)throw Error(JSON.stringify((await r.json()).error));document.getElementById('live-status').textContent='Provisional score released.';}catch(e){document.getElementById('live-status').textContent=e.message;release.disabled=false;}};}}
+draw(JSON.parse(document.getElementById('live-data').textContent));
+async function refresh(){try{const url=new URL(location.href);url.searchParams.set('format','json');const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('Panel access changed');draw(await r.json());document.getElementById('live-status').textContent='Live';}catch(e){root.replaceChildren();document.getElementById('live-status').textContent='Live data unavailable. '+e.message;}setTimeout(refresh,2000);}setTimeout(refresh,2000);
+})();</script>{% endblock %}
