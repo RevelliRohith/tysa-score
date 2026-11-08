@@ -45,7 +45,7 @@ def get_authorized_championships(user):
     panel_champ_ids = set(
         JudgePanel.objects.filter(is_active=True).filter(
             Q(chief_judge=user) | Q(d1_judge=user) | Q(d2_judge=user) |
-            Q(d3_judge=user) | Q(d4_judge=user) | Q(time_judge=user) |
+            Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user) | Q(time_judge=user) |
             Q(time_judge_2=user) | Q(evaluator=user) | Q(evaluator_2=user) |
             Q(artistry_judge=user) | Q(artistry_judge_2=user) | Q(stage_manager=user) |
             Q(seat_assignments__judge=user, seat_assignments__is_active=True)
@@ -121,7 +121,7 @@ def get_user_roles_for_request(request, championship=None):
     panels = JudgePanel.objects.filter(championship=champ, is_active=True)
     if panels.filter(chief_judge=user).exists():
         roles.add(RoleChoices.CHIEF_JUDGE)
-    if panels.filter(Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user)).exists():
+    if panels.filter(Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user)).exists():
         roles.add(RoleChoices.D_JUDGE)
     if panels.filter(Q(time_judge=user) | Q(time_judge_2=user)).exists():
         roles.add(RoleChoices.TIME_JUDGE)
@@ -144,7 +144,7 @@ def get_user_roles_for_request(request, championship=None):
     ).select_related('panel')
     for sa in seat_assignments:
         s_code = sa.seat_name
-        if any(d in s_code for d in ['D1', 'D2', 'D3', 'D4', 'D_JUDGE']):
+        if any(d in s_code for d in ['D1', 'D2', 'D3', 'D4', 'D5', 'D_JUDGE']):
             roles.add(RoleChoices.D_JUDGE)
         elif 'TIME' in s_code:
             roles.add(RoleChoices.TIME_JUDGE)
@@ -218,7 +218,7 @@ def get_user_workspaces(user):
     from competition.models import PanelSeatAssignment
     active_panels = JudgePanel.objects.filter(is_active=True).filter(
         Q(chief_judge=user) | Q(d1_judge=user) | Q(d2_judge=user) |
-        Q(d3_judge=user) | Q(d4_judge=user) | Q(time_judge=user) |
+        Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user) | Q(time_judge=user) |
         Q(time_judge_2=user) | Q(evaluator=user) | Q(evaluator_2=user) |
         Q(artistry_judge=user) | Q(artistry_judge_2=user) | Q(stage_manager=user) |
         Q(seat_assignments__judge=user, seat_assignments__is_active=True)
@@ -379,7 +379,7 @@ def get_user_roles_for_championship(user, championship):
     active_panels = JudgePanel.objects.filter(championship=championship, is_active=True)
     if active_panels.filter(chief_judge=user).exists():
         roles.add(RoleChoices.CHIEF_JUDGE)
-    if active_panels.filter(Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user)).exists():
+    if active_panels.filter(Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user)).exists():
         roles.add(RoleChoices.D_JUDGE)
     if active_panels.filter(Q(time_judge=user) | Q(time_judge_2=user)).exists():
         roles.add(RoleChoices.TIME_JUDGE)
@@ -400,7 +400,7 @@ def get_user_roles_for_championship(user, championship):
     ).select_related('panel')
     for sa in seat_assignments:
         s_code = sa.seat_name
-        if any(d in s_code for d in ['D1', 'D2', 'D3', 'D4', 'D_JUDGE']):
+        if any(d in s_code for d in ['D1', 'D2', 'D3', 'D4', 'D5', 'D_JUDGE']):
             roles.add(RoleChoices.D_JUDGE)
         elif 'TIME' in s_code:
             roles.add(RoleChoices.TIME_JUDGE)

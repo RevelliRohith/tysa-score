@@ -77,6 +77,7 @@ class JudgePanel(models.Model):
     d2_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d2_panels')
     d3_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d3_panels')
     d4_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d4_panels')
+    d5_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='d5_panels')
     time_judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='time_panels')
     time_judge_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='time_panels_2')
     evaluator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluator_panels')
@@ -101,7 +102,7 @@ class JudgePanel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     SEAT_FIELDS = [
-        'chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge',
+        'chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'd5_judge',
         'time_judge', 'time_judge_2', 'evaluator', 'evaluator_2',
         'artistry_judge', 'artistry_judge_2', 'stage_manager', 'jury_member'
     ]
@@ -112,6 +113,7 @@ class JudgePanel(models.Model):
         'd2_judge': 'D2 Judge',
         'd3_judge': 'D3 Judge',
         'd4_judge': 'D4 Judge',
+        'd5_judge': 'D5 Judge',
         'time_judge': 'Time Judge',
         'time_judge_2': 'Time Judge 2',
         'evaluator': 'Evaluator',
@@ -121,6 +123,19 @@ class JudgePanel(models.Model):
         'stage_manager': 'Stage Manager',
         'jury_member': 'Jury Member',
     }
+
+    @property
+    def required_seats(self):
+        etype = getattr(self.event_config, 'event_type', '') if self.event_config else ''
+        if etype == 'TRADITIONAL':
+            seats = ['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge']
+            if self.d5_judge or self.d_judges_count >= 5:
+                seats.append('d5_judge')
+            seats.extend(['time_judge', 'evaluator'])
+            return seats
+        elif etype in ['ARTISTIC_SINGLE', 'ARTISTIC_PAIR', 'RHYTHMIC_PAIR']:
+            return ['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'artistry_judge', 'artistry_judge_2', 'time_judge', 'evaluator']
+        return ['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'time_judge', 'evaluator']
 
     def get_assigned_judge_ids(self):
         ids = set()

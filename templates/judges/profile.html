@@ -162,7 +162,7 @@
                                     <span>Open Stage Control Desk (Stage Manager) →</span>
                                 </a>
                                 {% else %}
-                                <a href="{% url item.scoring_url_name %}" class="inline-flex items-center px-4 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white rounded-lg font-bold text-xs shadow-xs transition">
+                                <a href="{% url item.scoring_url_name %}?panel_id={{ item.panel.id }}" class="inline-flex items-center px-4 py-2 bg-[#0d5c58] hover:bg-[#09403d] text-white rounded-lg font-bold text-xs shadow-xs transition">
                                     Enter Digital Scoring Desk ({{ item.seat_label }}) →
                                 </a>
                                 {% endif %}

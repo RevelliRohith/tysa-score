@@ -52,13 +52,20 @@
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Asana Sequence:</span>
             <div class="flex items-center space-x-2">
                 {% for tab in sequence_tabs %}
-                <a href="?seq={{ tab.seq }}" class="w-9 h-9 rounded-xl font-bold flex items-center justify-center text-xs transition border
+                <a href="?seq={{ tab.seq }}" class="relative w-9 h-9 rounded-xl font-bold flex items-center justify-center text-xs transition border
                     {% if tab.is_current %}
                         bg-teal-800 text-white border-teal-800 shadow-xs ring-2 ring-teal-600/30
+                    {% elif tab.is_locked %}
+                        bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100
                     {% else %}
                         bg-white text-slate-700 border-slate-300 hover:bg-slate-50
                     {% endif %}">
                     <span>{{ tab.seq }}</span>
+                    {% if tab.is_locked %}
+                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px]">
+                        ✓
+                    </span>
+                    {% endif %}
                 </a>
                 {% endfor %}
             </div>

@@ -11,7 +11,7 @@
             </span>
         </div>
         <div class="flex items-center space-x-2 text-xs font-medium text-slate-400">
-            <span class="hidden sm:inline">Asana-by-Asana Judge Matrix • Olympic Trimmed Mean</span>
+            <span class="hidden sm:inline">Asana-by-Asana Judge Matrix (D1–D5, Time & Evaluator)</span>
             <i data-lucide="chevron-down" id="d-breakdown-icon" class="w-4 h-4 transition-transform duration-200"></i>
         </div>
     </button>
@@ -39,15 +39,17 @@
                 <thead>
                     <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px] tracking-wider">
                         <th class="py-2.5 px-3 w-12 text-center">#</th>
-                        <th class="py-2.5 px-3">Asana Code & Name</th>
-                        <th class="py-2.5 px-3 w-16 text-center">BV</th>
-                        <th class="py-2.5 px-3 w-20 text-right">D1 Judge</th>
-                        <th class="py-2.5 px-3 w-20 text-right">D2 Judge</th>
-                        <th class="py-2.5 px-3 w-20 text-right">D3 Judge</th>
-                        <th class="py-2.5 px-3 w-20 text-right">D4 Judge</th>
-                        <th class="py-2.5 px-3 w-24 text-right">D Item Mean</th>
-                        <th class="py-2.5 px-3 w-24 text-right">Evaluator / Time</th>
-                        <th class="py-2.5 px-3 w-24 text-right font-black">Net Total</th>
+                        <th class="py-2.5 px-3 min-w-[140px]">Asana Code & Name</th>
+                        <th class="py-2.5 px-3 w-14 text-center">BV</th>
+                        <th class="py-2.5 px-3 w-16 text-right">D1</th>
+                        <th class="py-2.5 px-3 w-16 text-right">D2</th>
+                        <th class="py-2.5 px-3 w-16 text-right">D3</th>
+                        <th class="py-2.5 px-3 w-16 text-right">D4</th>
+                        <th class="py-2.5 px-3 w-16 text-right">D5</th>
+                        <th class="py-2.5 px-3 w-28 text-center bg-sky-50/60 border-l border-r border-sky-100">Time Judge</th>
+                        <th class="py-2.5 px-3 w-28 text-center bg-amber-50/60 border-r border-amber-100">Evaluator</th>
+                        <th class="py-2.5 px-3 w-20 text-right">D Mean</th>
+                        <th class="py-2.5 px-3 w-20 text-right font-black">Net Total</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-800">
@@ -61,43 +63,75 @@
                                 <span class="font-bold text-slate-900 font-mono text-xs">{{ row.code }}</span>
                                 {% if row.is_invalid %}
                                 <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200" title="{{ row.invalid_reason|default:'Invalid Asana' }}">
-                                    Invalid (Total 0.000)
+                                    0.000
                                 </span>
                                 {% endif %}
                             </div>
                             <span class="text-slate-500 text-[11px] block truncate max-w-xs">{{ row.name }}</span>
-                            {% if row.is_invalid and row.invalid_reason %}
-                            <span class="text-[10px] text-rose-600 font-medium block truncate max-w-xs">{{ row.invalid_reason }}</span>
+                            {% if row.invalid_reason %}
+                            <span class="text-[10px] text-rose-600 font-bold block truncate max-w-xs">{{ row.invalid_reason }}</span>
                             {% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-center text-slate-600 font-bold">
                             {{ row.bv }}
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d1_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d1_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                            <span class="{% if row.d1_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d1|stringformat:".2f" }}
                             </span>
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d2_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d2_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                            <span class="{% if row.d2_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d2|stringformat:".2f" }}
                             </span>
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d3_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d3_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                            <span class="{% if row.d3_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d3|stringformat:".2f" }}
                             </span>
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d4_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}" {% if row.d4_dropped %}title="Dropped (Olympic Trim)"{% endif %}>
+                            <span class="{% if row.d4_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d4|stringformat:".2f" }}
                             </span>
                         </td>
+                        <td class="py-2.5 px-3 text-right">
+                            <span class="{% if row.d5_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
+                                {{ row.d5|default:"0.00"|stringformat:".2f" }}
+                            </span>
+                        </td>
+                        <!-- Time Judge column -->
+                        <td class="py-2.5 px-3 text-center bg-sky-50/40 border-l border-r border-sky-100 font-sans">
+                            {% if row.time_hold is not None %}
+                                <div class="font-mono font-bold {% if row.time_hold < 10 %}text-rose-600{% else %}text-sky-900{% endif %}">
+                                    {{ row.time_hold }}s
+                                </div>
+                                <div class="text-[10px] text-slate-500 font-mono">
+                                    Contrib: {{ row.time_contrib|default:"0.00" }}
+                                </div>
+                            {% else %}
+                                <span class="text-slate-400">—</span>
+                            {% endif %}
+                        </td>
+                        <!-- Evaluator column -->
+                        <td class="py-2.5 px-3 text-center bg-amber-50/40 border-r border-amber-100 font-sans">
+                            {% if row.is_eval_valid == False %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300" title="{{ row.eval_reason }}">
+                                    Invalid
+                                </span>
+                                {% if row.eval_reason %}
+                                <div class="text-[9px] text-rose-600 truncate max-w-[110px]" title="{{ row.eval_reason }}">{{ row.eval_reason }}</div>
+                                {% endif %}
+                            {% elif row.is_eval_valid == True %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    Valid
+                                </span>
+                            {% else %}
+                                <span class="text-slate-400">—</span>
+                            {% endif %}
+                        </td>
                         <td class="py-2.5 px-3 text-right font-bold text-teal-800">
                             {{ row.trimmed_mean|stringformat:".3f" }}
-                        </td>
-                        <td class="py-2.5 px-3 text-right text-rose-600 font-bold">
-                            {% if row.deduction > 0 %}-{{ row.deduction|stringformat:".2f" }}{% else %}—{% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-right font-black {% if row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}">
                             {{ row.net_item_score|stringformat:".3f" }}
@@ -105,7 +139,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" class="py-6 text-center text-slate-400 italic font-sans">
+                        <td colspan="12" class="py-6 text-center text-slate-400 italic font-sans">
                             No individual asana mark breakdown recorded yet.
                         </td>
                     </tr>
@@ -114,13 +148,16 @@
                 {% if score_calc.d_matrix %}
                 <tfoot>
                     <tr class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300 font-mono text-xs">
-                        <td colspan="3" class="py-3 px-3 uppercase text-[10px] tracking-wider font-sans">Composite D Total & Mean</td>
+                        <td colspan="3" class="py-3 px-3 uppercase text-[10px] tracking-wider font-sans">Composite D Totals & Trimmed Mean</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d1_total|stringformat:".2f" }}</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d2_total|stringformat:".2f" }}</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d3_total|stringformat:".2f" }}</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d4_total|stringformat:".2f" }}</td>
+                        <td class="py-3 px-3 text-right">{{ score_calc.d5_total|default:"0.00"|stringformat:".2f" }}</td>
+                        <td colspan="2" class="py-3 px-3 text-center text-[10px] font-sans font-bold text-slate-600">
+                            Penalties: {% if score_calc.penalties > 0 %}<span class="text-rose-700">-{{ score_calc.penalties|stringformat:".3f" }}</span>{% else %}0.000{% endif %}
+                        </td>
                         <td class="py-3 px-3 text-right font-black text-teal-900 text-sm">{{ score_calc.retained_d|stringformat:".3f" }}</td>
-                        <td class="py-3 px-3 text-right text-rose-700">{% if score_calc.penalties > 0 %}-{{ score_calc.penalties|stringformat:".3f" }}{% else %}0.000{% endif %}</td>
                         <td class="py-3 px-3 text-right font-black text-emerald-900 text-sm">{{ score_calc.provisional_total|stringformat:".3f" }}</td>
                     </tr>
                 </tfoot>

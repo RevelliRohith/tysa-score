@@ -55,6 +55,8 @@ def get_judge_assignment_info(panel, user):
         seat = 'D3 Judge'
     elif panel.d4_judge_id == user.id:
         seat = 'D4 Judge'
+    elif panel.d5_judge_id == user.id:
+        seat = 'D5 Judge'
     else:
         # Check PanelSeatAssignment
         seat_assign = panel.seat_assignments.filter(judge=user, is_active=True).first()
@@ -68,6 +70,8 @@ def get_judge_assignment_info(panel, user):
                 seat = 'D3 Judge'
             elif 'D4' in s_code:
                 seat = 'D4 Judge'
+            elif 'D5' in s_code:
+                seat = 'D5 Judge'
             elif 'STAGE' in s_code:
                 seat = 'Stage Manager'
                 url_name = 'stage_manager'
@@ -106,7 +110,7 @@ def get_judge_assignment_info(panel, user):
 
 def models_q_for_judge(user):
     return (
-        Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) |
+        Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user) |
         Q(time_judge=user) | Q(time_judge_2=user) |
         Q(artistry_judge=user) | Q(artistry_judge_2=user) |
         Q(evaluator=user) | Q(evaluator_2=user) |

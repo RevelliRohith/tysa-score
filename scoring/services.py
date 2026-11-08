@@ -654,7 +654,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     # Determine confirmed panel size and required roles
     # Check if a confirmed JudgePanel exists for this division
     from competition.models import JudgePanel, PanelSeatAssignment
-    from scoring.models import JudgeSubmission, PerformanceStatus
+    from scoring.models import JudgeSubmission, PerformanceStatus, AsanaScoreItem
     from registrations.models import AsanaSequenceItem
 
     panel = JudgePanel.objects.filter(
@@ -871,13 +871,12 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         d_judge_totals.append((d_role, quantize_score(judge_effective_total)))
         compulsory_d_judge_totals.append((d_role, quantize_score(judge_compulsory_total)))
 
-    # Assemble Asana-by-Asana matrix across all submitted D judges
+    # Assemble Asana-by-Asana matrix across all submitted judges (D1-D5, Time, Evaluator)
     items_by_role_seq = {}
-    for d_role in required_d_roles:
-        d_sub = sub_by_role.get(d_role)
-        if d_sub:
-            for itm in d_sub.items.all():
-                items_by_role_seq[(d_role, itm.sequence_order)] = itm
+    for role_name, sub_obj in sub_by_role.items():
+        if sub_obj:
+            for itm in sub_obj.items.all():
+                items_by_role_seq[(role_name, itm.sequence_order)] = itm
 
     for seq in range(1, sequence_count + 1):
         decl = declared_seqs.get(seq)
@@ -925,12 +924,31 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         d4_val = _get_item_mark(d4_itm)
         d5_val = _get_item_mark(d5_itm)
 
+        # Time judge & Evaluator details for this sequence (checked across draft and submitted sheets)
+        time_itm = items_by_role_seq.get(('TIME_JUDGE', seq))
+        eval_itm = items_by_role_seq.get(('EVALUATOR', seq))
+        if not eval_itm:
+            eval_itm = AsanaScoreItem.objects.filter(
+                submission__performance=performance,
+                submission__judge_role__in=['EVALUATOR', 'EVALUATOR_1'],
+                sequence_order=seq
+            ).first()
+
+        time_hold = time_itm.hold_duration_seconds if time_itm else None
+        time_contrib = time_itm.timing_contribution if time_itm else None
+        is_eval_valid = eval_itm.is_valid if eval_itm else True
+        eval_reason = eval_itm.invalid_reason if (eval_itm and not eval_itm.is_valid) else ""
+
         all_d_at_seq = [d1_val, d2_val, d3_val, d4_val]
         if confirmed_d_count >= 5:
             all_d_at_seq.append(d5_val)
 
         item_mean = quantize_score(sum(all_d_at_seq) / Decimal(str(len(all_d_at_seq)))) if all_d_at_seq else Decimal('0.000')
-        is_seq_invalid = (seq in invalid_item_sequences)
+        is_seq_invalid = (seq in invalid_item_sequences) or (not is_eval_valid) or (time_contrib is not None and time_contrib <= Decimal('0.00'))
+
+        effective_reason = invalid_reasons.get(seq, '') or eval_reason
+        if not effective_reason and time_contrib is not None and time_contrib <= Decimal('0.00'):
+            effective_reason = "Hold < 75% (0.0s): Score is 0.000"
 
         d_matrix.append({
             'seq': seq,
@@ -942,11 +960,15 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
             'd3': d3_val,
             'd4': d4_val,
             'd5': d5_val,
+            'time_hold': time_hold,
+            'time_contrib': time_contrib,
+            'is_eval_valid': is_eval_valid,
+            'eval_reason': eval_reason,
             'trimmed_mean': item_mean,
             'deduction': item_mean if is_seq_invalid else Decimal('0.00'),
             'net_item_score': Decimal('0.000') if is_seq_invalid else item_mean,
             'is_invalid': is_seq_invalid,
-            'invalid_reason': invalid_reasons.get(seq, '')
+            'invalid_reason': effective_reason
         })
 
     d_dict = dict(d_judge_totals)

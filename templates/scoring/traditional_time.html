@@ -50,9 +50,21 @@
         <div class="flex items-center space-x-3">
             <span class="text-sm font-bold text-slate-900">Round Sequence <span class="text-slate-500 font-normal">(7 asanas)</span>:</span>
             <div class="flex items-center space-x-2">
-                {% for seq_num in "1234567"|make_list %}
-                <a href="?seq={{ seq_num }}" class="w-8 h-8 rounded-full {% if current_seq|stringformat:'s' == seq_num %}bg-teal-800 text-white shadow-xs{% else %}border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %} font-bold flex items-center justify-center text-xs transition">
-                    {{ seq_num }}
+                {% for tab in sequence_tabs %}
+                <a href="?seq={{ tab.seq }}" class="relative w-9 h-9 rounded-xl font-bold flex items-center justify-center text-xs transition border
+                    {% if tab.is_current %}
+                        bg-teal-800 text-white border-teal-800 shadow-xs ring-2 ring-teal-600/30
+                    {% elif tab.is_locked %}
+                        bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100
+                    {% else %}
+                        bg-white text-slate-700 border-slate-300 hover:bg-slate-50
+                    {% endif %}">
+                    <span>{{ tab.seq }}</span>
+                    {% if tab.is_locked %}
+                    <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px]">
+                        ✓
+                    </span>
+                    {% endif %}
                 </a>
                 {% endfor %}
             </div>
@@ -91,16 +103,12 @@
                         </div>
                     </div>
 
-                    <!-- Asana Name, Code, BV Clearly Visible -->
+                    <!-- Asana Code & BV (Code only) -->
                     <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-                        <div class="min-w-0 pr-2">
-                            <span class="text-[9px] font-black uppercase text-slate-400 block">Declared Asana</span>
-                            <span class="font-bold text-slate-900 truncate block text-xs">{{ s.pose.declared_name|default:"Declared Asana" }}</span>
-                        </div>
-                        <div class="flex items-center space-x-1.5 shrink-0">
-                            <span class="px-2 py-0.5 rounded bg-slate-900 text-white font-mono font-bold text-[10px]">{{ s.pose.declared_code|default:"ASANA" }}</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-mono font-black text-xs tracking-wider shadow-xs">{{ s.declared_code|default:"ASANA" }}</span>
                             <span class="px-2 py-0.5 rounded {% if s.is_compulsory %}bg-indigo-100 text-indigo-800{% else %}bg-teal-100 text-teal-800{% endif %} font-bold text-[10px]">
-                                BV: {{ s.base_value|default:s.pose.declared_bv|default:"1.00" }} {% if s.is_compulsory %}(Compulsory){% endif %}
+                                BV: {{ s.base_value|default:"1.00" }} {% if s.is_compulsory %}(Compulsory){% endif %}
                             </span>
                         </div>
                     </div>
@@ -129,14 +137,25 @@
                     </div>
 
                     <div class="pt-2 border-t border-slate-100 space-y-2 text-xs">
-                        <!-- Manual Second Entry -->
-                        <div class="flex items-center justify-between">
-                            <span class="text-slate-600 font-medium">Hold Seconds (Manual Edit):</span>
-                            <input type="number" step="0.1" min="0" max="120" 
-                                   name="hold_{{ s.entry.id }}" id="input_{{ s.entry.id }}" 
-                                   value="{{ s.item.hold_duration_seconds }}" 
-                                   oninput="updateDisplayFromInput('{{ s.entry.id }}')"
-                                   class="w-24 text-right px-2.5 py-1 border border-slate-300 rounded font-bold font-mono outline-none focus:ring-1 focus:ring-teal-700 bg-white">
+                        <!-- Manual Second Entry (Easy Access & Presets) -->
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-700 font-bold text-xs">Hold Seconds (Manual):</span>
+                                <div class="flex items-center space-x-1">
+                                    <input type="number" step="any" min="0" max="300" 
+                                           name="hold_{{ s.entry.id }}" id="input_{{ s.entry.id }}" 
+                                           value="{{ s.item.hold_duration_seconds }}" 
+                                           oninput="updateDisplayFromInput('{{ s.entry.id }}')"
+                                           class="w-24 text-center px-2 py-1.5 border-2 border-teal-600/70 rounded-lg font-black font-mono text-sm outline-none focus:border-teal-700 bg-white shadow-2xs">
+                                    <span class="text-xs font-bold text-slate-500">sec</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-end space-x-1 pt-0.5">
+                                <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 0)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-[10px] font-bold text-slate-700">0s</button>
+                                <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 30)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">30s</button>
+                                <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 45)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">45s</button>
+                                <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 60)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">60s</button>
+                            </div>
                         </div>
 
                         <!-- Attempt Selector -->
@@ -206,16 +225,24 @@
 
             <div class="flex items-center space-x-3">
                 <button type="submit" name="action" value="save_draft"
-                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition cursor-pointer">
+                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold flex items-center space-x-2 transition cursor-pointer">
                     <i data-lucide="save" class="w-4 h-4"></i>
                     <span>Save Draft (Item {{ current_seq }})</span>
                 </button>
 
-                <button type="submit" name="action" value="submit_timing"
-                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition cursor-pointer">
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    <span>Submit & Lock Timing</span>
+                {% if current_seq < 7 %}
+                <button type="submit" name="action" value="submit_item_next"
+                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold flex items-center space-x-2 shadow-xs transition cursor-pointer">
+                    <span>Save Asana {{ current_seq }} & Next</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
+                {% else %}
+                <button type="submit" name="action" value="submit_final_batch"
+                        class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center space-x-2 shadow-xs transition cursor-pointer">
+                    <i data-lucide="check-check" class="w-4 h-4"></i>
+                    <span>Submit & Lock Entire Batch</span>
+                </button>
+                {% endif %}
             </div>
         </div>
     </form>
@@ -239,6 +266,14 @@ const ANNEXURE_B = {
     30: { 30: 1.000000, 29: 0.966667, 28: 0.933333, 27: 0.900000, 26: 0.866667, 25: 0.833333, 24: 0.800000, 23: 0.766667, 22: 0.733333 },
     15: { 15: 1.000000, 14: 0.933333, 13: 0.866667, 12: 0.800000, 11: 0.733333 }
 };
+
+function setManualSeconds(entryId, sec) {
+    const input = document.getElementById('input_' + entryId);
+    if (input) {
+        input.value = sec.toFixed(1);
+        updateDisplayFromInput(entryId);
+    }
+}
 
 function calculateContribution(seconds, attempt) {
     if (seconds <= 0 || targetHold <= 0) return 0.00;
