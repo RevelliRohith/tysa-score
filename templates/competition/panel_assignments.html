@@ -541,6 +541,39 @@
                             </td>
                         </tr>
 
+                        <!-- 5b. D5 Judge (Traditional full Difficulty judge) -->
+                        <tr class="hover:bg-slate-50/60 {% if current_panel.event_config.event_type != 'TRADITIONAL' %}opacity-75{% endif %}">
+                            <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">
+                                <div class="text-sm">D5 Judge</div>
+                                <span class="text-[10px] text-slate-500 font-normal">Difficulty & execution evaluation (Traditional)</span>
+                            </td>
+                            <td class="py-3 px-4 border-r border-slate-300">
+                                <select name="d5_judge" {% if current_panel.is_closed %}disabled{% endif %} class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none focus:bg-white focus:border-teal-600 disabled:opacity-60 disabled:bg-slate-100">
+                                    <option value="">— Unassigned —</option>
+                                    {% for item in annotated_judges %}
+                                    <option value="{{ item.user.id }}" data-district="{{ item.obj.district }}" data-cert="{{ item.obj.get_certification_level_display }}" data-name="{{ item.user.full_name|default:item.user.email }}" data-email="{{ item.email }}" data-password="{{ item.password }}" 
+                                        {% if current_panel.d5_judge_id == item.user.id %}selected{% endif %}
+                                        {% if item.is_busy and current_panel.d5_judge_id != item.user.id %}disabled class="text-amber-800 bg-amber-50 font-normal"{% endif %}>
+                                        {{ item.user.full_name|default:item.user.email }} ({{ item.obj.district }} • {{ item.obj.get_certification_level_display }})
+                                        {% if item.is_busy and current_panel.d5_judge_id != item.user.id %}
+                                            — ⚠️ LOCKED: {{ item.busy_info.panel_desc }}
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="py-3 px-4 border-r border-slate-300 text-slate-600">
+                                {% if current_panel.d5_judge %}
+                                    <span class="font-bold text-slate-900">{{ current_panel.d5_judge.judge_profile.district }}</span> • {{ current_panel.d5_judge.judge_profile.get_certification_level_display }}
+                                {% else %}
+                                    <span class="text-slate-400 italic">Select from approved list</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="border-b border-dotted border-slate-400 w-28 mx-auto h-5"></div>
+                            </td>
+                        </tr>
+
                         <!-- 6. Time Judge -->
                         <tr class="hover:bg-slate-50/60">
                             <td class="py-3 px-4 border-r border-slate-300 font-bold text-slate-900">

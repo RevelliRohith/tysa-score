@@ -98,11 +98,16 @@
             </button>
             
             {% if has_submitted_previous and submitted_batch_number %}
-            <a href="?review=1" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center justify-center space-x-1.5">
-                <i data-lucide="eye" class="w-4 h-4"></i>
-                <span>Review Batch #{{ submitted_batch_number }}</span>
+            <a href="?review=1" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-teal-50 border border-teal-200 hover:bg-teal-100 text-teal-800 font-bold transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="eye" class="w-4 h-4 text-teal-700"></i>
+                <span>Review Batch #{{ submitted_batch_number }} Scores</span>
             </a>
             {% endif %}
+
+            <a href="{% url 'judge_my_scores' %}" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="clipboard-check" class="w-4 h-4 text-slate-600"></i>
+                <span>All My Scores & History</span>
+            </a>
 
             <a href="{% url 'judge_portal' %}#panels" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold transition flex items-center justify-center space-x-1.5">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>

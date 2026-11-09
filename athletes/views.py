@@ -280,8 +280,12 @@ def athlete_register_step3(request):
     is_traditional = (current_entry.event_config.event_type == EventType.TRADITIONAL)
     is_pair = current_entry.event_config.is_pair or current_entry.is_pair
     max_slots = 7 if is_traditional else 10
-    compulsory_count = 4 if is_traditional else 0
-    optional_slots_count = 3 if is_traditional else 10
+    if is_traditional:
+        compulsory_count = 4 if round_type == 'FINAL' else 5
+        optional_slots_count = 3 if round_type == 'FINAL' else 2
+    else:
+        compulsory_count = 0
+        optional_slots_count = 10
 
     catalog_asanas = Asana.objects.filter(is_published=True, is_reference_record=False).order_by('display_category', 'sno', 'code')
     
@@ -292,8 +296,8 @@ def athlete_register_step3(request):
     ).order_by('sequence_order')
 
     if is_traditional and not existing_items.filter(is_compulsory=True).exists():
-        # Assign 4 standard syllabus compulsory poses
-        sample_compulsories = catalog_asanas[:4]
+        # Assign standard syllabus compulsory poses (5 for prelims/semi, 4 for final)
+        sample_compulsories = catalog_asanas[:compulsory_count]
         for c_idx, c_pose in enumerate(sample_compulsories, start=1):
             AsanaSequenceItem.objects.create(
                 event_entry=current_entry,

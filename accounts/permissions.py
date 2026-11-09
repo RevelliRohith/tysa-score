@@ -62,6 +62,9 @@ def get_active_championship(request, user=None):
     - If user is anonymous (e.g. public pages, athlete registration), checks session or default.
     - Removes Championship.objects.first() as an implicit operational fallback.
     """
+    if request is not None and user is None and hasattr(request, '_cached_active_championship'):
+        return request._cached_active_championship
+
     effective_user = user or (request.user if hasattr(request, 'user') and request.user.is_authenticated else None)
 
     active_id = None
@@ -77,6 +80,8 @@ def get_active_championship(request, user=None):
         first_authorized = authorized_champs.first()
         if first_authorized and hasattr(request, 'session'):
             request.session['active_championship_id'] = first_authorized.id
+        if request is not None and user is None:
+            request._cached_active_championship = first_authorized
         return first_authorized
 
     # Anonymous user resolution
@@ -118,21 +123,28 @@ def get_user_roles_for_request(request, championship=None):
     roles.update(scoped_roles)
 
     # Active Panel assignments for this championship (must be is_active=True)
-    panels = JudgePanel.objects.filter(championship=champ, is_active=True)
-    if panels.filter(chief_judge=user).exists():
-        roles.add(RoleChoices.CHIEF_JUDGE)
-    if panels.filter(Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user)).exists():
-        roles.add(RoleChoices.D_JUDGE)
-    if panels.filter(Q(time_judge=user) | Q(time_judge_2=user)).exists():
-        roles.add(RoleChoices.TIME_JUDGE)
-    if panels.filter(Q(evaluator=user) | Q(evaluator_2=user)).exists():
-        roles.add(RoleChoices.EVALUATOR)
-    if panels.filter(Q(artistry_judge=user) | Q(artistry_judge_2=user)).exists():
-        roles.add(RoleChoices.ARTISTRY_JUDGE)
-    if panels.filter(stage_manager=user).exists():
-        roles.add(RoleChoices.STAGE_MANAGER)
-    if panels.filter(jury_member=user).exists():
-        roles.add(RoleChoices.JURY)
+    panel = JudgePanel.objects.filter(championship=champ, is_active=True).filter(
+        Q(chief_judge=user) | Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) |
+        Q(d4_judge=user) | Q(d5_judge=user) | Q(time_judge=user) | Q(time_judge_2=user) |
+        Q(evaluator=user) | Q(evaluator_2=user) | Q(artistry_judge=user) | Q(artistry_judge_2=user) |
+        Q(stage_manager=user) | Q(jury_member=user)
+    ).first()
+    if panel:
+        uid = user.id
+        if panel.chief_judge_id == uid:
+            roles.add(RoleChoices.CHIEF_JUDGE)
+        if uid in (panel.d1_judge_id, panel.d2_judge_id, panel.d3_judge_id, panel.d4_judge_id, panel.d5_judge_id):
+            roles.add(RoleChoices.D_JUDGE)
+        if uid in (panel.time_judge_id, panel.time_judge_2_id):
+            roles.add(RoleChoices.TIME_JUDGE)
+        if uid in (panel.evaluator_id, panel.evaluator_2_id):
+            roles.add(RoleChoices.EVALUATOR)
+        if uid in (panel.artistry_judge_id, panel.artistry_judge_2_id):
+            roles.add(RoleChoices.ARTISTRY_JUDGE)
+        if panel.stage_manager_id == uid:
+            roles.add(RoleChoices.STAGE_MANAGER)
+        if panel.jury_member_id == uid:
+            roles.add(RoleChoices.JURY)
 
     # Active PanelSeatAssignment check (handles seat assignment only users)
     from competition.models import PanelSeatAssignment
@@ -376,19 +388,26 @@ def get_user_roles_for_championship(user, championship):
         return set()
 
     roles = set(ScopedRole.objects.filter(user=user, championship=championship).values_list('role', flat=True))
-    active_panels = JudgePanel.objects.filter(championship=championship, is_active=True)
-    if active_panels.filter(chief_judge=user).exists():
-        roles.add(RoleChoices.CHIEF_JUDGE)
-    if active_panels.filter(Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) | Q(d4_judge=user) | Q(d5_judge=user)).exists():
-        roles.add(RoleChoices.D_JUDGE)
-    if active_panels.filter(Q(time_judge=user) | Q(time_judge_2=user)).exists():
-        roles.add(RoleChoices.TIME_JUDGE)
-    if active_panels.filter(Q(evaluator=user) | Q(evaluator_2=user)).exists():
-        roles.add(RoleChoices.EVALUATOR)
-    if active_panels.filter(Q(artistry_judge=user) | Q(artistry_judge_2=user)).exists():
-        roles.add(RoleChoices.ARTISTRY_JUDGE)
-    if active_panels.filter(stage_manager=user).exists():
-        roles.add(RoleChoices.STAGE_MANAGER)
+    panel = JudgePanel.objects.filter(championship=championship, is_active=True).filter(
+        Q(chief_judge=user) | Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) |
+        Q(d4_judge=user) | Q(d5_judge=user) | Q(time_judge=user) | Q(time_judge_2=user) |
+        Q(evaluator=user) | Q(evaluator_2=user) | Q(artistry_judge=user) | Q(artistry_judge_2=user) |
+        Q(stage_manager=user)
+    ).first()
+    if panel:
+        uid = user.id
+        if panel.chief_judge_id == uid:
+            roles.add(RoleChoices.CHIEF_JUDGE)
+        if uid in (panel.d1_judge_id, panel.d2_judge_id, panel.d3_judge_id, panel.d4_judge_id, panel.d5_judge_id):
+            roles.add(RoleChoices.D_JUDGE)
+        if uid in (panel.time_judge_id, panel.time_judge_2_id):
+            roles.add(RoleChoices.TIME_JUDGE)
+        if uid in (panel.evaluator_id, panel.evaluator_2_id):
+            roles.add(RoleChoices.EVALUATOR)
+        if uid in (panel.artistry_judge_id, panel.artistry_judge_2_id):
+            roles.add(RoleChoices.ARTISTRY_JUDGE)
+        if panel.stage_manager_id == uid:
+            roles.add(RoleChoices.STAGE_MANAGER)
 
     # Active PanelSeatAssignment check
     from competition.models import PanelSeatAssignment

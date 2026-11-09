@@ -251,8 +251,8 @@ def calculate_traditional_item(
     time_clamped = min(Decimal('2.00'), max(Decimal('0.00'), timing_contribution))
 
     raw_item = (execution + time_clamped) * base_value
-    # Evaluator is the authoritative decider of asana validity
-    if is_invalid:
+    # Evaluator is the authoritative decider of asana validity, and timing hold < 75% zeroes the score
+    if is_invalid or time_clamped <= Decimal('0.00'):
         effective_item = Decimal('0.000')
     else:
         effective_item = raw_item
@@ -623,7 +623,7 @@ def calculate_panel_trimmed_mean(
 # ============================================================================
 # 8. MASTER CALCULATION SERVICE FOR A PERFORMANCE
 # ============================================================================
-def calculate_performance_score(performance) -> Dict[str, Any]:
+def calculate_performance_score(performance, persist: bool = True) -> Dict[str, Any]:
     """
     Authoritative server-side scoring calculation for a performance.
     Runs on server for all screens, exports, live scoreboard, and CD review.
@@ -685,11 +685,14 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     if is_artistic_pair:
         required_roles.append('EVALUATOR_2')
 
-    # Fetch submissions
-    submissions = list(JudgeSubmission.objects.filter(
-        performance=performance,
-        is_submitted=True
+    # Fetch submissions (both submitted and live in-progress/draft so matrix & preview sync live)
+    all_submissions = list(JudgeSubmission.objects.filter(
+        performance=performance
     ).select_related('judge').prefetch_related('items'))
+    all_sub_by_role = {s.judge_role: s for s in all_submissions}
+
+    # Only finalized/submitted submissions count toward official panel completeness
+    submissions = [s for s in all_submissions if s.is_submitted]
     sub_by_role = {s.judge_role: s for s in submissions}
 
     # Seat status tracking
@@ -721,21 +724,19 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     invalid_reasons = {}
 
     # Check Evaluator submissions (respects invalid decisions across both live draft and submitted sheets)
-    eval_subs = JudgeSubmission.objects.filter(
-        performance=performance,
-        judge_role__in=['EVALUATOR', 'EVALUATOR_1', 'EVALUATOR_2']
-    )
-    eval1 = eval_subs.filter(judge_role__in=['EVALUATOR', 'EVALUATOR_1']).first()
-    eval2 = eval_subs.filter(judge_role='EVALUATOR_2').first()
+    eval_subs = [s for s in all_submissions if s.judge_role in ['EVALUATOR', 'EVALUATOR_1', 'EVALUATOR_2']]
+    eval1 = next((s for s in eval_subs if s.judge_role in ['EVALUATOR', 'EVALUATOR_1']), None)
+    eval2 = next((s for s in eval_subs if s.judge_role == 'EVALUATOR_2'), None)
     for ev in eval_subs:
-        for itm in ev.items.filter(is_valid=False):
-            invalid_item_sequences.add(itm.sequence_order)
-            invalid_reasons[itm.sequence_order] = itm.invalid_reason or "Evaluator Confirmed Invalid Asana"
+        for itm in ev.items.all():
+            if not itm.is_valid:
+                invalid_item_sequences.add(itm.sequence_order)
+                invalid_reasons[itm.sequence_order] = itm.invalid_reason or "Evaluator Confirmed Invalid Asana"
 
     # Check Time Judges holds
     reconciled_timing_data = {}
-    time_judge_1 = JudgeSubmission.objects.filter(performance=performance, judge_role='TIME_JUDGE').first()
-    time_judge_2 = JudgeSubmission.objects.filter(performance=performance, judge_role='TIME_JUDGE_2').first()
+    time_judge_1 = all_sub_by_role.get('TIME_JUDGE')
+    time_judge_2 = all_sub_by_role.get('TIME_JUDGE_2')
 
     if not is_traditional and time_judge_1 and time_judge_2:
         t1_holds = [itm.hold_duration_seconds for itm in time_judge_1.items.all().order_by('sequence_order')]
@@ -766,13 +767,16 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     d_matrix = []
     sequence_count = 7 if is_traditional else 10
 
-    # Number of compulsory asanas in Traditional
-    ev_cfg = event_entry.event_config if event_entry else None
+    # Number of compulsory asanas in Traditional:
+    # Quarter-Final / Preliminary: 5 Compulsory, 2 Optional
+    # Semi-Final: 5 Compulsory, 2 Optional
+    # Final: 4 Compulsory, 3 Optional
     if is_traditional:
-        if ev_cfg and hasattr(ev_cfg, 'final_compulsory_count'):
-            compulsory_count = ev_cfg.final_compulsory_count if round_type == 'FINAL' else ev_cfg.prelim_compulsory_count
+        rt = (round_type or '').upper()
+        if 'FINAL' in rt and 'SEMI' not in rt:
+            compulsory_count = 4
         else:
-            compulsory_count = 2 if round_type == 'FINAL' else 4
+            compulsory_count = 5
     else:
         compulsory_count = 0
 
@@ -785,7 +789,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         judge_raw_total = Decimal('0.000')
         judge_compulsory_total = Decimal('0.000')
 
-        items = list(d_sub.items.all().order_by('sequence_order'))
+        items = sorted(list(d_sub.items.all()), key=lambda x: x.sequence_order)
         for itm in items:
             seq = itm.sequence_order
             is_inv = (seq in invalid_item_sequences)
@@ -810,7 +814,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
 
                 time_contrib = itm.timing_contribution
                 if time_judge_1:
-                    tj_itm = time_judge_1.items.filter(sequence_order=seq).first()
+                    tj_itm = next((ti for ti in time_judge_1.items.all() if ti.sequence_order == seq), None)
                     if tj_itm is not None:
                         time_contrib = tj_itm.timing_contribution
 
@@ -849,14 +853,28 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
                     is_invalid=is_inv
                 )
 
-            itm.raw_item_score = calc_res['raw_item_score']
-            itm.effective_item_score = calc_res['effective_item_score']
-            itm.is_valid = not is_inv
-            if is_inv:
-                itm.invalid_reason = invalid_reasons.get(seq, 'Invalid Asana')
+            new_raw = calc_res['raw_item_score']
+            new_eff = calc_res['effective_item_score']
+            new_valid = not is_inv
+            new_reason = invalid_reasons.get(seq, 'Invalid Asana') if is_inv else ''
+
+            if persist and (
+                itm.raw_item_score != new_raw or
+                itm.effective_item_score != new_eff or
+                itm.is_valid != new_valid or
+                itm.invalid_reason != new_reason or
+                itm.base_value != itm.base_value
+            ):
+                itm.raw_item_score = new_raw
+                itm.effective_item_score = new_eff
+                itm.is_valid = new_valid
+                itm.invalid_reason = new_reason
+                itm.save(update_fields=['base_value', 'raw_item_score', 'effective_item_score', 'is_valid', 'invalid_reason'])
             else:
-                itm.invalid_reason = ''
-            itm.save(update_fields=['base_value', 'raw_item_score', 'effective_item_score', 'is_valid', 'invalid_reason'])
+                itm.raw_item_score = new_raw
+                itm.effective_item_score = new_eff
+                itm.is_valid = new_valid
+                itm.invalid_reason = new_reason
 
             judge_raw_total += calc_res['raw_item_score']
             judge_effective_total += calc_res['effective_item_score']
@@ -865,15 +883,21 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
                 judge_compulsory_total += calc_res['effective_item_score']
 
         # Update submission totals
-        d_sub.raw_total = quantize_score(judge_raw_total)
-        d_sub.effective_total = quantize_score(judge_effective_total)
-        d_sub.save(update_fields=['raw_total', 'effective_total'])
+        new_sub_raw = quantize_score(judge_raw_total)
+        new_sub_eff = quantize_score(judge_effective_total)
+        if persist and (d_sub.raw_total != new_sub_raw or d_sub.effective_total != new_sub_eff):
+            d_sub.raw_total = new_sub_raw
+            d_sub.effective_total = new_sub_eff
+            d_sub.save(update_fields=['raw_total', 'effective_total'])
+        else:
+            d_sub.raw_total = new_sub_raw
+            d_sub.effective_total = new_sub_eff
         d_judge_totals.append((d_role, quantize_score(judge_effective_total)))
         compulsory_d_judge_totals.append((d_role, quantize_score(judge_compulsory_total)))
 
-    # Assemble Asana-by-Asana matrix across all submitted judges (D1-D5, Time, Evaluator)
+    # Assemble Asana-by-Asana matrix across all active judges (D1-D5, Time, Evaluator) live
     items_by_role_seq = {}
-    for role_name, sub_obj in sub_by_role.items():
+    for role_name, sub_obj in all_sub_by_role.items():
         if sub_obj:
             for itm in sub_obj.items.all():
                 items_by_role_seq[(role_name, itm.sequence_order)] = itm
@@ -901,16 +925,21 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         else:
             bv = first_itm.base_value if (first_itm and first_itm.base_value) else (decl.declared_bv if decl else Decimal('0.80'))
 
-        def _get_item_mark(itm):
+        def _get_item_marks(itm):
             if not itm:
-                return Decimal('0.000')
+                return Decimal('0.000'), Decimal('0.000')
+            # Given raw score (posture + stability + time) * bv
+            raw = Decimal('0.000')
             if itm.raw_item_score > Decimal('0.000'):
-                return itm.raw_item_score
-            if itm.posture_score > Decimal('0.00') or itm.stability_score > Decimal('0.00'):
-                return quantize_score(itm.posture_score + itm.stability_score + (itm.timing_contribution or Decimal('0.00')))
-            if itm.execution_score > Decimal('0.00'):
-                return quantize_score(itm.execution_score * itm.base_value)
-            return itm.effective_item_score
+                raw = itm.raw_item_score
+            elif itm.posture_score > Decimal('0.00') or itm.stability_score > Decimal('0.00'):
+                raw = quantize_score(itm.posture_score + itm.stability_score + (itm.timing_contribution or Decimal('0.00')))
+            elif itm.execution_score > Decimal('0.00'):
+                raw = quantize_score(itm.execution_score * itm.base_value)
+            else:
+                raw = itm.effective_item_score
+            eff = itm.effective_item_score
+            return quantize_score(raw), quantize_score(eff)
 
         d1_itm = items_by_role_seq.get(('D1_JUDGE', seq))
         d2_itm = items_by_role_seq.get(('D2_JUDGE', seq))
@@ -918,21 +947,15 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
         d4_itm = items_by_role_seq.get(('D4_JUDGE', seq))
         d5_itm = items_by_role_seq.get(('D5_JUDGE', seq))
 
-        d1_val = _get_item_mark(d1_itm)
-        d2_val = _get_item_mark(d2_itm)
-        d3_val = _get_item_mark(d3_itm)
-        d4_val = _get_item_mark(d4_itm)
-        d5_val = _get_item_mark(d5_itm)
+        d1_raw, d1_val = _get_item_marks(d1_itm)
+        d2_raw, d2_val = _get_item_marks(d2_itm)
+        d3_raw, d3_val = _get_item_marks(d3_itm)
+        d4_raw, d4_val = _get_item_marks(d4_itm)
+        d5_raw, d5_val = _get_item_marks(d5_itm)
 
         # Time judge & Evaluator details for this sequence (checked across draft and submitted sheets)
         time_itm = items_by_role_seq.get(('TIME_JUDGE', seq))
-        eval_itm = items_by_role_seq.get(('EVALUATOR', seq))
-        if not eval_itm:
-            eval_itm = AsanaScoreItem.objects.filter(
-                submission__performance=performance,
-                submission__judge_role__in=['EVALUATOR', 'EVALUATOR_1'],
-                sequence_order=seq
-            ).first()
+        eval_itm = items_by_role_seq.get(('EVALUATOR', seq)) or items_by_role_seq.get(('EVALUATOR_1', seq))
 
         time_hold = time_itm.hold_duration_seconds if time_itm else None
         time_contrib = time_itm.timing_contribution if time_itm else None
@@ -956,10 +979,15 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
             'name': name,
             'bv': bv,
             'd1': d1_val,
+            'd1_raw': d1_raw,
             'd2': d2_val,
+            'd2_raw': d2_raw,
             'd3': d3_val,
+            'd3_raw': d3_raw,
             'd4': d4_val,
+            'd4_raw': d4_raw,
             'd5': d5_val,
+            'd5_raw': d5_raw,
             'time_hold': time_hold,
             'time_contrib': time_contrib,
             'is_eval_valid': is_eval_valid,
@@ -1044,6 +1072,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
 
         # Deduplicate shared incidents between E1 and E2 (Page 17: Shared incidents are not charged twice)
         inc_key = (inc.incident_type, inc.affected_item_numbers, inc.declared_code)
+        # Evaluator penalties apply automatically without requiring Chief Judge confirmation unless rejected
         if inc_key not in seen_incidents and inc.chief_decision != 'REJECTED':
             seen_incidents.add(inc_key)
             evaluator_penalties += inc.penalty_marks
@@ -1054,7 +1083,7 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
                 'player': inc.player_target,
                 'evaluator': inc.evaluator_seat,
                 'reason': inc.evidence_notes or inc.get_incident_type_display(),
-                'status': inc.chief_decision
+                'status': inc.chief_decision or 'APPROVED'
             })
 
     # 2. From metadata on submissions (backward compatible)
@@ -1128,10 +1157,11 @@ def calculate_performance_score(performance) -> Dict[str, Any]:
     # Store calculation payload on performance
     serializable_payload = make_json_serializable(audit_payload)
     performance.calculation_data = serializable_payload
-    try:
-        performance.save(update_fields=['calculation_data'])
-    except Exception:
-        pass
+    if persist:
+        try:
+            performance.save(update_fields=['calculation_data'])
+        except Exception:
+            pass
 
     return {
         'performance': performance,

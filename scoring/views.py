@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Q
 from .models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem, PerformanceArtistryScore, EvaluatorIncident, IncidentType
 from .services import calculate_performance_score, calculate_traditional_timing_contribution
 from competition.models import StageBatch, JudgePanel
@@ -15,21 +16,34 @@ from accounts.models import RoleChoices, ScopedRole
 from accounts.permissions import role_required, get_active_championship
 from audit.models import AuditLog
 
+def get_traditional_compulsory_count(round_type: str) -> int:
+    """
+    Traditional Yogasana compulsory asana count:
+    - Quarter-Final (Preliminary): 5 Compulsory (Items 1-5), 2 Optional (Items 6-7)
+    - Semi-Final: 5 Compulsory (Items 1-5), 2 Optional (Items 6-7)
+    - Final: 4 Compulsory (Items 1-4), 3 Optional (Items 5-7)
+    """
+    rt = (round_type or '').upper()
+    if 'FINAL' in rt and 'SEMI' not in rt:
+        return 4
+    return 5
+
 def resolve_asana_compulsory_and_bv(entry, round_type, seq_num, pose_seq=None):
     if pose_seq is None and entry:
         pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq_num, round_type=round_type).first()
         if not pose_seq:
             pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq_num).first()
 
-    if pose_seq and hasattr(pose_seq, 'is_compulsory') and pose_seq.is_compulsory is not None:
+    cfg = getattr(entry, 'event_config', None)
+    is_traditional = bool(cfg and 'TRADITIONAL' in getattr(cfg, 'event_type', '').upper())
+
+    if is_traditional:
+        comp_count = get_traditional_compulsory_count(round_type)
+        is_comp = (seq_num <= comp_count)
+    elif pose_seq and hasattr(pose_seq, 'is_compulsory') and pose_seq.is_compulsory is not None:
         is_comp = pose_seq.is_compulsory
     else:
-        cfg = getattr(entry, 'event_config', None)
-        if cfg and hasattr(cfg, 'final_compulsory_count'):
-            comp_count = cfg.final_compulsory_count if round_type == 'FINAL' else cfg.prelim_compulsory_count
-        else:
-            comp_count = 2 if round_type == 'FINAL' else 4
-        is_comp = (seq_num <= comp_count)
+        is_comp = False
 
     if is_comp:
         bv = Decimal('1.00')
@@ -39,6 +53,26 @@ def resolve_asana_compulsory_and_bv(entry, round_type, seq_num, pose_seq=None):
         bv = Decimal('0.80')
 
     return is_comp, bv
+
+def get_traditional_target_hold(round_type: str, is_compulsory: bool) -> Decimal:
+    """
+    Returns the target hold duration for Traditional Yogasana:
+    - Quarter-Final / Preliminary Compulsory: 60 seconds
+    - Semi-Final Compulsory: 45 seconds
+    - Final Compulsory: 30 seconds
+    - Optional Asanas (all rounds): 15 seconds
+    """
+    if not is_compulsory:
+        return Decimal('15.00')
+
+    rt = (round_type or '').upper()
+    if 'FINAL' in rt and 'SEMI' not in rt:
+        return Decimal('30.00')
+    elif 'SEMI' in rt:
+        return Decimal('45.00')
+    else:
+        # Quarter-final / Preliminary
+        return Decimal('60.00')
 
 def get_upcoming_athletes_in_queue(panel, exclude_entries=None):
     """
@@ -266,10 +300,10 @@ def scoring_traditional_d(request):
             submission=sub,
             sequence_order=current_asana_seq,
             defaults={
-                'posture_score': Decimal('5.00'),
-                'stability_score': Decimal('1.50'),
-                'timing_contribution': Decimal('2.00'),
-                'effective_item_score': Decimal('8.50'),
+                'posture_score': Decimal('0.00'),
+                'stability_score': Decimal('0.00'),
+                'timing_contribution': Decimal('0.00'),
+                'effective_item_score': Decimal('0.00'),
                 'is_draft': True,
                 'is_locked': False
             }
@@ -419,13 +453,19 @@ def scoring_traditional_d(request):
 
         if action == 'save_draft':
             messages.info(request, f"Draft saved for Asana #{current_asana_seq}.")
-            return redirect(f"{request.path}?seq={current_asana_seq}")
+            redirect_url = f"{request.path}?seq={current_asana_seq}"
+            if request.GET.get('panel_id'):
+                redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+            return redirect(redirect_url)
 
         elif action == 'submit_item_next':
             if current_asana_seq < total_items:
                 next_seq = current_asana_seq + 1
                 messages.success(request, f"Asana #{current_asana_seq} committed & locked. Opened Asana #{next_seq}.")
-                return redirect(f"{request.path}?seq={next_seq}")
+                redirect_url = f"{request.path}?seq={next_seq}"
+                if request.GET.get('panel_id'):
+                    redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+                return redirect(redirect_url)
             else:
                 action = 'submit_final_batch'
 
@@ -548,10 +588,10 @@ def scoring_traditional_d_final(request):
             submission=sub,
             sequence_order=current_asana_seq,
             defaults={
-                'posture_score': Decimal('5.00'),
-                'stability_score': Decimal('1.50'),
-                'timing_contribution': Decimal('2.00'),
-                'effective_item_score': Decimal('8.50'),
+                'posture_score': Decimal('0.00'),
+                'stability_score': Decimal('0.00'),
+                'timing_contribution': Decimal('0.00'),
+                'effective_item_score': Decimal('0.00'),
                 'is_draft': True,
                 'is_locked': False
             }
@@ -701,13 +741,19 @@ def scoring_traditional_d_final(request):
 
         if action == 'save_draft':
             messages.info(request, f"Draft saved for Final Asana #{current_asana_seq}.")
-            return redirect(f"{request.path}?seq={current_asana_seq}")
+            redirect_url = f"{request.path}?seq={current_asana_seq}"
+            if request.GET.get('panel_id'):
+                redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+            return redirect(redirect_url)
 
         elif action == 'submit_item_next':
             if current_asana_seq < total_items:
                 next_seq = current_asana_seq + 1
                 messages.success(request, f"Final Asana #{current_asana_seq} committed & locked. Opened Asana #{next_seq}.")
-                return redirect(f"{request.path}?seq={next_seq}")
+                redirect_url = f"{request.path}?seq={next_seq}"
+                if request.GET.get('panel_id'):
+                    redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+                return redirect(redirect_url)
             else:
                 action = 'submit_final_batch'
 
@@ -1047,10 +1093,9 @@ def scoring_traditional_time(request):
     current_seq = max(1, min(7, current_seq))
 
     round_type = batch.panel.round_type if (batch and batch.panel) else 'PRELIMINARY'
-    # Default target hold based on round_type and seq
-    default_is_comp = (current_seq <= 2) if round_type == 'FINAL' else (current_seq <= 4)
-    is_compulsory = default_is_comp
-    target_hold = Decimal('45.00') if is_compulsory else Decimal('30.00')
+    comp_count = get_traditional_compulsory_count(round_type)
+    is_compulsory = (current_seq <= comp_count)
+    target_hold = get_traditional_target_hold(round_type, is_compulsory)
 
     submissions = {}
     entry_subs = {}
@@ -1071,7 +1116,7 @@ def scoring_traditional_time(request):
         if not pose_seq:
             pose_seq = AsanaSequenceItem.objects.filter(event_entry=e, sequence_order=current_seq).first()
         is_comp, bv_val = resolve_asana_compulsory_and_bv(e, round_type, current_seq, pose_seq)
-        entry_target_hold = Decimal('45.00') if is_comp else Decimal('30.00')
+        entry_target_hold = get_traditional_target_hold(round_type, is_comp)
         item, _ = AsanaScoreItem.objects.get_or_create(
             submission=sub,
             sequence_order=current_seq,
@@ -1121,8 +1166,9 @@ def scoring_traditional_time(request):
                 attempt_num = 1
 
             pose_seq = AsanaSequenceItem.objects.filter(event_entry=e, sequence_order=current_seq).first()
-            e_target = target_hold
-            if not is_compulsory and pose_seq and getattr(pose_seq, 'declared_hold_time', None):
+            is_comp, _ = resolve_asana_compulsory_and_bv(e, round_type, current_seq, pose_seq)
+            e_target = get_traditional_target_hold(round_type, is_comp)
+            if not is_comp and pose_seq and getattr(pose_seq, 'declared_hold_time', None):
                 e_target = pose_seq.declared_hold_time
 
             contrib = calculate_traditional_timing_contribution(hold_secs, e_target, attempt=attempt_num)
@@ -1178,10 +1224,16 @@ def scoring_traditional_time(request):
         elif action == 'submit_item_next':
             messages.success(request, f"Timing saved for Asana #{current_seq}.")
             next_seq = min(7, current_seq + 1)
-            return redirect(f"{request.path}?seq={next_seq}")
+            redirect_url = f"{request.path}?seq={next_seq}"
+            if request.GET.get('panel_id'):
+                redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+            return redirect(redirect_url)
         else:
             messages.success(request, f"Timing draft saved for Asana #{current_seq}.")
-            return redirect(f"{request.path}?seq={current_seq}")
+            redirect_url = f"{request.path}?seq={current_seq}"
+            if request.GET.get('panel_id'):
+                redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+            return redirect(redirect_url)
 
     return render(request, 'scoring/traditional_time.html', {
         'batch': batch,
@@ -1400,6 +1452,9 @@ def scoring_evaluator(request, perf_id=None):
                 'is_locked': seq_locked_count == entry_count if entry_count else False,
                 'is_partial': 0 < seq_locked_count < entry_count,
             })
+
+        for e in entries:
+            perf, sub = entry_subs[e.id]
             score_item, _ = AsanaScoreItem.objects.get_or_create(
                 submission=sub,
                 sequence_order=current_seq,
@@ -1410,11 +1465,19 @@ def scoring_evaluator(request, perf_id=None):
                 pose = AsanaSequenceItem.objects.filter(event_entry=e, sequence_order=current_seq).first()
             is_compulsory, declared_bv = resolve_asana_compulsory_and_bv(e, round_type, current_seq, pose)
 
-            seq_inc = EvaluatorIncident.objects.filter(performance=perf, incident_type=IncidentType.SEQUENCE_CHANGE).first()
+            seq_inc = EvaluatorIncident.objects.filter(
+                performance=perf,
+                incident_type=IncidentType.SEQUENCE_CHANGE,
+                affected_item_numbers=str(current_seq)
+            ).first()
             seq_penalty = int(seq_inc.penalty_marks) if seq_inc else 0
             is_dq = bool(seq_inc and seq_inc.evidence_notes == 'DQ')
 
-            other_inc = EvaluatorIncident.objects.filter(performance=perf, incident_type=IncidentType.OTHER_RULE).first()
+            other_inc = EvaluatorIncident.objects.filter(
+                performance=perf,
+                incident_type=IncidentType.OTHER_RULE,
+                affected_item_numbers=str(current_seq)
+            ).first()
             other_penalty = other_inc.penalty_marks if other_inc else Decimal('0.00')
             other_reason = other_inc.evidence_notes if other_inc else ''
 
@@ -1493,6 +1556,7 @@ def scoring_evaluator(request, perf_id=None):
                     EvaluatorIncident.objects.update_or_create(
                         performance=perf,
                         incident_type=IncidentType.SEQUENCE_CHANGE,
+                        affected_item_numbers=str(current_seq),
                         defaults={
                             'chest_number': e.chest_number or str(e.id),
                             'reporting_evaluator': request.user,
@@ -1510,18 +1574,20 @@ def scoring_evaluator(request, perf_id=None):
                         EvaluatorIncident.objects.update_or_create(
                             performance=perf,
                             incident_type=IncidentType.SEQUENCE_CHANGE,
+                            affected_item_numbers=str(current_seq),
                             defaults={
                                 'chest_number': e.chest_number or str(e.id),
                                 'reporting_evaluator': request.user,
                                 'penalty_marks': pen_marks,
-                                'evidence_notes': f'-{pen_marks} marks sequence change penalty',
+                                'evidence_notes': f'-{pen_marks} marks sequence change penalty on Asana #{current_seq}',
                                 'chief_decision': 'APPROVED',
                             }
                         )
                     else:
                         EvaluatorIncident.objects.filter(
                             performance=perf,
-                            incident_type=IncidentType.SEQUENCE_CHANGE
+                            incident_type=IncidentType.SEQUENCE_CHANGE,
+                            affected_item_numbers=str(current_seq)
                         ).delete()
 
                 # 4. Other Penalties
@@ -1535,18 +1601,20 @@ def scoring_evaluator(request, perf_id=None):
                     EvaluatorIncident.objects.update_or_create(
                         performance=perf,
                         incident_type=IncidentType.OTHER_RULE,
+                        affected_item_numbers=str(current_seq),
                         defaults={
                             'chest_number': e.chest_number or str(e.id),
                             'reporting_evaluator': request.user,
                             'penalty_marks': other_marks,
-                            'evidence_notes': other_reason_str or 'Other technical penalty',
+                            'evidence_notes': other_reason_str or f'Other technical penalty on Asana #{current_seq}',
                             'chief_decision': 'APPROVED',
                         }
                     )
                 else:
                     EvaluatorIncident.objects.filter(
                         performance=perf,
-                        incident_type=IncidentType.OTHER_RULE
+                        incident_type=IncidentType.OTHER_RULE,
+                        affected_item_numbers=str(current_seq)
                     ).delete()
 
                 if action == 'submit_sheet':
@@ -1563,18 +1631,30 @@ def scoring_evaluator(request, perf_id=None):
 
             if action == 'save_draft':
                 messages.info(request, f"Evaluator decisions saved for Asana #{current_seq}.")
-                return redirect(f"{request.path}?seq={current_seq}")
+                redirect_url = f"{request.path}?seq={current_seq}"
+                if request.GET.get('panel_id'):
+                    redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+                return redirect(redirect_url)
             elif action == 'save_next':
                 if current_seq < total_items:
                     next_seq = current_seq + 1
                     messages.success(request, f"Asana #{current_seq} evaluated. Opened Asana #{next_seq}.")
-                    return redirect(f"{request.path}?seq={next_seq}")
+                    redirect_url = f"{request.path}?seq={next_seq}"
+                    if request.GET.get('panel_id'):
+                        redirect_url += f"&panel_id={request.GET.get('panel_id')}"
+                    return redirect(redirect_url)
                 else:
                     messages.success(request, "All asana sequences evaluated for batch!")
-                    return redirect(request.path)
+                    redirect_url = request.path
+                    if request.GET.get('panel_id'):
+                        redirect_url += f"?panel_id={request.GET.get('panel_id')}"
+                    return redirect(redirect_url)
             elif action == 'submit_sheet':
                 messages.success(request, f"Evaluator sheet finalized and locked for Batch #{batch.batch_number if batch else '1'}!")
-                return redirect(request.path)
+                redirect_url = request.path
+                if request.GET.get('panel_id'):
+                    redirect_url += f"?panel_id={request.GET.get('panel_id')}"
+                return redirect(redirect_url)
 
         return render(request, 'scoring/evaluator.html', {
             'is_traditional': True,
@@ -1672,20 +1752,26 @@ def scoring_chief_judge(request):
     championship = get_active_championship(request)
     
     # 1. Identify current panel for this Chief Judge
+    panel_qs = JudgePanel.objects.filter(championship=championship).select_related(
+        'championship', 'event_config', 'age_category',
+        'chief_judge', 'd1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'd5_judge',
+        'time_judge', 'time_judge_2', 'evaluator', 'evaluator_2',
+        'artistry_judge', 'artistry_judge_2', 'stage_manager'
+    )
     assigned_panel = None
     if not (request.user.is_superuser or ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists()):
-        assigned_panel = JudgePanel.objects.filter(championship=championship, chief_judge=request.user, is_active=True).first()
+        assigned_panel = panel_qs.filter(chief_judge=request.user, is_active=True).first()
     
     # If not found or if CD/Admin, allow panel_id selector or fall back to first panel
     panel_id = request.GET.get('panel_id')
     if panel_id:
-        p_candidate = JudgePanel.objects.filter(id=panel_id, championship=championship).first()
+        p_candidate = panel_qs.filter(id=panel_id).first()
         if p_candidate:
             if assigned_panel is None or p_candidate.id == assigned_panel.id:
                 assigned_panel = p_candidate
 
     if not assigned_panel:
-        assigned_panel = JudgePanel.objects.filter(championship=championship, is_active=True).first()
+        assigned_panel = panel_qs.filter(is_active=True).first()
 
     if not assigned_panel:
         return render(request, 'scoring/no_panel_assigned.html', {'championship': championship})
@@ -1696,12 +1782,20 @@ def scoring_chief_judge(request):
 
     # Get performances ONLY for pushed athletes in this active batch
     if active_batch and batch_entries.exists():
-        performances = Performance.objects.filter(
+        entry_id_list = list(batch_entries.values_list('id', flat=True))
+        order_map = {eid: idx for idx, eid in enumerate(entry_id_list)}
+        performances = list(Performance.objects.filter(
             event_entry__in=batch_entries,
             round_type=assigned_panel.round_type
-        ).select_related('event_entry__registration__athlete', 'event_entry__event_config', 'event_entry__age_category')
+        ).select_related(
+            'event_entry__registration__championship',
+            'event_entry__registration__athlete',
+            'event_entry__event_config',
+            'event_entry__age_category'
+        ))
+        performances.sort(key=lambda p: order_map.get(p.event_entry_id, 9999))
     else:
-        performances = Performance.objects.none()
+        performances = []
 
     current_event = assigned_panel.event_config
     current_cat = assigned_panel.age_category
@@ -1711,11 +1805,45 @@ def scoring_chief_judge(request):
     categories = [current_cat] if current_cat else []
 
     perf_id = request.GET.get('perf_id')
-    selected_perf = performances.filter(id=perf_id).first() if perf_id else performances.first()
+    selected_perf = None
+    if performances:
+        if perf_id:
+            try:
+                p_id_int = int(perf_id)
+                selected_perf = next((p for p in performances if p.id == p_id_int), None)
+                if not selected_perf:
+                    messages.warning(request, f"Requested competitor (Performance #{perf_id}) is not active in the current batch on {assigned_panel.stage_name}.")
+            except (ValueError, TypeError):
+                messages.warning(request, "Invalid performance ID requested.")
+        else:
+            selected_perf = performances[0]
 
     score_calc = None
     if selected_perf:
-        score_calc = calculate_performance_score(selected_perf)
+        score_calc = calculate_performance_score(selected_perf, persist=False)
+        # Enrich seat_status with official assigned judge names and friendly role labels
+        seat_judge_map = {
+            'D1_JUDGE': ('D1 Judge (Difficulty)', getattr(assigned_panel.d1_judge, 'full_name', 'D1 Official')),
+            'D2_JUDGE': ('D2 Judge (Difficulty)', getattr(assigned_panel.d2_judge, 'full_name', 'D2 Official')),
+            'D3_JUDGE': ('D3 Judge (Difficulty)', getattr(assigned_panel.d3_judge, 'full_name', 'D3 Official')),
+            'D4_JUDGE': ('D4 Judge (Difficulty)', getattr(assigned_panel.d4_judge, 'full_name', 'D4 Official')),
+            'D5_JUDGE': ('D5 Judge (Difficulty)', getattr(assigned_panel.d5_judge, 'full_name', 'D5 Official')),
+            'TIME_JUDGE': ('Time Judge 1 (Hold Timer)', getattr(assigned_panel.time_judge, 'full_name', 'Time Official')),
+            'TIME_JUDGE_2': ('Time Judge 2 (Routine)', getattr(assigned_panel.time_judge_2, 'full_name', 'Time Official 2')),
+            'EVALUATOR': ('Evaluator 1 (Rules/Sequence)', getattr(assigned_panel.evaluator, 'full_name', 'Evaluator')),
+            'EVALUATOR_2': ('Evaluator 2 (Pair Sync)', getattr(assigned_panel.evaluator_2, 'full_name', 'Evaluator 2')),
+            'ARTISTRY_JUDGE': ('Artistry Judge 1', getattr(assigned_panel.artistry_judge, 'full_name', 'Artistry Official')),
+            'ARTISTRY_JUDGE_2': ('Artistry Judge 2', getattr(assigned_panel.artistry_judge_2, 'full_name', 'Artistry Official 2')),
+        }
+        for seat in score_calc.get('seat_status', []):
+            rc = seat.get('role_code')
+            info = seat_judge_map.get(rc, (rc.replace('_', ' ').title(), 'Official'))
+            seat['role_label'] = info[0]
+            seat['judge_name'] = info[1]
+            if seat.get('is_submitted'):
+                seat['badge_class'] = 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            else:
+                seat['badge_class'] = 'bg-amber-100 text-amber-800 border-amber-200'
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1753,6 +1881,24 @@ def scoring_chief_judge(request):
             messages.success(request, f"Provisional score of {calc['provisional_total']} released for Chest {perf.chest_number}! Broadcast to Live Public Screen.")
             return redirect(f"/scoring/chief-judge/?perf_id={perf.id}&event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
 
+        elif action == 'approve_incident':
+            inc_id = request.POST.get('incident_id')
+            inc = get_object_or_404(EvaluatorIncident, id=inc_id, performance=perf)
+            inc.chief_decision = 'APPROVED'
+            inc.chief_decided_at = timezone.now()
+            inc.save(update_fields=['chief_decision', 'chief_decided_at'])
+            messages.success(request, f"Incident #{inc.id} ({inc.get_incident_type_display()}) penalty confirmed by Chief Judge.")
+            return redirect(f"/scoring/chief-judge/?perf_id={perf.id}&event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
+        elif action == 'reject_incident':
+            inc_id = request.POST.get('incident_id')
+            inc = get_object_or_404(EvaluatorIncident, id=inc_id, performance=perf)
+            inc.chief_decision = 'REJECTED'
+            inc.chief_decided_at = timezone.now()
+            inc.save(update_fields=['chief_decision', 'chief_decided_at'])
+            messages.info(request, f"Incident #{inc.id} penalty dismissed/rejected by Chief Judge.")
+            return redirect(f"/scoring/chief-judge/?perf_id={perf.id}&event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
         elif action == 'request_correction':
             return redirect(f"/corrections/cd-undo/?perf_id={perf.id}")
 
@@ -1766,11 +1912,26 @@ def scoring_chief_judge(request):
 
     incidents = EvaluatorIncident.objects.filter(performance=selected_perf).order_by('-created_at') if selected_perf else []
 
+    # Calculate previous and next performance for navigation
+    prev_perf = None
+    next_perf = None
+    if selected_perf and performances and len(performances) > 1:
+        try:
+            curr_idx = next(i for i, p in enumerate(performances) if p.id == selected_perf.id)
+            if curr_idx > 0:
+                prev_perf = performances[curr_idx - 1]
+            if curr_idx < len(performances) - 1:
+                next_perf = performances[curr_idx + 1]
+        except StopIteration:
+            pass
+
     return render(request, 'scoring/chief_judge.html', {
         'panel': assigned_panel,
         'batch': active_batch,
         'performances': performances,
         'selected_perf': selected_perf,
+        'prev_perf': prev_perf,
+        'next_perf': next_perf,
         'score_calc': score_calc,
         'sequence_items': sequence_items,
         'incidents': incidents,
@@ -1782,3 +1943,111 @@ def scoring_chief_judge(request):
         'gender': gender,
         'round_type': round_type,
     })
+
+@login_required
+def judge_my_scores(request):
+    """
+    Judge Submitted Scores & Verdict History Module:
+    Allows any judge to inspect the scores and judgements they have entered across
+    all competitors, batches, and panels.
+    - Read-only review with asana-wise breakdown (posture, stability, timing, invalidities, deductions).
+    - Grouped by batch and athlete for fast review.
+    """
+    championship = get_active_championship(request)
+    user = request.user
+
+    # Fetch all submissions made by this judge or where this judge is assigned
+    submissions_qs = JudgeSubmission.objects.filter(
+        judge=user
+    ).select_related(
+        'performance__event_entry__event_config',
+        'performance__event_entry__age_category',
+        'performance__batch__panel',
+    ).prefetch_related('items').order_by('-submitted_at', '-id')
+
+    if championship:
+        submissions_qs = submissions_qs.filter(
+            Q(performance__event_entry__event_config__championship=championship) |
+            Q(performance__batch__panel__championship=championship)
+        )
+
+    # Also include EvaluatorIncident reports filed by this evaluator
+    evaluator_incidents = list(EvaluatorIncident.objects.filter(
+        reporting_evaluator=user
+    ).select_related('performance__event_entry').order_by('-created_at'))
+
+    from registrations.models import AsanaSequenceItem
+
+    # Group submissions by batch
+    batch_map = {}
+    total_evaluations = 0
+
+    for s in submissions_qs:
+        perf = s.performance
+        batch = perf.batch if perf else None
+        batch_id = batch.id if batch else 0
+        panel = batch.panel if batch else None
+
+        if batch_id not in batch_map:
+            batch_map[batch_id] = {
+                'batch': batch,
+                'batch_number': batch.batch_number if batch else None,
+                'panel': panel,
+                'event_config': perf.event_entry.event_config if (perf and perf.event_entry) else (panel.event_config if panel else None),
+                'age_category': perf.event_entry.age_category if (perf and perf.event_entry) else (panel.age_category if panel else None),
+                'gender': perf.event_entry.gender if (perf and perf.event_entry) else (panel.gender if panel else 'M'),
+                'round_type': perf.round_type if perf else (panel.round_type if panel else 'PRELIMINARY'),
+                'stage_name': panel.stage_name if panel else 'Arena',
+                'submissions': []
+            }
+
+        # Pre-resolve asana codes and names for each item
+        items_detail = []
+        for itm in s.items.all().order_by('sequence_order'):
+            pose = None
+            if perf and perf.event_entry:
+                pose = AsanaSequenceItem.objects.filter(
+                    event_entry=perf.event_entry,
+                    sequence_order=itm.sequence_order
+                ).first()
+
+            items_detail.append({
+                'item': itm,
+                'seq': itm.sequence_order,
+                'code': pose.declared_code if pose else f"A{itm.sequence_order}",
+                'name': pose.declared_name if pose else f"Asana #{itm.sequence_order}",
+                'is_compulsory': getattr(pose, 'is_compulsory', None),
+                'posture': itm.posture_score,
+                'stability': itm.stability_score,
+                'timing_contrib': itm.timing_contrib if hasattr(itm, 'timing_contrib') else itm.timing_contribution,
+                'hold_duration': itm.hold_duration_seconds,
+                'base_value': itm.base_value,
+                'net_score': itm.effective_item_score,
+                'is_valid': itm.is_valid,
+                'invalid_reason': itm.invalid_reason,
+            })
+
+        batch_map[batch_id]['submissions'].append({
+            'sub': s,
+            'perf': perf,
+            'entry': perf.event_entry if perf else None,
+            'chest_number': perf.chest_number if perf else '--',
+            'athlete_name': perf.event_entry.display_names if (perf and perf.event_entry) else 'Athlete',
+            'role_label': s.get_judge_role_display() if hasattr(s, 'get_judge_role_display') else s.judge_role,
+            'items': items_detail,
+            'effective_total': s.effective_total,
+            'is_submitted': s.is_submitted,
+            'submitted_at': s.submitted_at,
+        })
+        total_evaluations += 1
+
+    batches_list = list(batch_map.values())
+
+    return render(request, 'scoring/judge_my_scores.html', {
+        'championship': championship,
+        'batches': batches_list,
+        'total_evaluations': total_evaluations,
+        'evaluator_incidents': evaluator_incidents,
+        'judge_user': user,
+    })
+

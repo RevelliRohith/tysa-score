@@ -103,6 +103,7 @@ urlpatterns = [
     path('scoring/artistry/', scoring_views.scoring_artistry, name='scoring_artistry'),
     path('scoring/evaluator/', scoring_views.scoring_evaluator, name='scoring_evaluator'),
     path('scoring/chief-judge/', scoring_views.scoring_chief_judge, name='scoring_chief_judge'),
+    path('scoring/my-scores/', scoring_views.judge_my_scores, name='judge_my_scores'),
 
     # CD Corrections & Jury & Appeals
     path('cd/corrections/', corr_views.cd_corrections, name='cd_corrections'),

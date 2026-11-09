@@ -13,6 +13,10 @@
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                     <span>Assigned Panels</span>
                 </a>
+                <a href="{% url 'judge_my_scores' %}" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 hover:bg-teal-100 text-teal-800 font-bold text-xs transition">
+                    <i data-lucide="clipboard-check" class="w-4 h-4 text-teal-600"></i>
+                    <span>My Entered Scores</span>
+                </a>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
                     Traditional Time Judge
                 </span>
@@ -152,6 +156,7 @@
                             </div>
                             <div class="flex items-center justify-end space-x-1 pt-0.5">
                                 <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 0)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-[10px] font-bold text-slate-700">0s</button>
+                                <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 15)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">15s</button>
                                 <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 30)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">30s</button>
                                 <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 45)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">45s</button>
                                 <button type="button" onclick="setManualSeconds('{{ s.entry.id }}', 60)" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-teal-100 hover:text-teal-800 text-[10px] font-bold text-slate-700">60s</button>

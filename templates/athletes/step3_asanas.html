@@ -86,14 +86,14 @@
             <div>
                 <div class="text-xs font-black text-slate-900">
                     {% if is_traditional %}
-                    Traditional Yogasana Rules: 4 Compulsory + 3 Optional = 7 Total
+                    Traditional Yogasana Rules: {{ compulsory_count }} Compulsory + {{ optional_slots_count }} Optional = 7 Total
                     {% else %}
                     {{ current_entry.event_config.get_event_type_display }}: 10 Free Choice Asanas
                     {% endif %}
                 </div>
                 <p class="text-[11px] text-slate-500 mt-0.5">
                     {% if is_traditional %}
-                    The 4 compulsory syllabus asanas are prescribed for the {{ round_type|lower }} round. Choose 3 optional asanas from the catalogue.
+                    The {{ compulsory_count }} compulsory syllabus asanas are prescribed for the {{ round_type|lower }} round. Choose {{ optional_slots_count }} optional asanas from the catalogue.
                     {% else %}
                     Select 10 approved asanas from different movement categories to maximize routine variety and execution marks.
                     {% endif %}

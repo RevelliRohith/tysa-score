@@ -16,7 +16,7 @@
         </div>
     </button>
 
-    <div id="d-breakdown-panel" class="hidden border-t border-slate-200 p-5 space-y-4 bg-slate-50/50">
+    <div id="d-breakdown-panel" class="border-t border-slate-200 p-5 space-y-4 bg-slate-50/50">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 gap-2">
             <span>Official Rule: Highest and lowest full judge totals are trimmed; remaining retained judge totals are averaged.</span>
             {% if score_calc.panel_trim_details.formula_display %}
@@ -47,9 +47,7 @@
                         <th class="py-2.5 px-3 w-16 text-right">D4</th>
                         <th class="py-2.5 px-3 w-16 text-right">D5</th>
                         <th class="py-2.5 px-3 w-28 text-center bg-sky-50/60 border-l border-r border-sky-100">Time Judge</th>
-                        <th class="py-2.5 px-3 w-28 text-center bg-amber-50/60 border-r border-amber-100">Evaluator</th>
-                        <th class="py-2.5 px-3 w-20 text-right">D Mean</th>
-                        <th class="py-2.5 px-3 w-20 text-right font-black">Net Total</th>
+                        <th class="py-2.5 px-3 w-28 text-center bg-amber-50/60">Evaluator</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-800">
@@ -76,29 +74,44 @@
                             {{ row.bv }}
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d1_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
+                            <span class="{% if row.d1_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d1|stringformat:".2f" }}
                             </span>
+                            {% if row.is_invalid and row.d1_raw > 0 %}
+                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d1_raw|stringformat:".2f" }})</span>
+                            {% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d2_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
+                            <span class="{% if row.d2_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d2|stringformat:".2f" }}
                             </span>
+                            {% if row.is_invalid and row.d2_raw > 0 %}
+                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d2_raw|stringformat:".2f" }})</span>
+                            {% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d3_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
+                            <span class="{% if row.d3_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d3|stringformat:".2f" }}
                             </span>
+                            {% if row.is_invalid and row.d3_raw > 0 %}
+                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d3_raw|stringformat:".2f" }})</span>
+                            {% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d4_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
+                            <span class="{% if row.d4_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
                                 {{ row.d4|stringformat:".2f" }}
                             </span>
+                            {% if row.is_invalid and row.d4_raw > 0 %}
+                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d4_raw|stringformat:".2f" }})</span>
+                            {% endif %}
                         </td>
                         <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d5_dropped %}line-through text-slate-400{% else %}text-slate-900 font-bold{% endif %}">
-                                {{ row.d5|default:"0.00"|stringformat:".2f" }}
+                            <span class="{% if row.d5_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
+                                {{ row.d5|stringformat:".2f" }}
                             </span>
+                            {% if row.is_invalid and row.d5_raw > 0 %}
+                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d5_raw|stringformat:".2f" }})</span>
+                            {% endif %}
                         </td>
                         <!-- Time Judge column -->
                         <td class="py-2.5 px-3 text-center bg-sky-50/40 border-l border-r border-sky-100 font-sans">
@@ -114,7 +127,7 @@
                             {% endif %}
                         </td>
                         <!-- Evaluator column -->
-                        <td class="py-2.5 px-3 text-center bg-amber-50/40 border-r border-amber-100 font-sans">
+                        <td class="py-2.5 px-3 text-center bg-amber-50/40 font-sans">
                             {% if row.is_eval_valid == False %}
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300" title="{{ row.eval_reason }}">
                                     Invalid
@@ -130,16 +143,10 @@
                                 <span class="text-slate-400">—</span>
                             {% endif %}
                         </td>
-                        <td class="py-2.5 px-3 text-right font-bold text-teal-800">
-                            {{ row.trimmed_mean|stringformat:".3f" }}
-                        </td>
-                        <td class="py-2.5 px-3 text-right font-black {% if row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}">
-                            {{ row.net_item_score|stringformat:".3f" }}
-                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="12" class="py-6 text-center text-slate-400 italic font-sans">
+                        <td colspan="10" class="py-6 text-center text-slate-400 italic font-sans">
                             No individual asana mark breakdown recorded yet.
                         </td>
                     </tr>
@@ -148,17 +155,35 @@
                 {% if score_calc.d_matrix %}
                 <tfoot>
                     <tr class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300 font-mono text-xs">
-                        <td colspan="3" class="py-3 px-3 uppercase text-[10px] tracking-wider font-sans">Composite D Totals & Trimmed Mean</td>
+                        <td colspan="3" class="py-3 px-3 uppercase text-[10px] tracking-wider font-sans">Judge Totals</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d1_total|stringformat:".2f" }}</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d2_total|stringformat:".2f" }}</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d3_total|stringformat:".2f" }}</td>
                         <td class="py-3 px-3 text-right">{{ score_calc.d4_total|stringformat:".2f" }}</td>
-                        <td class="py-3 px-3 text-right">{{ score_calc.d5_total|default:"0.00"|stringformat:".2f" }}</td>
-                        <td colspan="2" class="py-3 px-3 text-center text-[10px] font-sans font-bold text-slate-600">
-                            Penalties: {% if score_calc.penalties > 0 %}<span class="text-rose-700">-{{ score_calc.penalties|stringformat:".3f" }}</span>{% else %}0.000{% endif %}
+                        <td class="py-3 px-3 text-right">{{ score_calc.d5_total|stringformat:".2f" }}</td>
+                        <td colspan="2" class="py-3 px-3 text-right text-xs font-sans font-bold text-slate-700">
+                            {% if score_calc.penalties > 0 %}
+                            <span class="text-rose-700">Penalties: -{{ score_calc.penalties|stringformat:".3f" }}</span>
+                            {% else %}
+                            <span class="text-slate-500">Penalties: 0.000</span>
+                            {% endif %}
                         </td>
-                        <td class="py-3 px-3 text-right font-black text-teal-900 text-sm">{{ score_calc.retained_d|stringformat:".3f" }}</td>
-                        <td class="py-3 px-3 text-right font-black text-emerald-900 text-sm">{{ score_calc.provisional_total|stringformat:".3f" }}</td>
+                    </tr>
+                    <tr class="bg-teal-50/80 font-bold text-teal-950 border-t border-teal-200 font-mono text-xs">
+                        <td colspan="8" class="py-2.5 px-3 uppercase text-[10px] tracking-wider font-sans text-teal-900">
+                            Official COP Retained D Average (Extreme High & Low Trimmed)
+                        </td>
+                        <td colspan="2" class="py-2.5 px-3 text-right font-black text-teal-900 text-sm">
+                            {{ score_calc.retained_d|stringformat:".3f" }}
+                        </td>
+                    </tr>
+                    <tr class="bg-emerald-500 text-white font-bold border-t border-emerald-600 font-mono text-xs">
+                        <td colspan="8" class="py-2.5 px-3 uppercase text-[11px] tracking-wider font-sans font-black">
+                            Final Composite Score
+                        </td>
+                        <td colspan="2" class="py-2.5 px-3 text-right font-black text-base">
+                            {{ score_calc.provisional_total|stringformat:".3f" }}
+                        </td>
                     </tr>
                 </tfoot>
                 {% endif %}

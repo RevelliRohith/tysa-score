@@ -97,6 +97,22 @@
     </div>
     {% endif %}
 
+    <!-- Quick Scoring History Shortcut Banner -->
+    <div class="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl border border-teal-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+            <span class="inline-flex items-center space-x-1.5 text-xs font-bold text-teal-800">
+                <i data-lucide="clipboard-check" class="w-4 h-4 text-teal-600"></i>
+                <span>My Scoring Records & Judgement History</span>
+            </span>
+            <h3 class="text-base font-black text-slate-900">View Entered Scores & Verdict History</h3>
+            <p class="text-xs text-slate-600">Review all asana scores, timing entries, validity calls, and technical deductions you submitted across all batches.</p>
+        </div>
+        <a href="{% url 'judge_my_scores' %}" class="px-5 py-2.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs shadow-xs transition flex items-center space-x-2 shrink-0">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+            <span>View My Submitted Scores</span>
+        </a>
+    </div>
+
     <!-- Assigned Panels Section -->
     <div id="panels" class="space-y-4">
         <div>

@@ -313,7 +313,11 @@
                         <p class="text-[11px] text-slate-500">Live arena public scoreboard display.</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-2 pt-1">
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <a href="{% url 'scoring_chief_judge' %}?panel_id={{ current_panel.id }}" target="_blank" class="flex-1 py-2 px-3 text-center bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-1.5 shadow-2xs">
+                        <i data-lucide="check-check" class="w-3.5 h-3.5 text-sky-600"></i>
+                        <span>Chief Judge Desk</span>
+                    </a>
                     <a href="{% url 'second_screen' %}" target="_blank" class="flex-1 py-2 px-3 text-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-1.5">
                         <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                         <span>Open Arena Display</span>

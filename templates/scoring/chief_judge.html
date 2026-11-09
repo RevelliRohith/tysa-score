@@ -1,225 +1,180 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Chief Judge — Performance Review — TYSA Score{% endblock %}
+{% block title %}Chief Judge Live Review — Arena {{ panel.id }} — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6 py-2">
-    <!-- Event / Category / Round Navigation Filter Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-bold text-slate-500 uppercase mr-2">Event:</span>
-                {% for ec in event_configs %}
-                <a href="?event_id={{ ec.id }}&gender={{ gender }}&round_type={{ round_type }}" 
-                   class="px-3 py-1.5 rounded-lg text-xs font-semibold transition {% if current_event and current_event.id == ec.id %}bg-teal-800 text-white shadow-xs{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
-                    {{ ec.get_event_type_display }}
-                </a>
-                {% empty %}
-                <span class="text-xs text-slate-400">No active events configured.</span>
-                {% endfor %}
+<div class="max-w-7xl mx-auto space-y-5 py-2">
+
+    <!-- Top Live Arena Header & Status Bar -->
+    <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl p-5 shadow-md border border-slate-800">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mr-1.5"></span>
+                        CHIEF JUDGE LIVE DESK
+                    </span>
+                    <span class="text-xs text-slate-400">•</span>
+                    <span class="text-xs font-semibold text-sky-300">{{ panel.stage_name }}</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                    <span>{{ panel.event_config.get_event_type_display }}</span>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                        {{ panel.age_category.name }} • {% if panel.gender == 'M' %}Boys{% else %}Girls{% endif %}
+                    </span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-900/60 text-sky-200 border border-sky-700/50">
+                        {{ panel.get_round_type_display }}
+                    </span>
+                </h1>
+                <p class="text-xs text-slate-400">
+                    Chief Judge: <strong class="text-slate-200">{{ panel.chief_judge.full_name|default:request.user.full_name }}</strong>
+                    &bull; Active Arena: <strong class="text-slate-200">{{ panel.stage_name }}</strong>
+                </p>
             </div>
 
-            <div class="flex items-center space-x-2 text-xs">
-                <span class="font-bold text-slate-500">Round:</span>
-                <a href="?event_id={{ current_event.id|default:'' }}&cat_id={{ current_cat.id|default:'' }}&gender={{ gender }}&round_type=PRELIMINARY" 
-                   class="px-2.5 py-1 rounded-md font-semibold {% if round_type == 'PRELIMINARY' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
-                    Preliminary
-                </a>
-                <a href="?event_id={{ current_event.id|default:'' }}&cat_id={{ current_cat.id|default:'' }}&gender={{ gender }}&round_type=SEMI_FINAL" 
-                   class="px-2.5 py-1 rounded-md font-semibold {% if round_type == 'SEMI_FINAL' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
-                    Semi-Final
-                </a>
-                <a href="?event_id={{ current_event.id|default:'' }}&cat_id={{ current_cat.id|default:'' }}&gender={{ gender }}&round_type=FINAL" 
-                   class="px-2.5 py-1 rounded-md font-semibold {% if round_type == 'FINAL' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
-                    Final
-                </a>
-            </div>
-        </div>
-
-        {% if categories %}
-        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
-            <span class="font-bold text-slate-500 uppercase mr-2">Category:</span>
-            {% for cat in categories %}
-            <a href="?event_id={{ current_event.id }}&cat_id={{ cat.id }}&gender={{ gender }}&round_type={{ round_type }}" 
-               class="px-2.5 py-1 rounded-md font-medium transition {% if current_cat and current_cat.id == cat.id %}bg-teal-100 text-teal-900 font-bold border border-teal-200{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
-                {{ cat.name }}
-            </a>
-            {% endfor %}
-
-            <div class="ml-auto flex items-center space-x-2">
-                <span class="font-bold text-slate-500">Gender:</span>
-                <a href="?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender=M&round_type={{ round_type }}" 
-                   class="px-2 py-0.5 rounded font-bold {% if gender == 'M' %}bg-teal-800 text-white{% else %}bg-slate-100 text-slate-600{% endif %}">Boys (M)</a>
-                <a href="?event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender=F&round_type={{ round_type }}" 
-                   class="px-2 py-0.5 rounded font-bold {% if gender == 'F' %}bg-teal-800 text-white{% else %}bg-slate-100 text-slate-600{% endif %}">Girls (F)</a>
+            <!-- Live Polling Indicator & Quick Controls -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 flex items-center space-x-2 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-slate-300 font-medium text-[11px]">Live Sync Active</span>
+                    <span class="text-slate-500 font-mono text-[10px] hidden sm:inline" id="sync-counter">(refreshing in 6s)</span>
+                </div>
+                <button type="button" onclick="window.location.reload();" 
+                        class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span>Refresh Now</span>
+                </button>
             </div>
         </div>
-        {% endif %}
     </div>
 
     {% if not selected_perf %}
-    <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-        <div class="w-14 h-14 rounded-2xl bg-teal-50 text-teal-800 flex items-center justify-center mx-auto text-2xl">
+    <!-- Empty State: Waiting for Stage Manager Push -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-12 text-center space-y-4 shadow-xs">
+        <div class="w-16 h-16 rounded-2xl bg-sky-50 text-sky-700 flex items-center justify-center mx-auto text-3xl">
             🧘
         </div>
-        <h2 class="text-lg font-bold text-slate-900">No Active Performances in this Division</h2>
-        <p class="text-xs text-slate-500 max-w-md mx-auto">
-            No athlete performances were found for the selected event, category, gender, and round filters. Switch event divisions above or push athletes from Stage Manager.
-        </p>
+        <div class="space-y-1">
+            <h2 class="text-lg font-bold text-slate-900">Waiting for Performer Call from Stage Manager</h2>
+            <p class="text-xs text-slate-500 max-w-md mx-auto">
+                No active competitor is currently called to the mat on <strong>{{ panel.stage_name }}</strong>. 
+                As soon as the Stage Manager calls an athlete, their live scorecard will appear here automatically.
+            </p>
+        </div>
+        <div class="inline-flex items-center space-x-2 text-xs text-slate-400 bg-slate-50 border border-slate-200 px-4 py-2 rounded-full">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Live listener connected to Stage Manager desk...</span>
+        </div>
     </div>
     {% else %}
 
-    <!-- Performer Switcher Pills -->
-    {% if performances.count > 1 %}
-    <div class="flex items-center space-x-2 overflow-x-auto pb-1">
-        <span class="text-xs font-bold text-slate-500 shrink-0">Chest Queue:</span>
-        {% for p in performances %}
-        <a href="?perf_id={{ p.id }}&event_id={{ current_event.id }}&cat_id={{ current_cat.id }}&gender={{ gender }}&round_type={{ round_type }}"
-           class="px-3 py-1.5 rounded-xl text-xs font-bold font-mono transition shrink-0 {% if selected_perf.id == p.id %}bg-sky-600 text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-            Chest {{ p.chest_number }}
-        </a>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Top Metadata Bar matching 24_Chief_Judge_Review.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex items-center space-x-6 text-xs">
-            <div>
-                <span class="text-slate-400 block font-medium">Event</span>
-                <span class="text-xl font-black text-slate-900">{{ selected_perf.event_entry.event_config.get_event_type_display }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Category</span>
-                <span class="text-xl font-black text-slate-900">{{ selected_perf.event_entry.age_category.name }} ({{ selected_perf.event_entry.get_gender_display }})</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Round</span>
-                <span class="text-xl font-black text-slate-900">{{ selected_perf.get_round_type_display }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Current Status</span>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold 
-                    {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}bg-emerald-100 text-emerald-800
-                    {% elif selected_perf.status == 'CD_FINALIZED' %}bg-purple-100 text-purple-800
-                    {% elif selected_perf.status == 'SUBMITTED' %}bg-blue-100 text-blue-800
-                    {% else %}bg-amber-100 text-amber-800{% endif %}">
-                    {{ selected_perf.get_status_display }}
-                </span>
-            </div>
-        </div>
-
-        <div class="bg-sky-50 border border-sky-200 px-6 py-2 rounded-xl text-center">
-            <span class="text-slate-400 text-[10px] block font-medium">Chest Number</span>
-            <span class="text-3xl font-black text-slate-900 font-mono">{{ selected_perf.chest_number }}</span>
-        </div>
-    </div>
-
-    <!-- Active Asana Comparison Card -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Declared Pose -->
-        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex items-center space-x-4">
-            <div class="w-14 h-14 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
-                {% if sequence_items.first.image_url %}
-                <img src="{{ sequence_items.first.image_url }}" alt="Pose" class="w-full h-full object-cover">
-                {% else %}🧘{% endif %}
-            </div>
-            <div class="min-w-0">
-                <span class="text-[10px] text-slate-400 uppercase font-mono">{{ sequence_items.first.declared_code|default:"DECLARED" }}</span>
-                <div class="text-xs font-bold text-slate-500">Declared asana (by entry)</div>
-                <div class="text-base font-bold text-slate-900 truncate">{{ sequence_items.first.declared_name|default:"Routine Pose" }}</div>
-                <div class="text-xs text-slate-500">Base Value: {{ sequence_items.first.declared_bv|default:"0.80" }}</div>
-            </div>
-        </div>
-
-        <!-- Performed Pose -->
-        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex items-center space-x-4">
-            <div class="w-14 h-14 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
-                {% if sequence_items.first.image_url %}
-                <img src="{{ sequence_items.first.image_url }}" alt="Pose" class="w-full h-full object-cover">
-                {% else %}🧘{% endif %}
-            </div>
-            <div class="min-w-0">
-                <span class="text-[10px] text-slate-400 uppercase font-mono">{{ sequence_items.first.declared_code|default:"OBSERVED" }}</span>
-                <div class="text-xs font-bold text-slate-500">Performed asana (on mat)</div>
-                <div class="text-base font-bold text-slate-900 truncate">{{ sequence_items.first.declared_name|default:"Observed Pose" }}</div>
-                <div class="text-xs text-slate-500">Verified by Evaluator</div>
-            </div>
-        </div>
-
-        <!-- Matched Status -->
-        <div class="border border-emerald-200 rounded-xl p-4 bg-emerald-50/60 flex items-center space-x-4">
-            <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                <i data-lucide="check" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <div class="text-xs font-bold text-slate-500">Observed / confirmed</div>
-                <div class="text-base font-black text-emerald-950">Matched Sequence</div>
-                <div class="text-xs text-emerald-800">Evaluator confirmation synchronized.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sequence Overview Bar -->
-    {% if sequence_items %}
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
-        <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wide">
-            {{ selected_perf.event_entry.event_config.get_event_type_display }} Sequence 
-            <span class="text-slate-400 font-normal">({{ sequence_items.count }} asanas total)</span>
-        </h2>
-        <div class="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-{{ sequence_items.count|default:10 }} gap-2">
-            {% for item in sequence_items %}
-            <div class="border border-slate-200 rounded-xl p-2 text-center bg-slate-50/60 hover:border-slate-300 transition">
-                <span class="text-xs font-bold text-slate-700">#{{ item.sequence_order }}</span>
-                <div class="text-xl my-1">
-                    {% if item.image_url %}
-                    <img src="{{ item.image_url }}" alt="{{ item.declared_code }}" class="w-8 h-8 mx-auto rounded object-cover">
-                    {% else %}🧘{% endif %}
+    <!-- Mat Performer Calling Strip -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Chest & Performer Details -->
+            <div class="flex items-center space-x-4">
+                <div class="bg-gradient-to-br from-sky-600 to-teal-700 text-white px-5 py-2.5 rounded-2xl shadow-sm text-center shrink-0">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-sky-100 block">Chest No</span>
+                    <span class="text-3xl font-black font-mono tracking-tight">{{ selected_perf.chest_number }}</span>
                 </div>
-                <span class="inline-flex items-center text-[9px] font-semibold text-emerald-700">
-                    <i data-lucide="check" class="w-2.5 h-2.5 mr-0.5"></i> Lock
-                </span>
-                <span class="text-[9px] text-slate-400 block font-mono truncate">{{ item.declared_code }}</span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Required Panel Seats & Completeness Audit (Distinguishing Missing vs Intentional 0.000) -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Panel Submissions & Completeness Audit</h2>
-                <p class="text-xs text-slate-500">Every required seat in the panel must be submitted and locked before score release.</p>
-            </div>
-            {% if score_calc.missing_seats %}
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                {{ score_calc.missing_seats|length }} Seat(s) Missing
-            </span>
-            {% else %}
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center space-x-1">
-                <i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1"></i> Panel Complete
-            </span>
-            {% endif %}
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {% for seat in score_calc.seat_status %}
-            <div class="border rounded-xl p-3.5 bg-slate-50/50 space-y-2 border-slate-200">
-                <div class="flex items-center justify-between">
-                    <span class="font-bold text-xs text-slate-900">{{ seat.role_label }}</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold border {{ seat.badge_class }}">
-                        {{ seat.display_text }}
-                    </span>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h2 class="text-lg font-black text-slate-900">
+                            {{ selected_perf.event_entry.registration.athlete.full_name }}
+                        </h2>
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            {{ selected_perf.event_entry.registration.athlete.district }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        DOB: {{ selected_perf.event_entry.registration.athlete.date_of_birth|date:"d M Y"|default:"--" }}
+                        &bull; Registration: <code class="text-slate-600 font-mono">{{ selected_perf.event_entry.registration.athlete.athlete_id|default:selected_perf.event_entry.id }}</code>
+                    </p>
                 </div>
-                <div class="text-[11px] text-slate-500 flex items-center justify-between">
-                    <span>Judge: <strong class="text-slate-700">{{ seat.judge_name }}</strong></span>
-                    {% if seat.is_submitted %}
-                    <span class="font-mono font-bold text-slate-900">{{ seat.score|stringformat:".3f" }}</span>
+            </div>
+
+            <!-- Performer Queue Switcher (if batch has multiple competitors) -->
+            {% if performances|length > 1 %}
+            <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+                <span class="text-xs font-bold text-slate-400 uppercase shrink-0">Batch Competitors:</span>
+                {% for p in performances %}
+                <a href="?perf_id={{ p.id }}&panel_id={{ panel.id }}"
+                   class="px-3 py-1.5 rounded-xl text-xs font-bold font-mono transition shrink-0 flex items-center space-x-1.5
+                   {% if selected_perf.id == p.id %}bg-slate-900 text-white shadow-sm ring-2 ring-sky-500{% else %}bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200{% endif %}">
+                    <span>Chest {{ p.chest_number }}</span>
+                    {% if p.status == 'PROVISIONAL_RELEASED' %}
+                    <span class="w-2 h-2 rounded-full bg-emerald-400" title="Provisional Released"></span>
                     {% else %}
-                    <span class="text-rose-600 font-semibold text-[10px]">Pending</span>
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Under Live Evaluation"></span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Current Review Status -->
+            <div class="text-right shrink-0">
+                <span class="text-[10px] text-slate-400 uppercase font-bold block">Status</span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold 
+                    {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}bg-emerald-100 text-emerald-800 border border-emerald-300
+                    {% elif selected_perf.status == 'CD_FINALIZED' %}bg-purple-100 text-purple-800 border border-purple-300
+                    {% else %}bg-amber-100 text-amber-800 border border-amber-300{% endif %}">
+                    {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}
+                    <i data-lucide="check-check" class="w-3.5 h-3.5 mr-1 text-emerald-700"></i> Provisional Released
+                    {% else %}
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1.5"></span> Under Live Judgment
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Judges Seat Status Cards (Who has submitted, who is still judging) -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span>Panel Judges Live Progress</span>
+                    <span class="text-[11px] font-normal text-slate-400">({{ score_calc.seat_status|length }} official seats)</span>
+                </h3>
+                <p class="text-[11px] text-slate-500">Live submission status of all assigned Difficulty, Timing, and Evaluator judges.</p>
+            </div>
+            <div>
+                {% if score_calc.missing_seats %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping mr-1.5"></span>
+                    Waiting for {{ score_calc.missing_seats|length }} Judge(s)
+                </span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1 text-emerald-700"></i> All Judges Submitted
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-{{ score_calc.seat_status|length|default:7 }} gap-3">
+            {% for seat in score_calc.seat_status %}
+            <div class="rounded-xl p-3 border transition-all text-center
+                {% if seat.is_submitted %}bg-emerald-50/50 border-emerald-200 shadow-2xs{% else %}bg-slate-50/60 border-slate-200{% endif %}">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block truncate" title="{{ seat.role_label }}">
+                    {{ seat.role_label }}
+                </span>
+                <span class="text-xs font-bold text-slate-800 block truncate mt-0.5" title="{{ seat.judge_name }}">
+                    {{ seat.judge_name }}
+                </span>
+                <div class="my-2">
+                    {% if seat.is_submitted %}
+                    <span class="text-lg font-black font-mono text-emerald-800 block">{{ seat.score|stringformat:".3f" }}</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                        <i data-lucide="check" class="w-2.5 h-2.5 mr-0.5"></i> Submitted
+                    </span>
+                    {% else %}
+                    <span class="text-sm font-bold font-mono text-slate-400 block py-1">—</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                        <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse mr-1"></span> Pending
+                    </span>
                     {% endif %}
                 </div>
             </div>
@@ -227,136 +182,153 @@
         </div>
     </div>
 
-    <!-- Provisional Scores Card matching 24_Chief_Judge_Review.png -->
+    <!-- Live Composite Score Summary Card -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-                <h2 class="text-base font-bold text-slate-900">Provisional Composite Scores – Chest {{ selected_perf.chest_number }}</h2>
-                <span class="text-xs text-slate-500">Calculated under Yogasana Bharat COP 2024–2026 (Olympic Trimmed Mean for D-judges)</span>
+                <h3 class="text-sm font-black text-slate-900 tracking-tight">
+                    Official Composite Score & Trimmed Mean — Chest {{ selected_perf.chest_number }}
+                </h3>
+                <p class="text-xs text-slate-500">Calculated strictly per Yogasana Bharat Official COP 2024–2026</p>
             </div>
             {% if score_calc.d_trimmed_scores %}
-            <span class="text-[11px] text-slate-400 font-mono">Retained D-marks: {{ score_calc.d_trimmed_scores|join:", " }}</span>
+            <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg">
+                <span>Retained D-Marks: <strong class="font-mono text-slate-800">{{ score_calc.d_trimmed_scores|join:", " }}</strong></span>
+            </div>
             {% endif %}
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <div class="border border-slate-200 rounded-xl p-3.5 text-center bg-slate-50/50">
-                <span class="text-xs text-slate-500 font-medium block">Retained D Mean</span>
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div class="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/50">
+                <span class="text-[11px] text-slate-500 font-medium block">D-Average (Mean)</span>
                 <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.retained_d|default:"0.000" }}</span>
+                <span class="text-[10px] text-slate-400 block mt-0.5">Olympic Trimmed</span>
             </div>
-            <div class="border border-slate-200 rounded-xl p-3.5 text-center bg-slate-50/50">
-                <span class="text-xs text-slate-500 font-medium block">Artistry (A)</span>
+            {% if not score_calc.is_traditional %}
+            <div class="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/50">
+                <span class="text-[11px] text-slate-500 font-medium block">Artistry (A)</span>
                 <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.artistry_total|default:"0.000" }}</span>
-            </div>
-            <div class="border border-slate-200 rounded-xl p-3.5 text-center bg-slate-50/50">
-                <span class="text-xs text-slate-500 font-medium block">Timing (T)</span>
-                <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.timing_score|default:"0.000" }}</span>
-            </div>
-            <div class="border border-slate-200 rounded-xl p-3.5 text-center bg-slate-50/50">
-                <span class="text-xs text-slate-500 font-medium block">Penalties</span>
-                <span class="text-2xl font-black text-rose-700 font-mono">-{{ score_calc.penalties|default:"0.000" }}</span>
-            </div>
-            <div class="border border-emerald-300 rounded-xl p-3.5 text-center bg-emerald-50">
-                <span class="text-xs text-emerald-800 font-bold block">Provisional Total</span>
-                <span class="text-3xl font-black text-emerald-950 font-mono">{{ score_calc.provisional_total|default:"0.000" }}</span>
-            </div>
-        </div>
-
-        <!-- Expandable D-Average Matrix Breakdown -->
-        {% include "includes/d_average_breakdown.html" %}
-
-        <!-- Evaluator Incidents & Infractions (Page 17) -->
-        <div class="pt-4 border-t border-slate-100 space-y-3">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xs font-bold text-slate-800">Evaluator Reported Technical Incidents & COP Penalties (Page 17)</h3>
-                <span class="text-[11px] text-slate-500">Chief Decision Determines Applied Penalties</span>
-            </div>
-            
-            {% if incidents %}
-            <div class="border border-slate-200 rounded-xl overflow-hidden">
-                <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                            <th class="py-2.5 px-3">Type</th>
-                            <th class="py-2.5 px-3">Seat / Target</th>
-                            <th class="py-2.5 px-3">Declared vs Performed</th>
-                            <th class="py-2.5 px-3">Item(s)</th>
-                            <th class="py-2.5 px-3 text-right">Penalty</th>
-                            <th class="py-2.5 px-3 text-center">Zeroes D</th>
-                            <th class="py-2.5 px-3">Chief Decision</th>
-                            <th class="py-2.5 px-3 text-right">Review Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-slate-800 text-[11px]">
-                        {% for inc in incidents %}
-                        <tr class="hover:bg-slate-50/60 font-mono">
-                            <td class="py-2.5 px-3 font-sans font-bold text-slate-900">{{ inc.get_incident_type_display }}</td>
-                            <td class="py-2.5 px-3 font-sans">{{ inc.evaluator_seat }} • {{ inc.get_player_target_display }}</td>
-                            <td class="py-2.5 px-3 font-sans">
-                                {% if inc.declared_code or inc.observed_code %}
-                                <span class="text-slate-400">Dec:</span> <strong>{{ inc.declared_code|default:"--" }}</strong>
-                                <span class="text-slate-400">→</span>
-                                <span class="text-slate-400">Obs:</span> <strong>{{ inc.observed_code|default:"--" }}</strong>
-                                {% else %}—{% endif %}
-                            </td>
-                            <td class="py-2.5 px-3">{{ inc.affected_item_numbers|default:"--" }}</td>
-                            <td class="py-2.5 px-3 text-right font-bold text-rose-700">
-                                {% if inc.penalty_marks > 0 %}-{{ inc.penalty_marks }}{% else %}0.00{% endif %}
-                            </td>
-                            <td class="py-2.5 px-3 text-center font-sans">
-                                {% if inc.zeroes_item %}
-                                <span class="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-bold">Zeroes Item</span>
-                                {% else %}—{% endif %}
-                            </td>
-                            <td class="py-2.5 px-3 font-sans">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold 
-                                    {% if inc.chief_decision == 'APPROVED' %}bg-emerald-100 text-emerald-800
-                                    {% elif inc.chief_decision == 'REJECTED' %}bg-slate-100 text-slate-500
-                                    {% else %}bg-amber-100 text-amber-800{% endif %}">
-                                    {{ inc.get_chief_decision_display }}
-                                </span>
-                            </td>
-                            <td class="py-2.5 px-3 text-right font-sans">
-                                <div class="inline-flex items-center space-x-1">
-                                    <form method="POST" class="inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
-                                        <input type="hidden" name="incident_id" value="{{ inc.id }}">
-                                        <button type="submit" name="action" value="approve_incident" 
-                                                class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-800 text-white hover:bg-emerald-900 transition cursor-pointer">
-                                            Approve
-                                        </button>
-                                    </form>
-                                    <form method="POST" class="inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
-                                        <input type="hidden" name="incident_id" value="{{ inc.id }}">
-                                        <button type="submit" name="action" value="reject_incident" 
-                                                class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 transition cursor-pointer">
-                                            Reject
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="border border-slate-200 rounded-xl p-3 text-center text-slate-400 text-xs italic bg-slate-50/50">
-                No technical rule incidents or penalty infractions reported by the evaluator for this performance.
+                <span class="text-[10px] text-slate-400 block mt-0.5">Choreography & Sync</span>
             </div>
             {% endif %}
+            <div class="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/50">
+                <span class="text-[11px] text-slate-500 font-medium block">Timing Mark</span>
+                <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.timing_score|default:"0.000" }}</span>
+                <span class="text-[10px] text-slate-400 block mt-0.5">Hold Duration</span>
+            </div>
+            <div class="border border-slate-200 rounded-xl p-3 text-center bg-rose-50/40 border-rose-200">
+                <span class="text-[11px] text-rose-700 font-medium block">Penalties</span>
+                <span class="text-2xl font-black text-rose-700 font-mono">-{{ score_calc.penalties|default:"0.000" }}</span>
+                <span class="text-[10px] text-rose-600/80 block mt-0.5">Evaluator Deductions</span>
+            </div>
+            <div class="border-2 border-emerald-500 rounded-xl p-3 text-center bg-gradient-to-br from-emerald-50 to-teal-50 col-span-2 sm:col-span-1 shadow-xs">
+                <span class="text-[11px] text-emerald-900 font-bold uppercase tracking-wider block">Provisional Total</span>
+                <span class="text-3xl font-black text-emerald-900 font-mono">{{ score_calc.provisional_total|default:"0.000" }}</span>
+                <span class="text-[10px] text-emerald-700 font-semibold block mt-0.5">Ready for Release</span>
+            </div>
         </div>
+
+        <!-- Detailed Breakdown of Judge Scores per Asana -->
+        {% include "includes/d_average_breakdown.html" %}
+    </div>
+
+    <!-- Evaluator Technical Incidents & Infractions -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div>
+                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Evaluator Technical Incidents & COP Penalties
+                </h3>
+                <p class="text-[11px] text-slate-500">Evaluator penalties apply automatically to the score. Chief Judge can dismiss/override if necessary.</p>
+            </div>
+            <span class="text-[11px] font-bold text-slate-500">
+                {% if incidents %}{{ incidents|length }} Incident(s) Logged{% else %}No Incidents{% endif %}
+            </span>
+        </div>
+
+        {% if incidents %}
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                        <th class="py-2.5 px-3">Type</th>
+                        <th class="py-2.5 px-3">Declared vs Performed</th>
+                        <th class="py-2.5 px-3">Affected Pose</th>
+                        <th class="py-2.5 px-3 text-right">Penalty</th>
+                        <th class="py-2.5 px-3">Penalty Status</th>
+                        <th class="py-2.5 px-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800 text-[11px]">
+                    {% for inc in incidents %}
+                    <tr class="hover:bg-slate-50/60 font-mono">
+                        <td class="py-2.5 px-3 font-sans font-bold text-slate-900">{{ inc.get_incident_type_display }}</td>
+                        <td class="py-2.5 px-3 font-sans">
+                            {% if inc.declared_code or inc.observed_code %}
+                            <span class="text-slate-400">Dec:</span> <strong>{{ inc.declared_code|default:"--" }}</strong>
+                            <span class="text-slate-400">→</span>
+                            <span class="text-slate-400">Obs:</span> <strong>{{ inc.observed_code|default:"--" }}</strong>
+                            {% else %}{{ inc.evidence_notes|default:"—" }}{% endif %}
+                        </td>
+                        <td class="py-2.5 px-3">{{ inc.affected_item_numbers|default:"--" }}</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-rose-700">
+                            {% if inc.penalty_marks > 0 %}-{{ inc.penalty_marks }}{% else %}0.00{% endif %}
+                        </td>
+                        <td class="py-2.5 px-3 font-sans">
+                            {% if inc.chief_decision == 'REJECTED' %}
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                Dismissed (Not Applied)
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                Applied Automatically
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-sans">
+                            <div class="inline-flex items-center space-x-1">
+                                {% if inc.chief_decision != 'REJECTED' %}
+                                <form method="POST" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
+                                    <input type="hidden" name="incident_id" value="{{ inc.id }}">
+                                    <button type="submit" name="action" value="reject_incident" 
+                                            title="Override/Dismiss this penalty"
+                                            class="px-2.5 py-1 rounded text-[10px] font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 transition cursor-pointer">
+                                        Dismiss
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form method="POST" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
+                                    <input type="hidden" name="incident_id" value="{{ inc.id }}">
+                                    <button type="submit" name="action" value="approve_incident" 
+                                            class="px-2.5 py-1 rounded text-[10px] font-bold bg-emerald-700 text-white hover:bg-emerald-800 transition cursor-pointer">
+                                        Re-apply
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="border border-slate-200 rounded-xl p-3 text-center text-slate-400 text-xs italic bg-slate-50/50">
+            No technical rule infractions or sequence changes reported by the Evaluator for this competitor.
+        </div>
+        {% endif %}
     </div>
 
     <!-- Blocking Warnings if can_release is False -->
     {% if not score_calc.can_release %}
-    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900">
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900 shadow-xs">
         <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
         <div class="space-y-1">
-            <span class="font-bold block text-sm">Provisional Score Release Blocked</span>
+            <span class="font-bold block text-sm">Provisional Score Release Pending Completion</span>
             <ul class="list-disc pl-4 space-y-0.5">
                 {% for r in score_calc.block_reasons %}
                 <li>{{ r }}</li>
@@ -366,26 +338,99 @@
     </div>
     {% endif %}
 
-    <!-- Bottom Action Buttons matching 24_Chief_Judge_Review.png -->
-    <div class="flex items-center justify-between pt-2">
-        <a href="{% url 'cd_corrections' %}?perf_id={{ selected_perf.id }}" 
-           class="px-5 py-2.5 border border-teal-800 text-teal-800 hover:bg-teal-50 rounded-lg text-xs font-semibold transition flex items-center space-x-2">
-            <i data-lucide="undo-2" class="w-4 h-4"></i>
-            <span>Request CD Correction</span>
-        </a>
+    <!-- Bottom Action Release Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <a href="{% url 'cd_corrections' %}?perf_id={{ selected_perf.id }}" 
+               class="px-4 py-2.5 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center space-x-2">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-slate-500"></i>
+                <span>Report Issue to CD</span>
+            </a>
+
+            <!-- Previous / Next Athlete Navigation (convenient without scrolling to top) -->
+            {% if performances|length > 1 %}
+            <div class="flex items-center space-x-1.5 pl-2 border-l border-slate-200">
+                {% if prev_perf %}
+                <a href="?perf_id={{ prev_perf.id }}&panel_id={{ panel.id }}" 
+                   class="px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center space-x-1"
+                   title="Previous Athlete: Chest {{ prev_perf.chest_number }}">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    <span>Prev ({{ prev_perf.chest_number }})</span>
+                </a>
+                {% else %}
+                <button type="button" disabled 
+                        class="px-3 py-2 border border-slate-200 text-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-not-allowed">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    <span>Prev</span>
+                </button>
+                {% endif %}
+
+                {% if next_perf %}
+                <a href="?perf_id={{ next_perf.id }}&panel_id={{ panel.id }}" 
+                   class="px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center space-x-1"
+                   title="Next Athlete: Chest {{ next_perf.chest_number }}">
+                    <span>Next ({{ next_perf.chest_number }})</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </a>
+                {% else %}
+                <button type="button" disabled 
+                        class="px-3 py-2 border border-slate-200 text-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-not-allowed">
+                    <span>Next</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
 
         <form method="POST" class="inline">
             {% csrf_token %}
             <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
             <button type="submit" name="action" value="provisional_release"
                     {% if not score_calc.can_release %}disabled{% endif %}
-                    class="px-6 py-2.5 rounded-lg text-xs font-semibold shadow-xs transition flex items-center space-x-2
-                    {% if score_calc.can_release %}bg-teal-800 hover:bg-teal-900 text-white cursor-pointer{% else %}bg-slate-200 text-slate-400 cursor-not-allowed{% endif %}">
-                <i data-lucide="broadcast" class="w-4 h-4"></i>
-                <span>Approve & Release Provisional Score</span>
+                    class="px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2
+                    {% if score_calc.can_release %}bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer{% else %}bg-slate-200 text-slate-400 cursor-not-allowed{% endif %}">
+                <i data-lucide="radio" class="w-4 h-4"></i>
+                <span>Approve & Release Provisional Score (Chest {{ selected_perf.chest_number }})</span>
             </button>
         </form>
     </div>
     {% endif %}
+
 </div>
+
+<!-- Auto-refresh polling script for live live updates at the venue -->
+<script>
+    (function() {
+        // Preserve scroll position across page reloads & athlete clicks
+        window.addEventListener('beforeunload', function() {
+            sessionStorage.setItem('cj_scroll_pos', window.scrollY);
+        });
+        const savedScroll = sessionStorage.getItem('cj_scroll_pos');
+        if (savedScroll !== null) {
+            window.scrollTo(0, parseInt(savedScroll, 10));
+        }
+
+        let secondsLeft = 6;
+        const counterEl = document.getElementById('sync-counter');
+        
+        // Only auto-refresh if performance is still pending/unreleased
+        const isReleased = {% if selected_perf and selected_perf.status == 'PROVISIONAL_RELEASED' %}true{% else %}false{% endif %};
+        
+        if (!isReleased) {
+            setInterval(function() {
+                secondsLeft--;
+                if (counterEl) {
+                    counterEl.textContent = `(refreshing in ${secondsLeft}s)`;
+                }
+                if (secondsLeft <= 0) {
+                    // Retain current URL so if user switched to another chest (?perf_id=...), it refreshes on THAT chest
+                    window.location.reload();
+                }
+            }, 1000);
+        } else if (counterEl) {
+            counterEl.textContent = '(provisional released)';
+        }
+    })();
+</script>
 {% endblock %}
