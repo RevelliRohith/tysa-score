@@ -1,144 +1,839 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}D1 Scoring — Artistic Single — TYSA Score{% endblock %}
+{% block title %}Artistic Single D Judge Scoring — TYSA Score{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Full 100% viewport optimization to eliminate scrolling on 1366x768, 1440x900, 1920x1080 */
+    @media (min-height: 600px) {
+        .scoring-page-container {
+            height: calc(100vh - 5.5rem);
+            max-height: calc(100vh - 5.5rem);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .scoring-workspace {
+            flex: 1 1 0%;
+            min-height: 0;
+            overflow: hidden;
+        }
+    }
+    /* Compact scrollbar styling for preview grid if screen is very short */
+    .custom-mini-scroll::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    .custom-mini-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-mini-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6 py-2">
-    <!-- Top Metadata Card matching 18_Artistic_Single_D_Judge.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">D1 Scoring</h1>
-            <p class="text-sm text-slate-500 mt-1">Enter execution marks for each item. Original marks are retained.</p>
+<div class="w-full max-w-[1720px] mx-auto scoring-page-container space-y-2.5">
+    
+    <!-- ======================================================================== -->
+    <!-- 1. COMPACT HEADER BAR (Chest Number, Event, Round, Judge Info, Progress) -->
+    <!-- ======================================================================== -->
+    <header class="bg-white rounded-xl border border-slate-200/90 px-4 py-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'judge_portal' %}#panels" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition" title="Back to Panels">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Panels</span>
+            </a>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                {{ seat_label|default:"D1 Judge" }} Desk
+            </span>
+            <div class="flex items-center space-x-2">
+                <span class="text-xs font-bold text-slate-400">Chest:</span>
+                <span class="text-xl font-black text-slate-900 font-mono tracking-tight">{{ entry.chest_number|default:"--" }}</span>
+            </div>
+            <span class="text-slate-300">•</span>
+            <span class="text-sm font-bold text-slate-700 truncate max-w-[180px] sm:max-w-xs">{{ entry.display_names|default:"Athlete" }}</span>
+            {% if entry.registration.district %}
+            <span class="text-xs font-medium text-slate-400 hidden md:inline">({{ entry.registration.district }})</span>
+            {% endif %}
         </div>
 
-        <div class="flex items-center space-x-6 text-xs">
-            <div>
-                <span class="text-slate-400 block font-medium">Chest No.</span>
-                <span class="text-xl font-black text-slate-900 font-mono">{{ entry.chest_number|default:"--" }}</span>
+        <div class="flex items-center space-x-3 text-xs">
+            <div class="hidden sm:flex items-center space-x-2 text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                <span>{{ entry.event_config.get_event_type_display|default:"Artistic Single" }}</span>
+                <span class="text-slate-300">•</span>
+                <span class="font-bold text-slate-800">{{ perf.get_round_type_display|default:"Preliminary" }}</span>
+                <span class="text-slate-300">•</span>
+                <span class="font-semibold text-teal-800">{{ panel.stage_name|default:"Arena 3" }}</span>
             </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Event</span>
-                <span class="text-base font-bold text-slate-900">{{ entry.event_config.get_event_type_display|default:"Artistic Single" }}</span>
+
+            <!-- Scoring Progress (Live Accurate) -->
+            <div class="bg-slate-100 text-slate-800 px-3 py-1 rounded-lg font-bold border border-slate-200 flex items-center space-x-1.5">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-teal-600"></i>
+                <span id="headerProgressDisplay">{{ completed_count }} / {{ total_items }} Scored</span>
             </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Round</span>
-                <span class="text-base font-bold text-slate-900">{{ perf.get_round_type_display|default:"Semi Final" }}</span>
+
+            <!-- Total Score Badge -->
+            <div class="bg-teal-50 border border-teal-200 px-3 py-1 rounded-lg text-right">
+                <span class="text-[10px] text-teal-700 uppercase font-bold tracking-wider mr-1">Total:</span>
+                <span class="text-sm font-black text-teal-900 font-mono" id="headerTotalScoreDisplay">{{ total_effective|floatformat:3 }}</span>
             </div>
-            <div class="bg-blue-50 border border-blue-200/60 p-2.5 rounded-xl text-center min-w-[90px]">
-                <span class="text-slate-400 text-[10px] block font-medium">Sequence</span>
-                <span class="text-base font-black text-blue-900">10 Asanas</span>
-            </div>
+        </div>
+    </header>
+
+    <!-- Sequence 1–10 Quick Jump Pill Bar -->
+    <div class="bg-white rounded-xl border border-slate-200/90 px-3 py-1.5 shadow-2xs flex items-center justify-between gap-1 overflow-x-auto shrink-0">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline mr-2">Sequence:</span>
+        <div class="flex items-center space-x-1.5 sm:space-x-2.5 flex-1 justify-center sm:justify-start">
+            {% for item in items_data %}
+            <button type="button"
+                    id="seqPill_{{ item.seq }}"
+                    onclick="selectActiveAsana({{ item.seq }})"
+                    title="Jump to Asana #{{ item.seq }} ({{ item.code }})"
+                    class="seq-pill w-8 h-8 rounded-lg font-black text-xs flex items-center justify-center transition cursor-pointer select-none border
+                    {% if item.seq == current_seq %}
+                        bg-teal-800 text-white border-teal-800 shadow-xs ring-2 ring-teal-700/30
+                    {% elif item.is_completed %}
+                        bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100
+                    {% else %}
+                        bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300
+                    {% endif %}">
+                {{ item.seq }}
+            </button>
+            {% endfor %}
         </div>
     </div>
 
-    <!-- Sequence Pill Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex items-center justify-center space-x-3 sm:space-x-6 overflow-x-auto">
-        {% for item in items %}
-        <span class="w-8 h-8 rounded-full font-bold flex items-center justify-center text-xs shrink-0
-            {% if forloop.first %}bg-teal-800 text-white shadow-xs{% else %}border border-slate-300 text-slate-700{% endif %}">
-            {{ item.seq }}
-        </span>
-        {% endfor %}
+    <!-- ======================================================================== -->
+    <!-- 2. MAIN WORKSPACE (Active Asana on Left + 9 Previews on Right)           -->
+    <!-- All 10 asanas visible simultaneously at 100% browser zoom                -->
+    <!-- ======================================================================== -->
+    <div class="scoring-workspace grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0">
+        
+        <!-- -------------------------------------------------------------------- -->
+        <!-- ACTIVE ASANA SECTION (Left Column, ~62% width)                      -->
+        <!-- -------------------------------------------------------------------- -->
+        <section class="lg:col-span-7 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-col min-h-0 h-full overflow-hidden">
+            <!-- Active Asana Header Bar -->
+            <div class="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center space-x-2.5">
+                    <span id="activeAsanaBadge" class="w-8 h-8 rounded-lg bg-teal-800 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                        #{{ current_seq }}
+                    </span>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-none">Asana Code</span>
+                        <span id="activeAsanaCode" class="text-xl font-black text-slate-900 font-mono tracking-tight leading-tight">
+                            {{ current_item.code }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Evaluator Status Badge -->
+                <div class="flex items-center space-x-2">
+                    <div id="saveStatusIndicator" class="text-[11px] font-bold text-slate-400 flex items-center space-x-1">
+                        <span class="save-dot w-2 h-2 rounded-full bg-slate-300"></span>
+                        <span class="save-text">Ready</span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-200"></div>
+                    <div id="activeEvaluatorStatusBadge">
+                        {% if current_item.is_valid %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1 animate-pulse"></span>
+                            Valid
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-600 mr-1"></span>
+                            Invalid (0.000)
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Asana Card Body: Responsive 2-column or flex container -->
+            <div class="flex-1 min-h-0 p-3 sm:p-4 grid grid-cols-1 md:grid-cols-12 gap-3.5 items-center overflow-hidden">
+                
+                <!-- Left: Pose Reference Image (Aspect ratio preserved, large & clear) -->
+                <div class="md:col-span-6 flex flex-col items-center justify-center h-full min-h-0">
+                    <div class="w-full h-full max-h-[360px] bg-slate-50 rounded-xl border border-slate-200 p-2.5 flex flex-col items-center justify-center relative overflow-hidden group">
+                        <img id="activeMainPoseImage" 
+                             src="{{ current_item.image_url|default:'' }}" 
+                             alt="Asana Reference"
+                             onerror="handleActiveImageError(this)"
+                             class="h-full w-auto max-w-full max-h-[340px] object-contain rounded-lg transition duration-150 group-hover:scale-102 {% if not current_item.image_url %}hidden{% endif %}">
+                        
+                        <!-- Fallback placeholder -->
+                        <div id="activeImageFallback" class="{% if current_item.image_url %}hidden{% endif %} flex flex-col items-center justify-center text-center p-4 space-y-2">
+                            <div class="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                                <i data-lucide="image-off" class="w-6 h-6"></i>
+                            </div>
+                            <span id="activeFallbackCode" class="font-mono text-xs font-black text-slate-600">{{ current_item.code }}</span>
+                            <span class="text-[11px] text-slate-400">Pose image reference unavailable</span>
+                        </div>
+
+                        <div class="absolute bottom-1.5 right-1.5 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-mono px-2 py-0.5 rounded">
+                            <span id="activeOverlayCode">{{ current_item.code }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Scoring Inputs & Calculations -->
+                <div class="md:col-span-6 flex flex-col justify-between space-y-3 h-full min-h-0">
+                    <!-- Base Value & Item Sequence -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Base Value (BV)</span>
+                            <span id="activeBaseValueDisplay" class="text-xl font-black text-teal-800 font-mono">
+                                {{ current_item.score_item.base_value|floatformat:2 }}
+                            </span>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Asana Order</span>
+                            <span id="activeSequenceDisplay" class="text-xl font-black text-slate-900">
+                                #{{ current_seq }} <span class="text-xs font-semibold text-slate-400">of {{ total_items }}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Evaluator Invalidation Alert Banner (Dynamic) -->
+                    <div id="activeInvalidBanner" class="{% if current_item.is_valid %}hidden{% endif %} p-2 rounded-lg bg-rose-50 border border-rose-200 flex items-start space-x-1.5 text-rose-800 text-[11px]">
+                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0 text-rose-600 mt-0.5"></i>
+                        <div>
+                            <span class="font-bold block">Invalidated by Evaluator:</span>
+                            <span id="activeInvalidReasonText">{{ current_item.invalid_reason|default:"Failed COP rules. Score is automatically 0.000." }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Execution Marks Input Box -->
+                    <div class="space-y-1.5 bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between text-xs">
+                            <label for="executionMarksInput" class="font-black text-slate-900">
+                                Execution Marks (0.00 – 10.00)
+                            </label>
+                            <span class="text-[11px] font-bold text-teal-700">Decimals (e.g. 7.50, 8.25)</span>
+                        </div>
+
+                        <!-- Editable execution marks input -->
+                        <div class="relative">
+                            <input type="number" 
+                                   step="any" 
+                                   min="0" 
+                                   max="10" 
+                                   id="executionMarksInput"
+                                   value="{{ current_item.score_item.execution_score }}"
+                                   placeholder="0.00"
+                                   autocomplete="off"
+                                   class="w-full text-3xl font-black text-center py-2.5 px-4 bg-white border-2 border-slate-300 rounded-xl outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/10 text-slate-900 font-mono transition"
+                                   {% if is_locked %}disabled{% endif %}>
+                        </div>
+
+                        <!-- Quick Mark Selector Pills -->
+                        {% if not is_locked %}
+                        <div class="flex flex-wrap items-center justify-center gap-1 pt-1">
+                            <button type="button" onclick="setExecMark(6.00)" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-xs font-bold font-mono transition">6.00</button>
+                            <button type="button" onclick="setExecMark(7.00)" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-xs font-bold font-mono transition">7.00</button>
+                            <button type="button" onclick="setExecMark(7.50)" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-xs font-bold font-mono transition">7.50</button>
+                            <button type="button" onclick="setExecMark(8.00)" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-xs font-bold font-mono transition">8.00</button>
+                            <button type="button" onclick="setExecMark(8.50)" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-xs font-bold font-mono transition">8.50</button>
+                            <button type="button" onclick="setExecMark(9.00)" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-xs font-bold font-mono transition">9.00</button>
+                            <button type="button" onclick="setExecMark(0.00)" class="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded text-xs font-bold font-mono transition">0.00</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Live Effective Score Calculation Result -->
+                    <div class="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+                        <div>
+                            <span class="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">Effective Score</span>
+                            <span class="text-[11px] text-teal-700">Execution × Base Value</span>
+                        </div>
+                        <div class="text-right">
+                            <span id="activeEffectiveScoreDisplay" class="text-2xl font-black text-teal-900 font-mono tracking-tight">
+                                {{ current_item.score_item.effective_item_score|floatformat:3 }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Active Asana Footer Controls: Navigation & Submissions -->
+            <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <div class="flex items-center space-x-2">
+                    <!-- Previous Asana Button (Instant switch without reload) -->
+                    <button type="button" 
+                            id="btnPrevAsana"
+                            onclick="goToPreviousAsana()"
+                            class="px-3.5 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-bold text-xs flex items-center space-x-1 transition bg-white hover:bg-slate-100 cursor-pointer shadow-2xs">
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        <span>Previous</span>
+                    </button>
+
+                    <!-- Next Asana Button (Instant switch without reload) -->
+                    <button type="button" 
+                            id="btnNextAsana"
+                            onclick="goToNextAsana()"
+                            class="px-4 py-1.5 rounded-lg border border-teal-700 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs flex items-center space-x-1 transition shadow-2xs cursor-pointer">
+                        <span>Next</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <!-- Save Draft Button -->
+                    <button type="button" 
+                            onclick="saveActiveAsana(true)"
+                            {% if is_locked %}disabled{% endif %}
+                            class="px-3.5 py-1.5 border border-slate-300 hover:bg-white bg-slate-100 text-slate-700 rounded-lg text-xs font-bold flex items-center space-x-1 transition shadow-2xs cursor-pointer">
+                        <i data-lucide="save" class="w-3.5 h-3.5 text-slate-600"></i>
+                        <span>Save</span>
+                    </button>
+
+                    <!-- Finalize & Submit Sheet Button -->
+                    <button type="button" 
+                            onclick="submitFullSheet()"
+                            {% if is_locked %}disabled{% endif %}
+                            class="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-xs transition cursor-pointer">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        <span>Finalize Sheet</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- -------------------------------------------------------------------- -->
+        <!-- NINE COMPACT ASANA CARDS (Right Column, ~38% width)                 -->
+        <!-- Displays all 10 asanas simultaneously, freely selectable in any order-->
+        <!-- -------------------------------------------------------------------- -->
+        <section class="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-col min-h-0 h-full overflow-hidden">
+            <!-- Panel Header -->
+            <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-1.5">
+                    <span class="text-xs font-extrabold text-slate-900">10 Asana Routine Sequence</span>
+                    <span class="text-[11px] text-slate-400">• Click to select</span>
+                </div>
+                <div class="flex items-center space-x-1 text-[10px] font-bold">
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-800 text-white">Active</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Scored</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">Pending</span>
+                </div>
+            </div>
+
+            <!-- Compact 10-Asana Grid (Fit in viewport, 2 or 5 columns responsive) -->
+            <div id="previewCardsContainer" class="flex-1 min-h-0 p-2.5 overflow-y-auto custom-mini-scroll grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5 gap-2 content-start">
+                {% for item in items_data %}
+                <div id="previewCard_{{ item.seq }}"
+                     onclick="selectActiveAsana({{ item.seq }})"
+                     class="preview-card bg-white rounded-lg border p-1.5 flex flex-col justify-between cursor-pointer transition hover:shadow-md relative select-none
+                     {% if item.seq == current_seq %}
+                         ring-2 ring-teal-700 border-teal-700 bg-teal-50/40 shadow-xs
+                     {% elif item.is_completed %}
+                         border-emerald-300 bg-emerald-50/25
+                     {% else %}
+                         border-slate-200 hover:border-teal-400
+                     {% endif %}">
+                    
+                    <!-- Card Top: Sequence # + Code -->
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="seq-badge w-5 h-5 rounded font-black text-[11px] flex items-center justify-center
+                            {% if item.seq == current_seq %}bg-teal-800 text-white{% elif item.is_completed %}bg-emerald-600 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">
+                            #{{ item.seq }}
+                        </span>
+                        <span class="font-mono text-[10px] font-black text-slate-800 truncate">{{ item.code }}</span>
+                    </div>
+
+                    <!-- Card Center: Compact Pose Reference Image -->
+                    <div class="h-14 sm:h-16 bg-slate-50 rounded border border-slate-100 flex items-center justify-center overflow-hidden mb-1">
+                        {% if item.image_url %}
+                        <img src="{{ item.image_url }}" 
+                             alt="{{ item.code }}" 
+                             onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+                             class="h-full w-auto max-w-full object-contain p-0.5">
+                        <div class="hidden text-[10px] text-slate-400 font-mono">{{ item.code }}</div>
+                        {% else %}
+                        <div class="text-[10px] text-slate-400 font-mono">{{ item.code }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Card Bottom: BV + Entered Score -->
+                    <div class="text-[10px] flex items-center justify-between pt-0.5 border-t border-slate-100 leading-tight">
+                        <span class="text-slate-400 font-medium">BV:{{ item.score_item.base_value|floatformat:2 }}</span>
+                        <div class="text-right">
+                            <span id="previewExec_{{ item.seq }}" class="font-mono font-black text-slate-900">
+                                {% if item.is_completed %}
+                                    {{ item.score_item.execution_score|floatformat:2 }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
     </div>
-
-    <form method="POST">
-        {% csrf_token %}
-        <!-- Table of 10 Asanas matching 18_Artistic_Single_D_Judge.png -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
-            <table class="w-full text-left text-xs">
-                <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-semibold">
-                        <th class="py-3 px-4 w-10">#</th>
-                        <th class="py-3 px-4">Asana code</th>
-                        <th class="py-3 px-4">Asana name</th>
-                        <th class="py-3 px-4 text-center">Pose reference</th>
-                        <th class="py-3 px-4 text-center">BV</th>
-                        <th class="py-3 px-4 text-center w-36">Execution / 10</th>
-                        <th class="py-3 px-4 text-center">Evaluator status</th>
-                        <th class="py-3 px-4 text-right">Effective score</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-800">
-                    {% for item in items %}
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-2.5 px-4 font-bold">{{ item.seq }}</td>
-                        <td class="py-2.5 px-4 font-mono text-slate-500">{{ item.pose.declared_code|default:"SAMPLE-001" }}</td>
-                        <td class="py-2.5 px-4">
-                            <span class="font-bold text-slate-900">{{ item.pose.declared_name|default:"Routine Pose" }}</span>
-                        </td>
-                        <td class="py-2.5 px-4 text-center">
-                            {% if item.pose.image_url %}
-                            <img src="{{ item.pose.image_url }}" alt="Pose" class="w-7 h-7 mx-auto rounded object-cover">
-                            {% else %}🧘{% endif %}
-                        </td>
-                        <td class="py-2.5 px-4 text-center font-semibold">
-                            <input type="hidden" name="bv_{{ item.seq }}" id="bv_{{ item.seq }}" value="{{ item.score_item.base_value }}">
-                            {{ item.score_item.base_value }}
-                        </td>
-                        <td class="py-2.5 px-4 text-center">
-                            <input type="number" step="0.25" min="0" max="10" 
-                                   name="exec_{{ item.seq }}" id="exec_{{ item.seq }}"
-                                   value="{{ item.score_item.execution_score }}" 
-                                   oninput="updateEffective({{ item.seq }})"
-                                   class="w-24 text-center py-1 border border-slate-300 rounded-lg font-bold outline-none focus:ring-1 focus:ring-teal-700"
-                                   {% if sub.is_locked %}disabled{% endif %}>
-                        </td>
-                        <td class="py-2.5 px-4 text-center">
-                            {% if item.score_item.is_valid %}
-                            <span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Valid</span>
-                            {% else %}
-                            <span class="px-3 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800">Invalid</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-2.5 px-4 text-right font-black text-slate-900 text-sm" id="eff_{{ item.seq }}">
-                            {{ item.score_item.effective_item_score }}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="py-6 text-center text-slate-400 italic">No sequence items found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Bottom Actions matching 18_Artistic_Single_D_Judge.png -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
-            <div class="bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-center space-x-2 text-xs text-blue-900">
-                <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0"></i>
-                <span>Independent evaluation • Original marks are retained.</span>
-            </div>
-
-            <div class="flex items-center space-x-3">
-                <button type="submit" name="action" value="save_draft"
-                        {% if sub.is_locked %}disabled{% endif %}
-                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
-                    <i data-lucide="save" class="w-4 h-4"></i>
-                    <span>Save Draft</span>
-                </button>
-                <button type="submit" name="action" value="submit_sheet"
-                        {% if sub.is_locked %}disabled{% endif %}
-                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    <span>Submit Marks</span>
-                </button>
-            </div>
-        </div>
-    </form>
 </div>
 
+<!-- Raw Safe JSON payload of all 10 asanas for client-side state -->
+{{ asanas_json|json_script:"asanasJsonData" }}
+
 <script>
-function updateEffective(seq) {
-    const execInput = document.getElementById('exec_' + seq);
-    const bvInput = document.getElementById('bv_' + seq);
-    const effCell = document.getElementById('eff_' + seq);
-    if (execInput && bvInput && effCell) {
-        const exec = parseFloat(execInput.value) || 0;
-        const bv = parseFloat(bvInput.value) || 0;
-        effCell.textContent = (exec * bv).toFixed(3);
+// ============================================================================
+// State Management for 10 Asanas Artistic Single Scoring Interface
+// Independent per-asana state, free unrestricted navigation, reliable autosave
+// ============================================================================
+let asanasList = [];
+try {
+    const rawParsed = JSON.parse(document.getElementById('asanasJsonData').textContent || '[]');
+    asanasList = (typeof rawParsed === 'string') ? JSON.parse(rawParsed) : rawParsed;
+} catch (e) {
+    console.error('Failed to parse asanas JSON:', e);
+    asanasList = [];
+}
+let currentSeq = {{ current_seq }};
+const totalItems = {{ total_items }};
+const isLocked = {{ is_locked|yesno:"true,false" }};
+const csrfToken = '{{ csrf_token }}';
+
+// Elements
+const executionInput = document.getElementById('executionMarksInput');
+const activeAsanaBadge = document.getElementById('activeAsanaBadge');
+const activeAsanaCode = document.getElementById('activeAsanaCode');
+const activeBaseValueDisplay = document.getElementById('activeBaseValueDisplay');
+const activeSequenceDisplay = document.getElementById('activeSequenceDisplay');
+const activeEffectiveScoreDisplay = document.getElementById('activeEffectiveScoreDisplay');
+const activeMainPoseImage = document.getElementById('activeMainPoseImage');
+const activeImageFallback = document.getElementById('activeImageFallback');
+const activeFallbackCode = document.getElementById('activeFallbackCode');
+const activeOverlayCode = document.getElementById('activeOverlayCode');
+const activeEvaluatorStatusBadge = document.getElementById('activeEvaluatorStatusBadge');
+const activeInvalidBanner = document.getElementById('activeInvalidBanner');
+const activeInvalidReasonText = document.getElementById('activeInvalidReasonText');
+const btnPrevAsana = document.getElementById('btnPrevAsana');
+const btnNextAsana = document.getElementById('btnNextAsana');
+const headerProgressDisplay = document.getElementById('headerProgressDisplay');
+const headerTotalScoreDisplay = document.getElementById('headerTotalScoreDisplay');
+const saveStatusIndicator = document.getElementById('saveStatusIndicator');
+
+// Find asana object by sequence
+function getAsana(seq) {
+    return asanasList.find(a => a.seq === seq);
+}
+
+// ----------------------------------------------------------------------------
+// 1. Unrestricted Free Navigation Between Any of the 10 Asanas
+// ----------------------------------------------------------------------------
+function selectActiveAsana(seq) {
+    if (seq < 1 || seq > totalItems) return;
+    if (seq === currentSeq) return;
+
+    // Flush any pending save for current asana before switching
+    if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        saveActiveAsana(false);
+    }
+
+    currentSeq = seq;
+    renderActiveAsana();
+    renderPreviewCards();
+}
+
+function goToNextAsana() {
+    if (currentSeq < totalItems) {
+        selectActiveAsana(currentSeq + 1);
     }
 }
+
+function goToPreviousAsana() {
+    if (currentSeq > 1) {
+        selectActiveAsana(currentSeq - 1);
+    }
+}
+
+// Render active asana workspace
+function renderActiveAsana() {
+    const asana = getAsana(currentSeq);
+    if (!asana) return;
+
+    // Header badge & code
+    activeAsanaBadge.textContent = '#' + asana.seq;
+    activeAsanaCode.textContent = asana.code;
+    activeOverlayCode.textContent = asana.code;
+    activeFallbackCode.textContent = asana.code;
+
+    // Base Value & Sequence
+    activeBaseValueDisplay.textContent = asana.bv.toFixed(2);
+    activeSequenceDisplay.innerHTML = '#' + asana.seq + ' <span class="text-xs font-semibold text-slate-400">of ' + totalItems + '</span>';
+
+    // Image
+    if (asana.image_url) {
+        activeMainPoseImage.src = asana.image_url;
+        activeMainPoseImage.classList.remove('hidden');
+        activeImageFallback.classList.add('hidden');
+    } else {
+        activeMainPoseImage.src = '';
+        activeMainPoseImage.classList.add('hidden');
+        activeImageFallback.classList.remove('hidden');
+    }
+
+    // Evaluator Validity
+    if (asana.is_valid) {
+        activeEvaluatorStatusBadge.innerHTML = `
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1 animate-pulse"></span>
+                Valid
+            </span>
+        `;
+        activeInvalidBanner.classList.add('hidden');
+    } else {
+        activeEvaluatorStatusBadge.innerHTML = `
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-600 mr-1"></span>
+                Invalid (0.000)
+            </span>
+        `;
+        activeInvalidReasonText.textContent = asana.invalid_reason || 'Failed COP rules. Score is automatically 0.000.';
+        activeInvalidBanner.classList.remove('hidden');
+    }
+
+    // Execution Input: Retain entered score or show empty if unscored
+    if (asana.is_completed) {
+        executionInput.value = asana.exec.toFixed(2);
+    } else {
+        executionInput.value = '';
+    }
+    
+    // Effective Score
+    updateEffectiveScoreDisplay(asana);
+
+    // Update Nav Buttons
+    btnPrevAsana.disabled = (currentSeq <= 1);
+    btnPrevAsana.style.opacity = (currentSeq <= 1) ? '0.4' : '1';
+    btnPrevAsana.style.cursor = (currentSeq <= 1) ? 'not-allowed' : 'pointer';
+
+    btnNextAsana.disabled = (currentSeq >= totalItems);
+    btnNextAsana.style.opacity = (currentSeq >= totalItems) ? '0.4' : '1';
+    btnNextAsana.style.cursor = (currentSeq >= totalItems) ? 'not-allowed' : 'pointer';
+
+    // Focus input for fast entry
+    if (!isLocked) {
+        executionInput.focus();
+        executionInput.select();
+    }
+}
+
+// Render Preview Cards Grid & Top Sequence Pills (Highlight Active, mark Scored, show Marks)
+function renderPreviewCards() {
+    asanasList.forEach(item => {
+        // 1. Update Preview Card in right section
+        const card = document.getElementById('previewCard_' + item.seq);
+        const badge = card?.querySelector('.seq-badge');
+        const execSpan = document.getElementById('previewExec_' + item.seq);
+
+        if (card) {
+            // Reset classes
+            card.classList.remove('ring-2', 'ring-teal-700', 'border-teal-700', 'bg-teal-50/40', 'shadow-xs', 'border-emerald-300', 'bg-emerald-50/25', 'border-slate-200');
+            if (badge) badge.classList.remove('bg-teal-800', 'bg-emerald-600', 'bg-slate-100', 'text-white', 'text-slate-700');
+
+            if (item.seq === currentSeq) {
+                card.classList.add('ring-2', 'ring-teal-700', 'border-teal-700', 'bg-teal-50/40', 'shadow-xs');
+                if (badge) badge.classList.add('bg-teal-800', 'text-white');
+            } else if (item.is_completed) {
+                card.classList.add('border-emerald-300', 'bg-emerald-50/25');
+                if (badge) badge.classList.add('bg-emerald-600', 'text-white');
+            } else {
+                card.classList.add('border-slate-200');
+                if (badge) badge.classList.add('bg-slate-100', 'text-slate-700');
+            }
+
+            if (execSpan) {
+                execSpan.textContent = item.is_completed ? item.exec.toFixed(2) : '--';
+            }
+        }
+
+        // 2. Update Top Sequence Pill Button
+        const pill = document.getElementById('seqPill_' + item.seq);
+        if (pill) {
+            pill.classList.remove('bg-teal-800', 'text-white', 'border-teal-800', 'shadow-xs', 'ring-2', 'ring-teal-700/30', 'bg-emerald-50', 'text-emerald-900', 'border-emerald-300', 'bg-slate-50', 'text-slate-700', 'border-slate-200');
+            if (item.seq === currentSeq) {
+                pill.classList.add('bg-teal-800', 'text-white', 'border-teal-800', 'shadow-xs', 'ring-2', 'ring-teal-700/30');
+            } else if (item.is_completed) {
+                pill.classList.add('bg-emerald-50', 'text-emerald-900', 'border-emerald-300');
+            } else {
+                pill.classList.add('bg-slate-50', 'text-slate-700', 'border-slate-200');
+            }
+        }
+    });
+
+    // Update Header Totals based on actual scored asanas
+    const completedCount = asanasList.filter(a => a.is_completed).length;
+    const totalEffective = asanasList.reduce((acc, a) => acc + (a.is_valid ? a.eff : 0), 0);
+
+    headerProgressDisplay.textContent = `${completedCount} / ${totalItems} Scored`;
+    headerTotalScoreDisplay.textContent = totalEffective.toFixed(3);
+}
+
+// ----------------------------------------------------------------------------
+// 2. Real-Time Calculation & Editable Input Handlers
+// ----------------------------------------------------------------------------
+function updateEffectiveScoreDisplay(asana) {
+    if (!asana.is_valid) {
+        activeEffectiveScoreDisplay.textContent = '0.000';
+        asana.eff = 0.0;
+        return;
+    }
+    const eff = (asana.exec * asana.bv);
+    asana.eff = parseFloat(eff.toFixed(3));
+    activeEffectiveScoreDisplay.textContent = asana.eff.toFixed(3);
+}
+
+// Keyboard input listener with real-time update and debounced autosave
+executionInput.addEventListener('input', function() {
+    const rawVal = this.value;
+    const asana = getAsana(currentSeq);
+    if (!asana) return;
+
+    if (rawVal.trim() === '') {
+        asana.is_completed = false;
+        asana.exec = 0;
+        asana.eff = 0;
+        activeEffectiveScoreDisplay.textContent = '0.000';
+        renderPreviewCards();
+        setSavingState('ready');
+        return;
+    }
+
+    let val = parseFloat(rawVal);
+    if (isNaN(val)) val = 0;
+    if (val < 0) val = 0;
+    if (val > 10) {
+        val = 10;
+        this.value = '10.00';
+    }
+
+    asana.exec = val;
+    asana.is_completed = true;
+    asana.is_zero = (val === 0);
+    asana.raw = parseFloat((val * asana.bv).toFixed(3));
+    updateEffectiveScoreDisplay(asana);
+    renderPreviewCards();
+    
+    // Trigger debounced auto-save
+    triggerDebouncedSave();
+});
+
+// Format decimals on blur without resetting input
+executionInput.addEventListener('blur', function() {
+    let rawVal = this.value;
+    if (rawVal.trim() !== '') {
+        let val = parseFloat(rawVal);
+        if (!isNaN(val)) {
+            if (val < 0) val = 0;
+            if (val > 10) val = 10;
+            this.value = val.toFixed(2);
+        }
+    }
+    saveActiveAsana(false);
+});
+
+// Quick Mark buttons
+function setExecMark(val) {
+    if (isLocked) return;
+    const num = parseFloat(val);
+    executionInput.value = num.toFixed(2);
+    const asana = getAsana(currentSeq);
+    if (asana) {
+        asana.exec = num;
+        asana.is_completed = true;
+        asana.is_zero = (num === 0);
+        asana.raw = parseFloat((asana.exec * asana.bv).toFixed(3));
+        updateEffectiveScoreDisplay(asana);
+        renderPreviewCards();
+        saveActiveAsana(false);
+    }
+    executionInput.focus();
+}
+
+function handleActiveImageError(img) {
+    img.classList.add('hidden');
+    activeImageFallback.classList.remove('hidden');
+}
+
+// ----------------------------------------------------------------------------
+// 3. Reliable Autosave with Status Indicators and Sequence Protection
+// ----------------------------------------------------------------------------
+let saveTimer = null;
+let lastSaveRequestTimestamp = 0;
+
+function setSavingState(state) {
+    if (!saveStatusIndicator) return;
+    const dot = saveStatusIndicator.querySelector('.save-dot');
+    const text = saveStatusIndicator.querySelector('.save-text');
+
+    if (state === 'saving') {
+        dot.className = 'save-dot w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+        text.textContent = 'Saving...';
+        text.className = 'save-text text-amber-600 font-bold';
+    } else if (state === 'saved') {
+        dot.className = 'save-dot w-2 h-2 rounded-full bg-emerald-500';
+        text.textContent = 'Saved';
+        text.className = 'save-text text-emerald-600 font-bold';
+    } else if (state === 'error') {
+        dot.className = 'save-dot w-2 h-2 rounded-full bg-rose-500';
+        text.textContent = 'Save Failed (Retrying)';
+        text.className = 'save-text text-rose-600 font-bold';
+    } else {
+        dot.className = 'save-dot w-2 h-2 rounded-full bg-slate-300';
+        text.textContent = 'Ready';
+        text.className = 'save-text text-slate-400 font-medium';
+    }
+}
+
+function triggerDebouncedSave() {
+    setSavingState('saving');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        saveActiveAsana(false);
+    }, 450);
+}
+
+function saveActiveAsana(showNotice = false) {
+    if (isLocked) return;
+    const targetSeqToSave = currentSeq;
+    const asana = getAsana(targetSeqToSave);
+    if (!asana) return;
+
+    let val = parseFloat(executionInput.value);
+    if (isNaN(val)) {
+        if (!asana.is_completed) return;
+        val = asana.exec;
+    }
+
+    const timestamp = Date.now();
+    lastSaveRequestTimestamp = timestamp;
+    setSavingState('saving');
+
+    const formData = new FormData();
+    formData.append('action', 'save_item');
+    formData.append('is_ajax', '1');
+    formData.append('item_seq', String(targetSeqToSave));
+    formData.append('execution_score', String(val));
+    formData.append('client_timestamp', String(timestamp));
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            // Confirm item marked completed
+            const savedItem = getAsana(data.seq);
+            if (savedItem) {
+                savedItem.is_completed = data.is_completed;
+                savedItem.is_zero = data.is_zero;
+                savedItem.exec = data.execution_score;
+                savedItem.eff = data.effective_item_score;
+            }
+            renderPreviewCards();
+            setSavingState('saved');
+            if (showNotice) {
+                alert(`Asana #${targetSeqToSave} saved successfully.`);
+            }
+        } else {
+            setSavingState('error');
+        }
+    })
+    .catch(err => {
+        console.error('Autosave error:', err);
+        setSavingState('error');
+    });
+}
+
+// ----------------------------------------------------------------------------
+// 4. Final Sheet Submission
+// ----------------------------------------------------------------------------
+function submitFullSheet() {
+    if (isLocked) return;
+    
+    // Save current active item
+    saveActiveAsana(false);
+
+    const unscored = asanasList.filter(a => !a.is_completed);
+    if (unscored.length > 0) {
+        const unscoredList = unscored.map(a => '#' + a.seq).join(', ');
+        if (!confirm(`Notice: Asanas ${unscoredList} have not been scored yet.\n\nAre you sure you want to finalize and lock this sheet?`)) {
+            return;
+        }
+    } else {
+        if (!confirm("Are you sure you want to finalize and lock all 10 asana scores for this athlete? Once submitted, marks cannot be altered.")) {
+            return;
+        }
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'submit_sheet');
+    formData.append('is_ajax', '1');
+    formData.append('item_seq', String(currentSeq));
+    formData.append('execution_score', String(executionInput.value || '0.00'));
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    // Also include all 10 values
+    asanasList.forEach(a => {
+        formData.append(`exec_${a.seq}`, String(a.exec));
+    });
+
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message || 'Artistic Single D scores submitted and locked!');
+            window.location.reload();
+        } else {
+            alert('Error submitting sheet. Please try again.');
+        }
+    })
+    .catch(err => {
+        console.error('Submission error:', err);
+        alert('Network error submitting sheet.');
+    });
+}
+
+// Keyboard shortcuts: Enter in execution input advances to next asana
+document.addEventListener('keydown', function(e) {
+    if (e.target === executionInput && e.key === 'Enter') {
+        e.preventDefault();
+        goToNextAsana();
+    }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    renderActiveAsana();
+    renderPreviewCards();
+});
 </script>
 {% endblock %}

@@ -738,18 +738,24 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
     time_judge_1 = all_sub_by_role.get('TIME_JUDGE')
     time_judge_2 = all_sub_by_role.get('TIME_JUDGE_2')
 
-    if not is_traditional and time_judge_1 and time_judge_2:
-        t1_holds = [itm.hold_duration_seconds for itm in time_judge_1.items.all().order_by('sequence_order')]
-        t2_holds = [itm.hold_duration_seconds for itm in time_judge_2.items.all().order_by('sequence_order')]
-        t1_tw = time_judge_1.raw_total
-        t2_tw = time_judge_2.raw_total
-
-        reconciled_timing_data = reconcile_music_timing(t1_tw, t2_tw, t1_holds, t2_holds)
-        # Propagate hold < 5s invalidations
-        for inv_seq in reconciled_timing_data.get('invalid_hold_indices', []):
-            invalid_item_sequences.add(inv_seq)
-            invalid_reasons[inv_seq] = "Accepted Hold Duration Below 5 Seconds"
-
+    if not is_traditional:
+        if time_judge_1 and time_judge_2:
+            t1_holds = [itm.hold_duration_seconds for itm in time_judge_1.items.all().order_by('sequence_order')]
+            t2_holds = [itm.hold_duration_seconds for itm in time_judge_2.items.all().order_by('sequence_order')]
+            t1_tw = time_judge_1.raw_total
+            t2_tw = time_judge_2.raw_total
+            reconciled_timing_data = reconcile_music_timing(t1_tw, t2_tw, t1_holds, t2_holds)
+            for inv_seq in reconciled_timing_data.get('invalid_hold_indices', []):
+                invalid_item_sequences.add(inv_seq)
+                invalid_reasons[inv_seq] = "Accepted Hold Duration Below 5 Seconds"
+        elif time_judge_1 or time_judge_2:
+            active_tj = time_judge_1 or time_judge_2
+            t_holds = [itm.hold_duration_seconds for itm in active_tj.items.all().order_by('sequence_order')]
+            t_tw = active_tj.raw_total or Decimal('0.00')
+            reconciled_timing_data = reconcile_music_timing(t_tw, t_tw, t_holds, t_holds)
+            for inv_seq in reconciled_timing_data.get('invalid_hold_indices', []):
+                invalid_item_sequences.add(inv_seq)
+                invalid_reasons[inv_seq] = "Hold Duration Below 5 Seconds"
     # Step 4: Calculate D Judges items and totals
     from registrations.models import AsanaSequenceItem
     declared_seqs = {

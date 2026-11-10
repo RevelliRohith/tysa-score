@@ -134,18 +134,9 @@ def user_roles(request):
     elif is_chief_judge:
         active_role = "Chief Judge"
         active_role_code = "CHIEF_JUDGE"
-    elif RoleChoices.D_JUDGE in roles:
-        active_role = "Difficulty Judge (D)"
-        active_role_code = "D_JUDGE"
-    elif RoleChoices.TIME_JUDGE in roles:
-        active_role = "Time Judge"
-        active_role_code = "TIME_JUDGE"
-    elif RoleChoices.ARTISTRY_JUDGE in roles:
-        active_role = "Artistry Judge"
-        active_role_code = "ARTISTRY_JUDGE"
-    elif RoleChoices.EVALUATOR in roles:
-        active_role = "Evaluator Judge"
-        active_role_code = "EVALUATOR"
+    elif any(r in roles for r in [RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE, RoleChoices.EVALUATOR]):
+        active_role = "Judge"
+        active_role_code = "JUDGE"
     elif is_jury:
         active_role = "Jury Official"
         active_role_code = "JURY"

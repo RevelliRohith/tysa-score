@@ -132,7 +132,12 @@ def system_settings_view(request):
         elif action == 'save_batches':
             max_batch = int(request.POST.get('max_batch_size', 5))
             if championship:
-                championship.event_configurations.all().update(max_batch_size=max_batch)
+                # Traditional can be updated; Artistic Single, Artistic Pair, and Rhythmic Pair are strictly 1 (solo/pair)
+                from championships.models import EventType
+                championship.event_configurations.filter(event_type=EventType.TRADITIONAL).update(max_batch_size=max_batch)
+                championship.event_configurations.filter(
+                    event_type__in=[EventType.ARTISTIC_SINGLE, EventType.ARTISTIC_PAIR, EventType.RHYTHMIC_PAIR]
+                ).update(max_batch_size=1)
 
             AuditLog.log(
                 action='SETTINGS_BATCH_UPDATE',

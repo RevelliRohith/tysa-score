@@ -211,6 +211,8 @@ def get_user_workspaces(user):
             url = 'district_approvals'
         elif sr.role == RoleChoices.VENUE_DESK:
             url = 'venue_verification'
+        elif sr.role == RoleChoices.STAGE_MANAGER:
+            url = 'stage_manager'
         elif sr.role == RoleChoices.JURY:
             url = 'jury_view'
         elif sr.role in [RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE, RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE]:

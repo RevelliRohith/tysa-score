@@ -1,4 +1,4 @@
-import datetime
+﻿import datetime
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -8,12 +8,12 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
 from .models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem, PerformanceArtistryScore, EvaluatorIncident, IncidentType
-from .services import calculate_performance_score, calculate_traditional_timing_contribution
+from .services import calculate_performance_score, calculate_traditional_timing_contribution, calculate_tw_marks
 from competition.models import StageBatch, JudgePanel
 from registrations.models import EventEntry, AsanaSequenceItem
 from catalogue.models import Asana
 from accounts.models import RoleChoices, ScopedRole
-from accounts.permissions import role_required, get_active_championship
+from accounts.permissions import role_required, get_active_championship, is_system_admin
 from audit.models import AuditLog
 
 def get_traditional_compulsory_count(round_type: str) -> int:
@@ -803,88 +803,348 @@ def scoring_traditional_d_final(request):
 @role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_artistic_single_d(request):
     """
-    Implements 18_Artistic_Single_D_Judge.png:
-    Ten-item single execution sheet with pose image, BV, execution marks,
-    evaluator validity indicator, and effective score.
+    Implements Artistic Single D Judge Scoring Interface:
+    Simultaneously displays all 10 asanas: 1 large active asana and 9 compact preview cards.
+    Supports seamless instant navigation between all 10 asanas without page reload.
+    Supports real-time execution score editing with auto-save and immediate effective score update.
     """
+    import json
     perf_id = request.GET.get('perf_id')
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
+    current_panel = None
+    seat_label = "D1 Judge"
+    batch = None
     
+    # 1. Resolve panel & active batch if perf_id not explicitly given
     if perf_id:
         perf = get_object_or_404(Performance, id=perf_id)
         entry = perf.event_entry
+        round_type = perf.round_type
     else:
-        entry = batch.entries.first() if batch else EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC_SINGLE').first()
+        current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+            request,
+            seat_fields=['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'd5_judge', 'chief_judge'],
+            event_type='ARTISTIC_SINGLE'
+        )
+        if isinstance(batch_or_resp, HttpResponse):
+            return batch_or_resp
+
+        batch = batch_or_resp
+        entry_id = request.GET.get('entry_id')
+        if entry_id and batch and batch.entries.filter(id=entry_id).exists():
+            entry = batch.entries.filter(id=entry_id).first()
+        elif batch and batch.entries.exists():
+            entry = batch.entries.first()
+        else:
+            entry = EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC_SINGLE').first()
+
+        round_type = current_panel.round_type if current_panel else 'PRELIMINARY'
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type='PRELIMINARY',
-            defaults={'status': PerformanceStatus.IN_PROGRESS}
+            round_type=round_type,
+            defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
 
-    judge_role = 'D1_JUDGE'
-    sub = JudgeSubmission.objects.filter(performance=perf, judge_role=judge_role).first() if perf else None
-    if not sub and perf:
-        sub = JudgeSubmission.objects.create(
-            performance=perf,
-            judge=request.user,
-            judge_role=judge_role,
-            version=1,
-            is_draft=True
-        )
+    if not perf or not entry:
+        messages.error(request, "No Artistic Single competitor found for this scoring session.")
+        return render(request, 'scoring/artistic_single_d.html', {'error': 'No competitor found'})
 
-    items = []
-    if sub and entry:
-        for seq in range(1, 11):
+    round_type = perf.round_type
+    
+    # Determine judge role
+    judge_role = seat_label.replace(' ', '_').upper() if seat_label else 'D1_JUDGE'
+    if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
+        judge_role = 'D1_JUDGE'
+
+    sub, _ = JudgeSubmission.objects.get_or_create(
+        performance=perf,
+        judge_role=judge_role,
+        version=1,
+        defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.000'), 'effective_total': Decimal('0.000')}
+    )
+    if request.user.is_authenticated and sub.judge != request.user and not sub.is_locked:
+        sub.judge = request.user
+        sub.save(update_fields=['judge'])
+
+    total_items = 10
+    current_seq = int(request.GET.get('seq', 1))
+    if current_seq < 1:
+        current_seq = 1
+    if current_seq > total_items:
+        current_seq = total_items
+
+    # Fetch Evaluator validity mappings for this athlete
+    eval_items_map = {}
+    eval_sub = JudgeSubmission.objects.filter(performance=perf, judge_role='EVALUATOR').first()
+    if eval_sub:
+        for itm in eval_sub.items.all():
+            eval_items_map[itm.sequence_order] = itm
+
+    # Ensure all 10 AsanaScoreItem records exist with correct base values and validity
+    all_score_items = {}
+    for item in sub.items.all():
+        all_score_items[item.sequence_order] = item
+
+    items_data = []
+    for seq in range(1, total_items + 1):
+        pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq, round_type=round_type).first()
+        if not pose_seq:
             pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq).first()
-            score_item, _ = AsanaScoreItem.objects.get_or_create(
-                submission=sub,
-                sequence_order=seq,
-                defaults={
-                    'execution_score': Decimal('8.50'),
-                    'base_value': pose_seq.declared_bv if pose_seq else Decimal('0.80'),
-                    'is_valid': True
-                }
-            )
-            items.append({'score_item': score_item, 'pose': pose_seq, 'seq': seq})
 
-    if request.method == 'POST' and sub:
-        action = request.POST.get('action')
-        total = Decimal('0.000')
-        for seq in range(1, 11):
-            exec_val = Decimal(request.POST.get(f'exec_{seq}', '8.00'))
-            bv_val = Decimal(request.POST.get(f'bv_{seq}', '0.80'))
-            eff = round(exec_val * bv_val, 3)
-            total += eff
-            AsanaScoreItem.objects.update_or_create(
+        declared_bv = pose_seq.declared_bv if pose_seq and pose_seq.declared_bv else Decimal('0.80')
+        declared_code = pose_seq.declared_code if pose_seq and pose_seq.declared_code else f"ASANA-{seq:02d}"
+
+        # Image URL resolution
+        img_url = None
+        if pose_seq and pose_seq.image_url:
+            img_url = pose_seq.image_url
+        elif pose_seq and pose_seq.declared_asana and pose_seq.declared_asana.image_url:
+            img_url = pose_seq.declared_asana.image_url
+
+        eval_item = eval_items_map.get(seq)
+        is_valid = eval_item.is_valid if eval_item else True
+        invalid_reason = eval_item.invalid_reason if eval_item and not eval_item.is_valid else ""
+
+        score_item = all_score_items.get(seq)
+        if not score_item:
+            score_item = AsanaScoreItem.objects.create(
                 submission=sub,
                 sequence_order=seq,
-                defaults={'execution_score': exec_val, 'base_value': bv_val, 'effective_item_score': eff}
+                execution_score=Decimal('0.00'),
+                base_value=declared_bv,
+                is_valid=is_valid,
+                invalid_reason=invalid_reason,
+                raw_item_score=Decimal('0.000'),
+                effective_item_score=Decimal('0.000'),
+                is_zero=False,
+                is_draft=True,
+                is_locked=False
             )
-        
-        sub.raw_total = total
-        sub.effective_total = total
-        if action == 'submit_sheet':
+            all_score_items[seq] = score_item
+        else:
+            # Sync base_value and validity if changed by evaluator
+            update_fields = []
+            if score_item.base_value != declared_bv:
+                score_item.base_value = declared_bv
+                update_fields.append('base_value')
+            if score_item.is_valid != is_valid or score_item.invalid_reason != invalid_reason:
+                score_item.is_valid = is_valid
+                score_item.invalid_reason = invalid_reason
+                update_fields.extend(['is_valid', 'invalid_reason'])
+            
+            # Recalculate effective_item_score based on current validity
+            eff = Decimal('0.000') if not is_valid else round(score_item.execution_score * score_item.base_value, 3)
+            raw = round(score_item.execution_score * score_item.base_value, 3)
+            if score_item.raw_item_score != raw:
+                score_item.raw_item_score = raw
+                update_fields.append('raw_item_score')
+            if score_item.effective_item_score != eff:
+                score_item.effective_item_score = eff
+                update_fields.append('effective_item_score')
+            if update_fields:
+                score_item.save(update_fields=update_fields)
+
+        # Scored definition: has explicit positive score, explicit recorded zero (is_zero=True), or is locked
+        is_completed = (score_item.execution_score > Decimal('0.00') or score_item.is_zero or score_item.is_locked)
+
+        items_data.append({
+            'seq': seq,
+            'pose': pose_seq,
+            'code': declared_code,
+            'image_url': img_url,
+            'score_item': score_item,
+            'is_valid': is_valid,
+            'invalid_reason': invalid_reason,
+            'is_completed': is_completed,
+            'is_zero': score_item.is_zero,
+        })
+
+    # Prepare JSON serializable list of all 10 asanas for client-side instant navigation & dynamic state
+    asanas_json_list = []
+    for d in items_data:
+        asanas_json_list.append({
+            'seq': d['seq'],
+            'code': d['code'],
+            'bv': float(d['score_item'].base_value),
+            'exec': float(d['score_item'].execution_score),
+            'eff': float(d['score_item'].effective_item_score),
+            'raw': float(d['score_item'].raw_item_score),
+            'is_valid': d['is_valid'],
+            'invalid_reason': d['invalid_reason'],
+            'is_completed': d['is_completed'],
+            'is_zero': d['score_item'].is_zero,
+            'is_locked': d['score_item'].is_locked or sub.is_locked,
+            'image_url': d['image_url'] or '',
+        })
+    asanas_json = json.dumps(asanas_json_list)
+
+    # Current item under scoring
+    current_item = items_data[current_seq - 1]
+
+    # Handle POST
+    if request.method == 'POST' and not sub.is_locked:
+        is_ajax = (request.headers.get('x-requested-with') == 'XMLHttpRequest') or (request.POST.get('is_ajax') == '1')
+        action = request.POST.get('action') # 'save_draft', 'save_item', 'navigate_prev', 'navigate_next', 'navigate_to', 'submit_sheet'
+        target_seq = request.POST.get('target_seq')
+
+        # Check if saving a specific seq via AJAX (item_seq + execution_score)
+        item_seq = request.POST.get('item_seq')
+        if item_seq:
+            try:
+                seq_idx = int(item_seq)
+            except (ValueError, TypeError):
+                seq_idx = current_seq
+        else:
+            seq_idx = current_seq
+
+        current_raw_exec = request.POST.get('execution_score')
+        client_timestamp = request.POST.get('client_timestamp')
+        if current_raw_exec is not None:
+            try:
+                e_val = min(Decimal('10.00'), max(Decimal('0.00'), Decimal(current_raw_exec)))
+            except Exception:
+                target_score_item = all_score_items.get(seq_idx)
+                e_val = target_score_item.execution_score if target_score_item else Decimal('0.00')
+            
+            c_item = all_score_items.get(seq_idx)
+            if c_item:
+                c_bv = c_item.base_value
+                c_valid = c_item.is_valid
+                eff = Decimal('0.000') if not c_valid else round(e_val * c_bv, 3)
+                c_item.execution_score = e_val
+                c_item.raw_item_score = round(e_val * c_bv, 3)
+                c_item.effective_item_score = eff
+                # Record explicit zero flag if 0.00 is purposefully passed
+                c_item.is_zero = (e_val == Decimal('0.00') and current_raw_exec.strip() != '')
+                c_item.is_draft = True
+                c_item.save(update_fields=['execution_score', 'raw_item_score', 'effective_item_score', 'is_zero', 'is_draft'])
+
+        # Also support saving all 10 asanas if submitted in batch form
+        for seq in range(1, total_items + 1):
+            seq_val = request.POST.get(f'exec_{seq}')
+            if seq_val is not None and seq_val.strip() != '':
+                try:
+                    e_val = min(Decimal('10.00'), max(Decimal('0.00'), Decimal(seq_val)))
+                except Exception:
+                    continue
+                s_item = all_score_items.get(seq)
+                if s_item:
+                    eff = Decimal('0.000') if not s_item.is_valid else round(e_val * s_item.base_value, 3)
+                    s_item.execution_score = e_val
+                    s_item.raw_item_score = round(e_val * s_item.base_value, 3)
+                    s_item.effective_item_score = eff
+                    s_item.is_zero = (e_val == Decimal('0.00'))
+                    s_item.save(update_fields=['execution_score', 'raw_item_score', 'effective_item_score', 'is_zero'])
+
+        # Recompute submission total
+        total_eff = sum(it.effective_item_score for it in sub.items.all())
+        total_raw = sum(it.raw_item_score for it in sub.items.all())
+        sub.raw_total = total_raw
+        sub.effective_total = total_eff
+        sub.save(update_fields=['raw_total', 'effective_total'])
+
+        # If AJAX request, return JsonResponse immediately without page reload
+        if is_ajax:
+            if action == 'submit_sheet':
+                sub.items.all().update(is_draft=False, is_submitted=True, is_locked=True, submitted_at=timezone.now())
+                sub.is_draft = False
+                sub.is_submitted = True
+                sub.is_locked = True
+                sub.submitted_at = timezone.now()
+                sub.save()
+                if sub.performance:
+                    calculate_performance_score(sub.performance)
+                return JsonResponse({
+                    'status': 'success',
+                    'action': 'submit_sheet',
+                    'message': f"Artistic Single D scores submitted and locked! Total: {total_eff:.3f}",
+                    'total_effective': float(total_eff),
+                    'is_locked': True,
+                })
+            else:
+                saved_item = all_score_items.get(seq_idx)
+                completed_count_now = sum(1 for it in sub.items.all() if it.execution_score > Decimal('0.00') or it.is_zero or it.is_locked)
+                return JsonResponse({
+                    'status': 'success',
+                    'action': action or 'save_item',
+                    'seq': seq_idx,
+                    'execution_score': float(saved_item.execution_score) if saved_item else 0.0,
+                    'effective_item_score': float(saved_item.effective_item_score) if saved_item else 0.0,
+                    'is_completed': (saved_item.execution_score > Decimal('0.00') or saved_item.is_zero or saved_item.is_locked) if saved_item else False,
+                    'is_zero': saved_item.is_zero if saved_item else False,
+                    'total_effective': float(total_eff),
+                    'completed_count': completed_count_now,
+                    'client_timestamp': client_timestamp,
+                })
+
+        # Standard non-AJAX POST navigation / submission handling
+        def make_url(seq_no):
+            base = f"{request.path}?seq={seq_no}"
+            if request.GET.get('perf_id'):
+                base += f"&perf_id={request.GET.get('perf_id')}"
+            if request.GET.get('panel_id'):
+                base += f"&panel_id={request.GET.get('panel_id')}"
+            if request.GET.get('entry_id'):
+                base += f"&entry_id={request.GET.get('entry_id')}"
+            return base
+
+        if action == 'save_draft':
+            sub.is_draft = True
+            sub.save(update_fields=['raw_total', 'effective_total', 'is_draft'])
+            messages.info(request, f"Asana #{seq_idx} marks saved. Total: {total_eff:.3f}")
+            return redirect(make_url(seq_idx))
+
+        elif action == 'navigate_prev':
+            sub.save(update_fields=['raw_total', 'effective_total'])
+            prev_seq = max(1, current_seq - 1)
+            return redirect(make_url(prev_seq))
+
+        elif action == 'navigate_next':
+            sub.save(update_fields=['raw_total', 'effective_total'])
+            next_seq = min(total_items, current_seq + 1)
+            return redirect(make_url(next_seq))
+
+        elif action == 'navigate_to':
+            sub.save(update_fields=['raw_total', 'effective_total'])
+            try:
+                dest = int(target_seq)
+                dest = max(1, min(total_items, dest))
+            except (ValueError, TypeError):
+                dest = current_seq
+            return redirect(make_url(dest))
+
+        elif action == 'submit_sheet':
+            sub.items.all().update(is_draft=False, is_submitted=True, is_locked=True, submitted_at=timezone.now())
             sub.is_draft = False
             sub.is_submitted = True
             sub.is_locked = True
-            sub.submitted_at = datetime.datetime.now()
+            sub.submitted_at = timezone.now()
             sub.save()
             if sub.performance:
                 calculate_performance_score(sub.performance)
-            messages.success(request, f"Artistic Single D scores submitted and locked! Total: {total:.3f}")
-            return redirect(request.path)
-        else:
-            sub.is_draft = True
-            sub.save()
-            messages.success(request, f"Artistic Single D draft saved. Total: {total:.3f}")
+            messages.success(request, f"Artistic Single D scores submitted and locked! Total: {total_eff:.3f}")
+            return redirect(make_url(current_seq))
+
+    # Calculate overall total score
+    total_effective = sum(d['score_item'].effective_item_score for d in items_data)
+    completed_count = sum(1 for d in items_data if d['is_completed'])
 
     return render(request, 'scoring/artistic_single_d.html', {
+        'panel': current_panel,
+        'seat_label': seat_label,
         'batch': batch,
         'entry': entry,
         'perf': perf,
         'sub': sub,
-        'items': items,
+        'current_seq': current_seq,
+        'total_items': total_items,
+        'items_data': items_data,
+        'asanas_json': asanas_json,
+        'current_item': current_item,
+        'total_effective': total_effective,
+        'completed_count': completed_count,
+        'is_locked': sub.is_locked,
     })
+
 
 @role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_artistic_pair_d(request):
@@ -1155,11 +1415,12 @@ def scoring_traditional_time(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         for e in entries:
-            hold_raw = request.POST.get(f'hold_{e.id}', '0.0')
+            hold_raw = request.POST.get(f'hold_{e.id}', '0').strip()
             try:
-                hold_secs = max(Decimal('0.00'), Decimal(hold_raw))
-            except:
+                hold_secs = Decimal(str(int(round(float(hold_raw))))) if hold_raw else Decimal('0.00')
+            except Exception:
                 hold_secs = Decimal('0.00')
+            hold_secs = max(Decimal('0.00'), hold_secs)
             try:
                 attempt_num = int(request.POST.get(f'attempt_{e.id}', '1'))
             except:
@@ -1248,142 +1509,544 @@ def scoring_traditional_time(request):
 @role_required(RoleChoices.ADMIN, RoleChoices.TIME_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_music_time(request):
     """
-    Implements 21_Music_Event_Time_Judge.png:
-    Whole routine stopwatch and 10 individual hold duration timers for music events.
+    Implements Artistic Single Pair Time Judge Desk:
+    - Displays all 10 asanas on a single screen with actual reference photographs, asana codes, manual duration entry, TA marks, and status badges.
+    - Manual individual hold-time entry only (no individual stopwatches).
+    - Automatically calculates TA marks: >= 5.0s -> 0.50 marks; < 5.0s -> 0.00 marks.
+    - Holds < 5.0s flag the item for invalidity across D Judges in composite scoring.
+    - Universal whole-performance stopwatch (TW) positioned at the bottom of the interface.
+    - COP TW brackets: <150s = 0, 150-160s = 3, 161-170s = 4, 171-180s = 5; >180s = 0.50 marks/sec overtime deduction.
+    - Two Time Judge reconciliation (T1 & T2) preserved separately.
+    - AJAX auto-save and manual Save Draft / Submit Sheet actions.
     """
     perf_id = request.GET.get('perf_id')
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
+    current_panel = None
+    seat_label = 'Time Judge 1'
+    batch = None
     
+    # 1. Resolve panel & active batch if perf_id not explicitly given
     if perf_id:
         perf = get_object_or_404(Performance, id=perf_id)
         entry = perf.event_entry
+        round_type = perf.round_type
+        batch = perf.batch
     else:
-        entry = batch.entries.first() if batch else EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC').first()
+        current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+            request,
+            seat_fields=['time_judge', 'time_judge_2'],
+            judge_role='TIME_JUDGE'
+        )
+        if isinstance(batch_or_resp, HttpResponse):
+            return batch_or_resp
+
+        batch = batch_or_resp
+        entry_id = request.GET.get('entry_id')
+        if entry_id and batch and batch.entries.filter(id=entry_id).exists():
+            entry = batch.entries.filter(id=entry_id).first()
+        elif batch and batch.entries.exists():
+            entry = batch.entries.first()
+        else:
+            entry = EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC').first()
+
+        round_type = current_panel.round_type if current_panel else 'PRELIMINARY'
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type='FINAL',
-            defaults={'status': PerformanceStatus.IN_PROGRESS}
+            round_type=round_type,
+            defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
 
-    sub = JudgeSubmission.objects.filter(performance=perf, judge_role='TIME_JUDGE').first() if perf else None
-    if not sub and perf:
-        sub = JudgeSubmission.objects.create(
-            performance=perf,
-            judge=request.user,
-            judge_role='TIME_JUDGE',
-            version=1,
-            is_draft=True
-        )
+    if not perf or not entry:
+        messages.error(request, 'No active competitor found for this timing session.')
+        return render(request, 'scoring/music_time.html', {'error': 'No competitor found'})
 
+    round_type = perf.round_type
+    judge_role = 'TIME_JUDGE_2' if ('2' in (seat_label or '') or 'TWO' in (seat_label or '').upper()) else 'TIME_JUDGE'
+
+    sub, _ = JudgeSubmission.objects.get_or_create(
+        performance=perf,
+        judge_role=judge_role,
+        version=1,
+        defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00'), 'effective_total': Decimal('0.000')}
+    )
+    if request.user.is_authenticated and sub.judge != request.user and not sub.is_locked:
+        sub.judge = request.user
+        sub.save(update_fields=['judge'])
+
+    total_items = 10
+
+    # Fetch sequence items (all 10 asanas) for this event entry
+    seq_items = list(AsanaSequenceItem.objects.filter(
+        event_entry=entry,
+        round_type=round_type
+    ).order_by('sequence_order'))
+    if not seq_items:
+        seq_items = list(AsanaSequenceItem.objects.filter(
+            event_entry=entry
+        ).order_by('sequence_order'))
+
+    seq_map = {item.sequence_order: item for item in seq_items}
+
+    # Fetch or create all 10 AsanaScoreItem objects for this submission
+    score_items_map = {}
+    for item in sub.items.all():
+        score_items_map[item.sequence_order] = item
+
+    items_data = []
+    ta_valid_count = 0
+    completed_holds_count = 0
+
+    for seq in range(1, total_items + 1):
+        score_item = score_items_map.get(seq)
+        if not score_item:
+            score_item, _ = AsanaScoreItem.objects.get_or_create(
+                submission=sub,
+                sequence_order=seq,
+                defaults={'hold_duration_seconds': Decimal('0.00'), 'timing_contribution': Decimal('0.00')}
+            )
+            score_items_map[seq] = score_item
+
+        pose = seq_map.get(seq)
+        hold_secs = score_item.hold_duration_seconds or Decimal('0.00')
+        is_completed = (hold_secs > Decimal('0.00') or score_item.is_zero)
+        is_valid = (hold_secs >= Decimal('5.00'))
+        
+        if is_completed:
+            completed_holds_count += 1
+        if is_valid:
+            ta_valid_count += 1
+
+        items_data.append({
+            'seq': seq,
+            'score_item': score_item,
+            'pose': pose,
+            'hold_duration': float(hold_secs),
+            'is_valid': is_valid,
+            'is_completed': is_completed,
+            'ta_marks': 0.50 if is_valid else 0.00,
+        })
+
+    # Handle POST submission (both standard form submission and AJAX auto-save)
     if request.method == 'POST' and sub:
-        action = request.POST.get('action')
-        routine_duration = Decimal(request.POST.get('routine_duration', '145.0'))
-        # Overtime penalty COP: target max 150s. Deduct 0.5 per 5s over 150s.
-        penalty = Decimal('0.00')
-        if routine_duration > Decimal('150.0'):
-            penalty = round(((routine_duration - Decimal('150.0')) / Decimal('5.0')) * Decimal('0.5'), 2)
+        action = request.POST.get('action') # 'auto_save', 'save_draft', 'submit_sheet'
+        is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or action == 'auto_save')
 
-        timing_score = max(Decimal('0.00'), Decimal('10.00') - penalty)
+        # 1. Update whole performance duration (TW) - Whole seconds only (no milliseconds/decimals)
+        raw_dur = request.POST.get('routine_duration', '').strip()
+        try:
+            routine_duration = Decimal(str(int(round(float(raw_dur))))) if raw_dur else Decimal(str(int(round(float(sub.raw_total or 0)))))
+        except Exception:
+            routine_duration = Decimal(str(int(round(float(sub.raw_total or 0)))))
+        routine_duration = max(Decimal('0.00'), routine_duration)
+
+        # 2. Update hold durations for all 10 asanas - Whole seconds only (no milliseconds/decimals)
+        updated_seq = None
+        for itm_info in items_data:
+            s_num = itm_info['seq']
+            h_key = f'hold_{s_num}'
+            if h_key in request.POST:
+                h_val_raw = request.POST.get(h_key, '').strip()
+                try:
+                    h_val = Decimal(str(int(round(float(h_val_raw))))) if h_val_raw else Decimal('0.00')
+                except Exception:
+                    h_val = Decimal(str(int(round(float(itm_info['hold_duration'])))))
+                
+                h_val = max(Decimal('0.00'), min(Decimal('120.00'), h_val))
+                score_item = itm_info['score_item']
+                score_item.hold_duration_seconds = h_val
+                is_val = (h_val >= Decimal('5.00'))
+                score_item.timing_contribution = Decimal('0.50') if is_val else Decimal('0.00')
+                score_item.is_valid = is_val
+                if h_val == Decimal('0.00') and h_val_raw == '0':
+                    score_item.is_zero = True
+                elif h_val > Decimal('0.00'):
+                    score_item.is_zero = False
+                
+                if action == 'submit_sheet':
+                    score_item.is_draft = False
+                    score_item.is_submitted = True
+                    score_item.is_locked = True
+                else:
+                    score_item.is_draft = True
+
+                score_item.save(update_fields=['hold_duration_seconds', 'timing_contribution', 'is_valid', 'is_zero', 'is_draft', 'is_submitted', 'is_locked'])
+                updated_seq = s_num
+
+        # Recalculate marks under COP
+        tw_marks = calculate_tw_marks(routine_duration)
+        ot_secs = max(0, int(round(routine_duration)) - 180)
+        ot_deduction = Decimal(str(ot_secs)) * Decimal('0.500')
+
+        # Recount valid holds from saved items
+        all_hold_items = AsanaScoreItem.objects.filter(submission=sub)
+        final_ta_valid = all_hold_items.filter(hold_duration_seconds__gte=Decimal('5.00')).count()
+        ta_marks = min(Decimal('5.000'), Decimal(str(final_ta_valid)) * Decimal('0.500'))
+        total_timing_score = max(Decimal('0.000'), tw_marks + ta_marks - ot_deduction)
+
         sub.raw_total = routine_duration
-        sub.effective_total = timing_score
+        sub.effective_total = total_timing_score
+
         if action == 'submit_sheet':
             sub.is_draft = False
             sub.is_submitted = True
             sub.is_locked = True
-            sub.submitted_at = datetime.datetime.now()
-            sub.save()
+            sub.submitted_at = timezone.now()
+            sub.save(update_fields=['raw_total', 'effective_total', 'is_draft', 'is_submitted', 'is_locked', 'submitted_at'])
             if sub.performance:
                 calculate_performance_score(sub.performance)
-            messages.success(request, f"Music timing submitted! Duration: {routine_duration}s, Timing Score: {timing_score:.2f}")
-            return redirect(request.path)
-        else:
-            sub.save()
-            messages.success(request, f"Routine duration draft saved: {routine_duration}s")
+
+            if is_ajax:
+                return JsonResponse({
+                    'status': 'success',
+                    'action': 'submit_sheet',
+                    'message': f'Timing sheet submitted and locked! TW: {tw_marks:.2f}, TA: {ta_marks:.2f}, Net: {total_timing_score:.2f}',
+                    'is_locked': True,
+                    'tw_marks': float(tw_marks),
+                    'ta_marks': float(ta_marks),
+                    'ot_deduction': float(ot_deduction),
+                    'total_timing_score': float(total_timing_score),
+                })
+            messages.success(request, f'Timing sheet submitted and locked! TW: {tw_marks:.2f}, TA: {ta_marks:.2f}, Net: {total_timing_score:.2f}')
+            redirect_url = request.path
+            params = []
+            if perf_id:
+                params.append(f'perf_id={perf_id}')
+            elif request.GET.get('panel_id'):
+                params.append(f"panel_id={request.GET.get('panel_id')}")
+            if params:
+                redirect_url += '?' + '&'.join(params)
+            return redirect(redirect_url)
+
+        else: # auto_save or save_draft
+            sub.save(update_fields=['raw_total', 'effective_total', 'is_draft'])
+            if sub.performance:
+                calculate_performance_score(sub.performance)
+
+            if is_ajax:
+                return JsonResponse({
+                    'status': 'success',
+                    'action': action,
+                    'routine_duration': float(routine_duration),
+                    'tw_marks': float(tw_marks),
+                    'ta_marks': float(ta_marks),
+                    'ta_valid_count': final_ta_valid,
+                    'ot_seconds': ot_secs,
+                    'ot_deduction': float(ot_deduction),
+                    'total_timing_score': float(total_timing_score),
+                    'updated_seq': updated_seq,
+                })
+            messages.info(request, f'Timing draft saved. Whole duration: {routine_duration}s.')
+            redirect_url = request.path
+            params = []
+            if perf_id:
+                params.append(f'perf_id={perf_id}')
+            elif request.GET.get('panel_id'):
+                params.append(f"panel_id={request.GET.get('panel_id')}")
+            if params:
+                redirect_url += '?' + '&'.join(params)
+            return redirect(redirect_url)
+
+    # Blind Judging Isolation:
+    # Neither Time Judge (T1 or T2) may view the other judge's readings, scores, or reconciliation.
+    # T1 sees only T1; T2 sees only T2.
+    # Reconciled timing data is exclusively visible to authorized supervisory staff (Chief Judge, CD, Admin).
+    time_judge_1 = JudgeSubmission.objects.filter(performance=perf, judge_role='TIME_JUDGE').first()
+    time_judge_2 = JudgeSubmission.objects.filter(performance=perf, judge_role='TIME_JUDGE_2').first()
+    reconciliation_info = None
+    
+    championship = get_active_championship(request)
+    can_view_reconciliation = (
+        request.user.is_authenticated and (
+            is_system_admin(request.user) or
+            ScopedRole.objects.filter(user=request.user, championship=championship, role__in=[RoleChoices.CD, RoleChoices.CHIEF_JUDGE]).exists() or
+            (current_panel and current_panel.chief_judge_id == request.user.id)
+        )
+    )
+
+    if can_view_reconciliation and time_judge_1 and time_judge_2 and (time_judge_1.raw_total or time_judge_2.raw_total):
+        from .services import reconcile_music_timing
+        t1_holds = [itm.hold_duration_seconds for itm in time_judge_1.items.all().order_by('sequence_order')]
+        t2_holds = [itm.hold_duration_seconds for itm in time_judge_2.items.all().order_by('sequence_order')]
+        t1_tw = time_judge_1.raw_total or Decimal('0.00')
+        t2_tw = time_judge_2.raw_total or Decimal('0.00')
+        reconciliation_info = reconcile_music_timing(t1_tw, t2_tw, t1_holds, t2_holds)
+
+    # Calculate live COP preview for display
+    current_tw = sub.raw_total or Decimal('0.00')
+    tw_marks_preview = calculate_tw_marks(current_tw)
+    ot_secs_preview = max(0, int(round(current_tw)) - 180)
+    ot_ded_preview = Decimal(str(ot_secs_preview)) * Decimal('0.500')
+    ta_marks_preview = min(Decimal('5.000'), Decimal(str(ta_valid_count)) * Decimal('0.500'))
+    total_preview = max(Decimal('0.000'), tw_marks_preview + ta_marks_preview - ot_ded_preview)
+
+    # In Artistic Single / Artistic Pair / Rhythmic Pair, only 1 performer performs at a time
+    is_traditional = (current_panel.event_config.event_type == 'TRADITIONAL') if (current_panel and current_panel.event_config) else False
+    batch_entries = list(batch.entries.all()) if (batch and is_traditional) else [entry]
 
     return render(request, 'scoring/music_time.html', {
+        'panel': current_panel,
+        'seat_label': seat_label,
+        'judge_role': judge_role,
         'batch': batch,
         'entry': entry,
         'perf': perf,
         'sub': sub,
+        'batch_entries': batch_entries,
+        'items': items_data,
+        'total_items': total_items,
+        'completed_holds_count': completed_holds_count,
+        'ta_valid_count': ta_valid_count,
+        'tw_marks': tw_marks_preview,
+        'ta_marks': ta_marks_preview,
+        'ot_seconds': ot_secs_preview,
+        'ot_deduction': ot_ded_preview,
+        'total_timing_score': total_preview,
+        'is_locked': sub.is_locked,
+        'can_view_reconciliation': can_view_reconciliation,
+        'reconciliation_info': reconciliation_info,
+        'time_judge_1': time_judge_1 if can_view_reconciliation else (sub if judge_role == 'TIME_JUDGE' else None),
+        'time_judge_2': time_judge_2 if can_view_reconciliation else (sub if judge_role == 'TIME_JUDGE_2' else None),
     })
+
 
 @role_required(RoleChoices.ADMIN, RoleChoices.ARTISTRY_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_artistry(request):
     """
-    Implements 22_Artistry_Judge.png:
-    Performance-level artistry criteria (20-point breakdown), routine sequence, deductions.
+    Implements Artistry Judge Score Sheet (COP 20-Point Breakdown):
+    5 Scoring Components:
+    1. Costume (Base 1)
+    2. Theme & Music (Base 1)
+    3. Character & Expression (Base 3)
+    4. Rhythm & Artistic Steps (Base 10, with penalty field)
+    5. Use of Floor (Base 5, with penalty field)
+    Other Penalties section with type, amount, reason, remarks.
+    Supports independent records for Artistry Judge 1 and Artistry Judge 2.
     """
+    import json
     perf_id = request.GET.get('perf_id')
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
-    
+    current_panel = None
+    seat_label = "Artistry Judge"
+    batch = None
+
     if perf_id:
         perf = get_object_or_404(Performance, id=perf_id)
         entry = perf.event_entry
+        round_type = perf.round_type
+        batch = perf.batch
     else:
-        entry = batch.entries.first() if batch else EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC').first()
+        current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+            request,
+            seat_fields=['artistry_judge', 'artistry_judge_2'],
+            judge_role='ARTISTRY_JUDGE'
+        )
+        if isinstance(batch_or_resp, HttpResponse):
+            return batch_or_resp
+
+        batch = batch_or_resp
+        entry_id = request.GET.get('entry_id')
+        if entry_id and batch and batch.entries.filter(id=entry_id).exists():
+            entry = batch.entries.filter(id=entry_id).first()
+        elif batch and batch.entries.exists():
+            entry = batch.entries.first()
+        else:
+            entry = EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC').first()
+
+        round_type = current_panel.round_type if current_panel else 'PRELIMINARY'
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type='FINAL',
-            defaults={'status': PerformanceStatus.IN_PROGRESS}
+            round_type=round_type,
+            defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
 
-    sub = JudgeSubmission.objects.filter(performance=perf, judge_role='ARTISTRY_JUDGE').first() if perf else None
-    if not sub and perf:
-        sub = JudgeSubmission.objects.create(
-            performance=perf,
-            judge=request.user,
-            judge_role='ARTISTRY_JUDGE',
-            version=1,
-            is_draft=True
-        )
+    if not perf or not entry:
+        messages.error(request, 'No active competitor found for this artistry scoring session.')
+        return render(request, 'scoring/artistry.html', {'error': 'No competitor found'})
+
+    round_type = perf.round_type
+    # Support Artistry Judge 1 vs Artistry Judge 2
+    role_param = request.GET.get('judge_role', '').strip().upper()
+    if role_param in ['ARTISTRY_JUDGE', 'ARTISTRY_JUDGE_2']:
+        judge_role = role_param
+    elif '2' in (seat_label or '') or 'TWO' in (seat_label or '').upper():
+        judge_role = 'ARTISTRY_JUDGE_2'
+    else:
+        judge_role = 'ARTISTRY_JUDGE'
+
+    sub, _ = JudgeSubmission.objects.get_or_create(
+        performance=perf,
+        judge_role=judge_role,
+        version=1,
+        defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00'), 'effective_total': Decimal('0.00')}
+    )
+    if request.user.is_authenticated and sub.judge != request.user and not sub.is_locked:
+        sub.judge = request.user
+        sub.save(update_fields=['judge'])
 
     art_score, _ = PerformanceArtistryScore.objects.get_or_create(
         submission=sub,
         defaults={
-            'presentation': Decimal('3.50'),
-            'synchronization': Decimal('3.50'),
-            'choreography': Decimal('3.50'),
-            'transition_flow': Decimal('3.50'),
-            'costume_grace': Decimal('3.00'),
-            'deductions': Decimal('0.00'),
-            'total_artistry': Decimal('17.00')
+            'costume': Decimal('0.00'),
+            'theme_music': Decimal('0.00'),
+            'character_expression': Decimal('0.00'),
+            'rhythm_artistic_steps': Decimal('0.00'),
+            'use_of_floor': Decimal('0.00'),
+            'artistry_deductions': Decimal('0.00'),
+            'total_artistry': Decimal('0.00')
         }
-    ) if sub else (None, False)
+    )
+
+    # Calculation metadata stores detailed component breakdown & other penalties
+    meta = sub.calculation_metadata or {}
+    other_penalties = meta.get('other_penalties', [])
+    rhythm_penalty = Decimal(str(meta.get('rhythm_penalty', '0.00')))
+    floor_penalty = Decimal(str(meta.get('floor_penalty', '0.00')))
 
     if request.method == 'POST' and sub:
-        action = request.POST.get('action')
-        art_score.presentation = min(Decimal('4.00'), Decimal(request.POST.get('presentation', '3.50')))
-        art_score.synchronization = min(Decimal('4.00'), Decimal(request.POST.get('synchronization', '3.50')))
-        art_score.choreography = min(Decimal('4.00'), Decimal(request.POST.get('choreography', '3.50')))
-        art_score.transition_flow = min(Decimal('4.00'), Decimal(request.POST.get('transition_flow', '3.50')))
-        art_score.costume_grace = min(Decimal('4.00'), Decimal(request.POST.get('costume_grace', '3.00')))
-        art_score.deductions = Decimal(request.POST.get('deductions', '0.00'))
-        total = art_score.calculate_total()
-        art_score.save()
+        action = request.POST.get('action') # 'auto_save', 'save_draft', 'submit_sheet'
+        is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or action == 'auto_save')
 
-        sub.raw_total = total
-        sub.effective_total = total
-        if action == 'submit_sheet':
-            sub.is_draft = False
-            sub.is_submitted = True
-            sub.is_locked = True
-            sub.submitted_at = datetime.datetime.now()
-            sub.save()
-            if sub.performance:
-                calculate_performance_score(sub.performance)
-            messages.success(request, f"Artistry scores submitted and locked! Total: {total:.2f}")
-            return redirect(request.path)
-        else:
-            sub.save()
-            messages.success(request, f"Artistry draft saved! Total: {total:.2f}")
+        if not sub.is_locked:
+            # 1. Parse Component Execution Values
+            def parse_dec(val_str, max_limit):
+                try:
+                    d = Decimal(str(float(val_str)))
+                    return max(Decimal('0.00'), min(Decimal(str(max_limit)), d))
+                except Exception:
+                    return Decimal('0.00')
+
+            def parse_pen(val_str):
+                try:
+                    d = Decimal(str(float(val_str)))
+                    return max(Decimal('0.00'), d)
+                except Exception:
+                    return Decimal('0.00')
+
+            costume_exec = parse_dec(request.POST.get('costume', art_score.costume), 1.00)
+            theme_music_exec = parse_dec(request.POST.get('theme_music', art_score.theme_music), 1.00)
+            char_expr_exec = parse_dec(request.POST.get('character_expression', art_score.character_expression), 3.00)
+            rhythm_steps_exec = parse_dec(request.POST.get('rhythm_artistic_steps', art_score.rhythm_artistic_steps), 10.00)
+            use_floor_exec = parse_dec(request.POST.get('use_of_floor', art_score.use_of_floor), 5.00)
+
+            # 2. Parse Criterion Penalties
+            rhythm_pen = parse_pen(request.POST.get('rhythm_penalty', rhythm_penalty))
+            floor_pen = parse_pen(request.POST.get('floor_penalty', floor_penalty))
+            criterion_penalties_total = rhythm_pen + floor_pen
+
+            # 3. Parse Other Penalties list (JSON or individual fields)
+            raw_other_penalties = request.POST.get('other_penalties_json')
+            if raw_other_penalties:
+                try:
+                    parsed_other = json.loads(raw_other_penalties)
+                    other_penalties = []
+                    for item in parsed_other:
+                        p_amt = parse_pen(item.get('amount', 0))
+                        p_type = str(item.get('type', 'General Infraction')).strip()
+                        p_reason = str(item.get('reason', '')).strip()
+                        p_remarks = str(item.get('remarks', '')).strip()
+                        p_approved = bool(item.get('is_approved', True))
+                        if p_amt > Decimal('0.00') or p_reason:
+                            other_penalties.append({
+                                'type': p_type,
+                                'amount': str(p_amt),
+                                'reason': p_reason,
+                                'remarks': p_remarks,
+                                'is_approved': p_approved
+                            })
+                except Exception:
+                    pass
+
+            # Approved other penalties sum
+            other_approved_total = sum(Decimal(p['amount']) for p in other_penalties if p.get('is_approved', True))
+            total_penalties = criterion_penalties_total + other_approved_total
+
+            # 4. Totals and Net Calculation
+            exec_total = costume_exec + theme_music_exec + char_expr_exec + rhythm_steps_exec + use_floor_exec
+            final_net_score = max(Decimal('0.00'), exec_total - total_penalties)
+
+            # Save model fields
+            art_score.costume = costume_exec
+            art_score.theme_music = theme_music_exec
+            art_score.character_expression = char_expr_exec
+            art_score.rhythm_artistic_steps = rhythm_steps_exec
+            art_score.use_of_floor = use_floor_exec
+            art_score.artistry_deductions = total_penalties
+            art_score.total_artistry = final_net_score
+            art_score.save()
+
+            meta['rhythm_penalty'] = str(rhythm_pen)
+            meta['floor_penalty'] = str(floor_pen)
+            meta['criterion_penalties'] = str(criterion_penalties_total)
+            meta['other_penalties'] = other_penalties
+            meta['other_approved_total'] = str(other_approved_total)
+            meta['execution_total'] = str(exec_total)
+            meta['total_penalties'] = str(total_penalties)
+            meta['final_artistry_score'] = str(final_net_score)
+
+            sub.raw_total = exec_total
+            sub.effective_total = final_net_score
+            sub.calculation_metadata = meta
+
+            if action == 'submit_sheet':
+                sub.is_draft = False
+                sub.is_submitted = True
+                sub.is_locked = True
+                sub.submitted_at = timezone.now()
+                sub.save()
+                if sub.performance:
+                    calculate_performance_score(sub.performance)
+
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': f"Artistry scores submitted and locked! Final Score: {final_net_score:.2f} / 20.00",
+                        'is_locked': True,
+                        'execution_total': float(exec_total),
+                        'penalty_total': float(total_penalties),
+                        'final_score': float(final_net_score)
+                    })
+                messages.success(request, f"Artistry scores submitted and locked! Final Score: {final_net_score:.2f} / 20.00")
+                return redirect(request.path)
+            else:
+                sub.save()
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': 'Artistry draft saved successfully.',
+                        'is_locked': False,
+                        'execution_total': float(exec_total),
+                        'penalty_total': float(total_penalties),
+                        'final_score': float(final_net_score)
+                    })
+                messages.success(request, f"Artistry draft saved! Final Score: {final_net_score:.2f} / 20.00")
+
+    # In Artistic Single / Artistic Pair / Rhythmic Pair, only 1 performer performs at a time
+    is_traditional = (current_panel.event_config.event_type == 'TRADITIONAL') if (current_panel and current_panel.event_config) else False
+    batch_entries = list(batch.entries.all()) if (batch and is_traditional) else ([entry] if entry else [])
+
+    # Get sister judge score if exists for composite preview
+    other_role = 'ARTISTRY_JUDGE_2' if judge_role == 'ARTISTRY_JUDGE' else 'ARTISTRY_JUDGE'
+    other_sub = JudgeSubmission.objects.filter(performance=perf, judge_role=other_role).first()
+    other_score = other_sub.effective_total if other_sub and other_sub.is_submitted else None
+    panel_average = None
+    if other_score is not None and sub.effective_total is not None:
+        panel_average = round((sub.effective_total + other_score) / Decimal('2.0'), 3)
 
     return render(request, 'scoring/artistry.html', {
         'batch': batch,
+        'batch_entries': batch_entries,
         'entry': entry,
         'perf': perf,
         'sub': sub,
         'art_score': art_score,
+        'judge_role': judge_role,
+        'seat_label': "Artistry Judge 2" if judge_role == 'ARTISTRY_JUDGE_2' else "Artistry Judge 1",
+        'rhythm_penalty': rhythm_penalty,
+        'floor_penalty': floor_penalty,
+        'other_penalties': other_penalties,
+        'other_approved_total': Decimal(str(meta.get('other_approved_total', '0.00'))),
+        'other_sub': other_sub,
+        'panel_average': panel_average,
     })
+
 
 @role_required(RoleChoices.ADMIN, RoleChoices.EVALUATOR, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_evaluator(request, perf_id=None):

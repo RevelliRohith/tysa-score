@@ -146,9 +146,9 @@
                             <div class="flex items-center justify-between">
                                 <span class="text-slate-700 font-bold text-xs">Hold Seconds (Manual):</span>
                                 <div class="flex items-center space-x-1">
-                                    <input type="number" step="any" min="0" max="300" 
+                                    <input type="number" step="1" min="0" max="300" 
                                            name="hold_{{ s.entry.id }}" id="input_{{ s.entry.id }}" 
-                                           value="{{ s.item.hold_duration_seconds }}" 
+                                           value="{{ s.item.hold_duration_seconds|floatformat:0 }}" 
                                            oninput="updateDisplayFromInput('{{ s.entry.id }}')"
                                            class="w-24 text-center px-2 py-1.5 border-2 border-teal-600/70 rounded-lg font-black font-mono text-sm outline-none focus:border-teal-700 bg-white shadow-2xs">
                                     <span class="text-xs font-bold text-slate-500">sec</span>
@@ -275,7 +275,7 @@ const ANNEXURE_B = {
 function setManualSeconds(entryId, sec) {
     const input = document.getElementById('input_' + entryId);
     if (input) {
-        input.value = sec.toFixed(1);
+        input.value = Math.round(sec);
         updateDisplayFromInput(entryId);
     }
 }
@@ -306,8 +306,8 @@ function updateCardDisplay(id, seconds) {
     const attemptEl = document.getElementById('attempt_' + id);
     const attempt = attemptEl ? parseInt(attemptEl.value) : 1;
 
-    input.value = seconds.toFixed(1);
-    display.textContent = seconds.toFixed(2) + 's';
+    input.value = Math.round(seconds);
+    display.textContent = Math.round(seconds) + 's';
 
     const contrib = calculateContribution(seconds, attempt);
     const maxMarks = (attempt === 2) ? '1.0' : '2.0';
@@ -347,7 +347,9 @@ function resetTimer(id) {
 }
 
 function updateDisplayFromInput(id) {
-    const val = parseFloat(document.getElementById('input_' + id).value) || 0;
+    const rawVal = parseFloat(document.getElementById('input_' + id).value) || 0;
+    const val = Math.round(rawVal);
+    document.getElementById('input_' + id).value = val;
     updateCardDisplay(id, val);
 }
 </script>

@@ -242,7 +242,11 @@ def championship_setup(request, champ_id):
             if 'total_asanas' in request.POST:
                 ev_cfg.total_asanas = int(request.POST.get('total_asanas', 7))
             if 'max_batch_size' in request.POST:
-                ev_cfg.max_batch_size = int(request.POST.get('max_batch_size', 5))
+                # Artistic Single, Artistic Pair, and Rhythmic Pair are strictly 1 athlete/pair at a time
+                if ev_cfg.event_type in (EventType.ARTISTIC_SINGLE, EventType.ARTISTIC_PAIR, EventType.RHYTHMIC_PAIR):
+                    ev_cfg.max_batch_size = 1
+                else:
+                    ev_cfg.max_batch_size = int(request.POST.get('max_batch_size', 5))
             if 'prelim_compulsory_count' in request.POST:
                 ev_cfg.prelim_compulsory_count = int(request.POST.get('prelim_compulsory_count', 4))
             if 'prelim_optional_count' in request.POST:

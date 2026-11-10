@@ -250,8 +250,8 @@
                                     {{ log.timestamp|date:"Y-m-d H:i:s" }}
                                 </td>
                                 <td class="py-3 px-4">
-                                    <div class="font-bold text-slate-900">{{ log.user.full_name|default:log.user.email|default:"System" }}</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">{{ log.user.email }}</div>
+                                    <div class="font-bold text-slate-900">{% if log.user %}{{ log.user.full_name|default:log.user.email }}{% else %}System{% endif %}</div>
+                                    <div class="text-[10px] text-slate-400 font-mono">{% if log.user %}{{ log.user.email }}{% endif %}</div>
                                 </td>
                                 <td class="py-3 px-4">
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-black uppercase rounded 

@@ -94,8 +94,8 @@
                 </div>
             </div>
 
-            <!-- Performer Queue Switcher (if batch has multiple competitors) -->
-            {% if performances|length > 1 %}
+            <!-- Performer Queue Switcher (if batch has multiple competitors, e.g. Traditional) -->
+            {% if panel.event_config.event_type == 'TRADITIONAL' and performances|length > 1 %}
             <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
                 <span class="text-xs font-bold text-slate-400 uppercase shrink-0">Batch Competitors:</span>
                 {% for p in performances %}
@@ -348,7 +348,7 @@
             </a>
 
             <!-- Previous / Next Athlete Navigation (convenient without scrolling to top) -->
-            {% if performances|length > 1 %}
+            {% if panel.event_config.event_type == 'TRADITIONAL' and performances|length > 1 %}
             <div class="flex items-center space-x-1.5 pl-2 border-l border-slate-200">
                 {% if prev_perf %}
                 <a href="?perf_id={{ prev_perf.id }}&panel_id={{ panel.id }}" 

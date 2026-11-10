@@ -77,8 +77,8 @@
                             {{ log.timestamp|date:"Y-m-d H:i:s" }}
                         </td>
                         <td class="py-3 px-4">
-                            <span class="font-bold text-slate-900 block">{{ log.user.get_full_name|default:log.user.email|default:"System" }}</span>
-                            <span class="text-[10px] text-slate-400 font-mono">{{ log.user.email|default:"system@tysa.internal" }}</span>
+                            <span class="font-bold text-slate-900 block">{% if log.user %}{{ log.user.get_full_name|default:log.user.email }}{% else %}System{% endif %}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{% if log.user %}{{ log.user.email }}{% else %}system@tysa.internal{% endif %}</span>
                         </td>
                         <td class="py-3 px-4">
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono
@@ -96,7 +96,7 @@
                             {{ log.ip_address|default:"-" }}
                         </td>
                         <td class="py-3 px-4 text-right">
-                            <button type="button" onclick="showAuditModal('{{ log.id }}', '{{ log.action|escapejs }}', '{{ log.timestamp|date:"Y-m-d H:i:s" }}', '{{ log.user.email|escapejs }}', {{ log.details|default:'{}' }})"
+                            <button type="button" onclick="showAuditModal('{{ log.id }}', '{{ log.action|escapejs }}', '{{ log.timestamp|date:"Y-m-d H:i:s" }}', '{% if log.user %}{{ log.user.email|escapejs }}{% else %}system@tysa.internal{% endif %}', {{ log.details|default:'{}' }})"
                                     class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold transition">
                                 View
                             </button>

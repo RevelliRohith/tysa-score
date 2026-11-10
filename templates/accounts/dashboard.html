@@ -529,8 +529,8 @@
                             <tr class="hover:bg-slate-50/70 transition">
                                 <td class="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{{ log.timestamp|date:"d M H:i" }}</td>
                                 <td class="py-2.5 px-3 font-bold text-slate-900">{{ log.action }}</td>
-                                <td class="py-2.5 px-3 text-slate-800">{{ log.user.full_name|default:log.user.email }}</td>
-                                <td class="py-2.5 px-3 font-mono text-[11px] text-[#00838f]">{{ log.entity_type }} #{{ log.entity_id }}</td>
+                                <td class="py-2.5 px-3 text-slate-800">{% if log.user %}{{ log.user.full_name|default:log.user.email }}{% else %}System{% endif %}</td>
+                                <td class="py-2.5 px-3 font-mono text-[11px] text-[#00838f]">{{ log.resource_type }} #{{ log.resource_id }}</td>
                                 <td class="py-2.5 px-3 text-slate-500 max-w-xs truncate">{{ log.details|default:"-" }}</td>
                             </tr>
                             {% empty %}

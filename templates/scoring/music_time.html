@@ -1,261 +1,698 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Time Judge — Music Event — TYSA Score{% endblock %}
+{% block title %}Time Judge ? Artistic Single ? TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6 py-2">
-    <!-- Top Metadata Card matching 21_Music_Event_Time_Judge.png -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Time Judge — Music Event</h1>
-            <p class="text-xs text-slate-500 mt-1">Independent timing desk: whole routine stopwatch with overtime penalty tracking.</p>
+<div class="max-w-7xl mx-auto space-y-4 py-1 pb-44">
+    <!-- TOP SECTION: Championship, Event, Chest Number, Round, Judge Information -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1">
+            <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                <a href="{% url 'judge_portal' %}#panels" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                    <span>Panels</span>
+                </a>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                    {{ seat_label|default:"Time Judge 1" }} Desk
+                </span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200">
+                    {{ entry.event_config.get_event_type_display|default:"Artistic Single" }}
+                </span>
+                <!-- Live Auto-save indicator -->
+                <span id="save_status_indicator" class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 text-slate-600 transition">
+                    <span class="w-2 h-2 rounded-full bg-slate-400" id="save_status_dot"></span>
+                    <span id="save_status_text">Ready</span>
+                </span>
+            </div>
+
+            <div class="flex items-center space-x-3 pt-0.5">
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                    Chest {{ entry.chest_number|default:"--" }}
+                </h1>
+                <span class="text-slate-300">?</span>
+                <span class="text-base font-bold text-slate-800">
+                    {{ entry.display_names|default:"Athlete" }}
+                </span>
+                {% if entry.registration.district %}
+                <span class="text-xs font-semibold text-slate-400">({{ entry.registration.district }})</span>
+                {% endif %}
+            </div>
         </div>
 
-        <div class="flex items-center space-x-6 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <div>
-                <span class="text-slate-400 block font-medium">Event</span>
-                <span class="font-bold text-slate-900 text-sm">{{ entry.event_config.get_event_type_display|default:"Artistic Yogasana" }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Chest No.</span>
-                <span class="font-bold text-slate-900 text-base font-mono">{{ entry.chest_number|default:"--" }}</span>
-            </div>
-            <div>
-                <span class="text-slate-400 block font-medium">Timing Target</span>
-                <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono font-bold">150s – 180s (Max 10 Holds)</span>
+        <div class="flex flex-wrap items-center gap-3">
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+                <div>
+                    <span class="text-slate-400 block font-medium text-[10px] uppercase">Championship</span>
+                    <span class="font-bold text-slate-800 truncate block max-w-[130px]">{{ entry.registration.championship.name|default:"TYSA Championship" }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 block font-medium text-[10px] uppercase">Round</span>
+                    <span class="font-bold text-slate-800">{{ perf.get_round_type_display|default:"Preliminary" }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 block font-medium text-[10px] uppercase">Arena</span>
+                    <span class="font-bold text-teal-800">{{ panel.stage_name|default:"Arena 3" }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 block font-medium text-[10px] uppercase">Status</span>
+                    {% if sub.is_locked %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 block text-center">Locked</span>
+                    {% else %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 block text-center">Active Draft</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
+    <!-- MAIN SECTION: ALL 10 ASANAS WITH REFERENCE PHOTOGRAPHS & MANUAL HOLD-TIME ENTRY -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <div>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center space-x-2">
+                    <span class="w-6 h-6 rounded-md bg-teal-50 border border-teal-200 flex items-center justify-center font-black text-xs text-teal-800">TA</span>
+                    <span>10 Asana Holds Evaluation (Manual Hold Entry ? Max 5.00 Marks)</span>
+                </h2>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                    Observe the athlete's hold and manually enter duration. Each hold &ge; 5.0s = 0.50 marks. Holds &lt; 5.0s = 0 TA marks and zeroes complete item for all D-Judges.
+                </p>
+            </div>
+            <div class="flex items-center space-x-2 text-xs font-mono font-bold">
+                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                    Holds Entered: <span id="ta_entered_count">{{ completed_holds_count }}</span>/10
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Valid (&ge;5s): <span id="ta_valid_count">{{ ta_valid_count }}</span>/10
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-teal-800 text-white shadow-xs">
+                    TA: <span id="ta_total_header">{{ ta_marks|floatformat:2 }}</span>/5.00
+                </span>
+            </div>
+        </div>
 
-    <form method="POST">
-        {% csrf_token %}
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-8">
-            <!-- PART 1: TW Whole Performance Timer -->
-            <div class="space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">1. TW — Whole Performance Duration (Max 5.00 Marks)</span>
-                    <span class="text-xs text-teal-800 font-semibold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-md">
-                        Below 150s = 0 | 150–160s = 3 | 161–170s = 4 | 171–180s = 5
+        <!-- 10 Asanas Compact Responsive Grid / Table (Fits 1366, 1440, 1920 at 100% zoom) -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {% for itm in items %}
+            <div class="rounded-xl border p-2.5 transition flex flex-col justify-between space-y-2 relative
+                        {% if itm.is_valid %}bg-emerald-50/40 border-emerald-200
+                        {% elif itm.is_completed %}bg-rose-50/40 border-rose-200
+                        {% else %}bg-slate-50/60 border-slate-200/90{% endif %}"
+                 id="asana_card_{{ itm.seq }}">
+
+                <!-- Top row: Number, Code, Status badge -->
+                <div class="flex items-center justify-between">
+                    <span class="w-6 h-6 rounded-full bg-slate-900 text-white font-mono font-black text-xs flex items-center justify-center">
+                        {{ itm.seq }}
+                    </span>
+                    <span class="font-mono font-black text-xs px-2 py-0.5 rounded bg-white border border-slate-200 text-teal-900 shadow-2xs">
+                        {{ itm.pose.declared_code|default:"--" }}
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-tight"
+                          id="status_badge_{{ itm.seq }}">
+                        {% if itm.is_valid %}
+                        <span class="text-emerald-700 bg-emerald-100/80 px-1 py-0.5 rounded">Valid (+0.5)</span>
+                        {% elif itm.is_completed %}
+                        <span class="text-rose-700 bg-rose-100/80 px-1 py-0.5 rounded">&lt;5s (0.0)</span>
+                        {% else %}
+                        <span class="text-slate-400 bg-slate-100 px-1 py-0.5 rounded">Pending</span>
+                        {% endif %}
                     </span>
                 </div>
 
-                <div class="text-center space-y-4 pt-2">
-                    <div class="inline-block bg-slate-950 px-10 py-5 rounded-3xl border-4 border-slate-800 shadow-inner">
-                        <span class="text-5xl sm:text-6xl font-black text-emerald-400 font-mono tracking-wider" id="routine_display">
-                            {{ sub.raw_total|default:"165.0" }}s
+                <!-- Reference Photograph (Actual image from DB, NO generic images, NO asana names) -->
+                <div class="w-full bg-white rounded-lg border border-slate-200 p-1 flex items-center justify-center min-h-[110px] max-h-[130px] overflow-hidden group">
+                    {% if itm.pose.image_url %}
+                    <img src="{{ itm.pose.image_url }}"
+                         alt="Asana {{ itm.pose.declared_code }}"
+                         loading="lazy"
+                         onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+                         class="max-h-[115px] w-auto max-w-full object-contain rounded transition duration-150 group-hover:scale-105">
+                    <div class="hidden flex-col items-center justify-center p-3 text-center text-slate-400 space-y-1">
+                        <i data-lucide="image" class="w-6 h-6 text-slate-300"></i>
+                        <span class="text-[10px] font-mono font-bold">{{ itm.pose.declared_code }}</span>
+                    </div>
+                    {% else %}
+                    <div class="flex flex-col items-center justify-center p-3 text-center text-slate-400 space-y-1">
+                        <i data-lucide="image" class="w-6 h-6 text-slate-300"></i>
+                        <span class="text-[10px] font-mono font-bold">{{ itm.pose.declared_code|default:"No Image" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Manual Hold Duration Input & Calculated TA Marks -->
+                <div class="space-y-1 pt-1">
+                    <div class="flex items-center justify-between text-xs">
+                        <label for="hold_input_{{ itm.seq }}" class="text-[11px] font-bold text-slate-600">Hold (sec):</label>
+                        <span class="text-[11px] font-mono font-bold text-teal-800" id="ta_mark_disp_{{ itm.seq }}">
+                            {% if itm.is_valid %}0.50{% else %}0.00{% endif %} marks
                         </span>
                     </div>
-
-                    <div class="flex items-center justify-center space-x-3">
-                        <button type="button" onclick="startRoutineTimer()"
-                                class="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-xs transition cursor-pointer">
-                            <i data-lucide="play" class="w-4 h-4"></i><span>Start Timer</span>
-                        </button>
-                        <button type="button" onclick="pauseRoutineTimer()"
-                                class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer">
-                            <i data-lucide="pause" class="w-4 h-4"></i><span>Pause</span>
-                        </button>
-                        <button type="button" onclick="resetRoutineTimer()"
-                                class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer">
-                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i><span>Reset</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div class="space-y-1.5">
-                        <label class="block text-xs font-bold text-slate-700">Exact Routine Duration (Whole Seconds with 0.5 rounded up)</label>
-                        <div class="flex items-center space-x-2">
-                            <input type="number" step="0.1" min="0" max="300" 
-                                   name="routine_duration" id="routine_duration"
-                                   value="{{ sub.raw_total|default:'165.0' }}"
-                                   oninput="updateDurationDisplay()"
-                                   class="w-full text-lg font-bold px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-1 focus:ring-teal-700 font-mono">
-                            <span class="text-xs font-bold text-slate-500">Sec</span>
-                        </div>
+                    <div class="relative flex items-center">
+                        <input type="number" step="1" min="0" max="60"
+                               name="hold_{{ itm.seq }}" id="hold_input_{{ itm.seq }}"
+                               value="{% if itm.hold_duration > 0 %}{{ itm.hold_duration }}{% endif %}"
+                               placeholder="0"
+                               oninput="handleHoldChange({{ itm.seq }}, this.value)"
+                               onchange="commitHoldChange({{ itm.seq }}, this.value)"
+                               {% if sub.is_locked %}disabled{% endif %}
+                               class="w-full text-right font-mono font-black text-sm px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-700 text-slate-900 placeholder:text-slate-300">
+                        <span class="text-[11px] font-bold text-slate-400 font-mono ml-1.5">s</span>
                     </div>
 
-                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-[11px] space-y-1 text-slate-600">
-                        <span class="font-bold text-slate-900 block">COP Timing Reconciliation Rules (Page 16):</span>
-                        <p>• <strong>150s Margin Rule:</strong> 3-second grace if one reading is &lt;150s and other &ge;150s (e.g. 148s/150s treated as 150s).</p>
-                        <p>• <strong>Overtime:</strong> After 180s, 0.5 marks per extra second deducted once.</p>
+                    <!-- Quick shortcut buttons for high-efficiency judging -->
+                    <div class="flex items-center justify-between pt-0.5 text-[10px] font-mono">
+                        <button type="button" onclick="setQuickHold({{ itm.seq }}, 5)"
+                                {% if sub.is_locked %}disabled{% endif %}
+                                class="px-1.5 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold transition cursor-pointer">
+                            5s
+                        </button>
+                        <button type="button" onclick="setQuickHold({{ itm.seq }}, 6)"
+                                {% if sub.is_locked %}disabled{% endif %}
+                                class="px-1.5 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold transition cursor-pointer">
+                            6s
+                        </button>
+                        <button type="button" onclick="setQuickHold({{ itm.seq }}, 4)"
+                                {% if sub.is_locked %}disabled{% endif %}
+                                class="px-1.5 py-0.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold transition cursor-pointer">
+                            4s
+                        </button>
+                        <button type="button" onclick="setQuickHold({{ itm.seq }}, 0)"
+                                {% if sub.is_locked %}disabled{% endif %}
+                                class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition cursor-pointer">
+                            Clear
+                        </button>
                     </div>
                 </div>
             </div>
-
-            <!-- PART 2: TA 10 Asana Holds -->
-            <div class="space-y-4 pt-6 border-t border-slate-200">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <div>
-                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">2. TA — 10 Asana Holds (Max 5.00 Marks)</span>
-                        <span class="text-[11px] text-slate-400">Each hold &ge; 5s = 0.50 marks. Below 5s = 0 TA and zeroes complete item for all 4 D-Judges.</span>
-                    </div>
-                    <span class="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-md">
-                        Pair hold measured as one shared unit
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    {% for itm in items %}
-                    <div class="border rounded-xl p-3 bg-slate-50/50 space-y-2 text-xs border-slate-200" id="card_hold_{{ itm.sequence_order }}">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-slate-900">Item #{{ itm.sequence_order }}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {% if itm.hold_duration_seconds >= 5 %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %}" id="badge_hold_{{ itm.sequence_order }}">
-                                {% if itm.hold_duration_seconds >= 5 %}Valid (+0.5){% else %}Invalid (0.0){% endif %}
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-1.5">
-                            <input type="number" step="0.5" min="0" max="60" 
-                                   name="hold_{{ itm.sequence_order }}" id="hold_{{ itm.sequence_order }}"
-                                   value="{{ itm.hold_duration_seconds }}"
-                                   oninput="updateHoldItem({{ itm.sequence_order }})"
-                                   class="w-full text-right px-2 py-1 border border-slate-300 rounded font-mono font-bold outline-none focus:ring-1 focus:ring-teal-700">
-                            <span class="text-[10px] text-slate-400">sec</span>
-                        </div>
-                        <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                            <button type="button" onclick="setHoldValue({{ itm.sequence_order }}, 5.0)" class="text-teal-700 font-bold hover:underline cursor-pointer">5s Valid</button>
-                            <button type="button" onclick="setHoldValue({{ itm.sequence_order }}, 4.0)" class="text-rose-600 font-bold hover:underline cursor-pointer">&lt;5s Fail</button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- T1 & T2 RECONCILIATION SUMMARY (WHEN BOTH JUDGES ARE PRESENT) -->
+    {% if can_view_reconciliation and reconciliation_info %}
+    <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+            <span class="font-bold text-indigo-950 uppercase tracking-wider text-[11px] flex items-center space-x-1.5">
+                <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-700"></i>
+                <span>Supervisory Timing Reconciliation Review (T1 vs T2)</span>
+            </span>
+            <span class="font-mono text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200 text-[10px] font-bold">
+                Reconciled TW: {{ reconciliation_info.reconciled_tw_seconds }}s | Valid Holds: {{ reconciliation_info.ta_valid_holds_count }}/10
+            </span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+            <div class="bg-white p-2 rounded border border-indigo-100">
+                <span class="text-slate-400 block text-[9px] uppercase font-sans">T1 Reading</span>
+                <span class="font-bold text-slate-800">{{ time_judge_1.raw_total|default:"0.0" }}s (TW: {{ reconciliation_info.t1_tw_seconds }}s)</span>
             </div>
-
-            <!-- PART 3: Combined Timing Summary Row -->
-            <div class="bg-teal-50 border border-teal-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div class="flex items-center space-x-6">
-                    <div>
-                        <span class="text-slate-500 block">TW Whole Marks:</span>
-                        <span class="text-lg font-black text-slate-900 font-mono" id="summary_tw">4.00</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 block">TA Valid Holds:</span>
-                        <span class="text-lg font-black text-slate-900 font-mono" id="summary_ta">4.50 / 5.00</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 block">Overtime Deduction:</span>
-                        <span class="text-lg font-black text-rose-700 font-mono" id="summary_ot">-0.00</span>
-                    </div>
-                </div>
-                <div class="text-right sm:border-l sm:border-teal-200 sm:pl-6">
-                    <span class="text-teal-900 font-bold block text-[11px] uppercase tracking-wider">Total Timing Score</span>
-                    <span class="text-2xl font-black text-teal-950 font-mono" id="summary_total">8.50 / 10.00</span>
-                </div>
+            <div class="bg-white p-2 rounded border border-indigo-100">
+                <span class="text-slate-400 block text-[9px] uppercase font-sans">T2 Reading</span>
+                <span class="font-bold text-slate-800">{{ time_judge_2.raw_total|default:"0.0" }}s (TW: {{ reconciliation_info.t2_tw_seconds }}s)</span>
+            </div>
+            <div class="bg-white p-2 rounded border border-indigo-100">
+                <span class="text-slate-400 block text-[9px] uppercase font-sans">Reconciled TW Marks</span>
+                <span class="font-bold text-teal-800">{{ reconciliation_info.tw_marks }} / 5.00</span>
+            </div>
+            <div class="bg-white p-2 rounded border border-indigo-100">
+                <span class="text-slate-400 block text-[9px] uppercase font-sans">Reconciled Timing Total</span>
+                <span class="font-bold text-indigo-900">{{ reconciliation_info.timing_total }} / 10.00</span>
             </div>
         </div>
-
-        <!-- Action Bar -->
-        <div class="flex items-center justify-between pt-4">
-            <a href="{% url 'judge_portal' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900">
-                ← Back to Portal
-            </a>
-
-            <div class="flex items-center space-x-3">
-                <button type="submit" name="action" value="save_draft"
-                        {% if sub.is_locked %}disabled{% endif %}
-                        class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition">
-                    <i data-lucide="save" class="w-4 h-4"></i>
-                    <span>Save Draft</span>
-                </button>
-                <button type="submit" name="action" value="submit_sheet"
-                        {% if sub.is_locked %}disabled{% endif %}
-                        class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-xs transition">
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    <span>Submit & Lock Timing</span>
-                </button>
-            </div>
-        </div>
-    </form>
+    </div>
+    {% endif %}
 </div>
 
+<!-- BOTTOM SECTION: ONE UNIVERSAL WHOLE-PERFORMANCE STOPWATCH (TW) & SCORES (Fixed at Bottom) -->
+<div class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t-2 border-teal-600 shadow-2xl py-3 px-4 sm:px-6 text-white">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <!-- Universal Stopwatch & Controls -->
+        <div class="flex items-center space-x-4 flex-wrap gap-y-2">
+            <!-- Digital Display -->
+            <div class="bg-slate-950 px-4 py-2 rounded-xl border border-slate-700 shadow-inner flex items-center space-x-3">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-mono uppercase text-slate-400 font-bold tracking-widest leading-none">WHOLE PERFORMANCE (TW)</span>
+                    <span class="text-3xl sm:text-4xl font-black text-emerald-400 font-mono tracking-wider tabular-nums leading-tight" id="tw_digital_display">
+                        0s
+                    </span>
+                </div>
+                <!-- Manual override input embedded compactly -->
+                <div class="pl-2 border-l border-slate-800">
+                    <span class="text-[9px] text-slate-400 block">Edit Sec:</span>
+                    <input type="number" step="1" min="0" max="360"
+                           id="routine_duration"
+                           value="{{ sub.raw_total|default:'0.0' }}"
+                           oninput="onManualTwChange(this.value)"
+                           onchange="commitTwChange(this.value)"
+                           {% if sub.is_locked %}disabled{% endif %}
+                           class="w-18 px-1.5 py-1 text-right font-mono font-bold text-xs bg-slate-900 border border-slate-700 rounded text-white outline-none focus:border-teal-400">
+                </div>
+            </div>
+
+            <!-- Controls: Start, Pause, Resume, Stop, Reset -->
+            <div class="flex items-center space-x-1.5">
+                <button type="button" id="tw_start_btn" onclick="startWholeTimer()"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1 transition cursor-pointer shadow-xs disabled:opacity-50">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i><span>Start</span>
+                </button>
+                <button type="button" id="tw_pause_btn" onclick="pauseWholeTimer()"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center space-x-1 transition cursor-pointer border border-slate-700 disabled:opacity-50">
+                    <i data-lucide="pause" class="w-3.5 h-3.5"></i><span>Pause</span>
+                </button>
+                <button type="button" id="tw_resume_btn" onclick="resumeWholeTimer()"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center space-x-1 transition cursor-pointer border border-slate-700 disabled:opacity-50">
+                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i><span>Resume</span>
+                </button>
+                <button type="button" id="tw_stop_btn" onclick="stopWholeTimer()"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1 transition cursor-pointer shadow-xs disabled:opacity-50">
+                    <i data-lucide="square" class="w-3.5 h-3.5"></i><span>Stop</span>
+                </button>
+                <button type="button" id="tw_reset_btn" onclick="resetWholeTimer()"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-2.5 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/80 rounded-xl text-xs font-bold flex items-center space-x-1 transition cursor-pointer disabled:opacity-50">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span>Reset</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Scores Breakdown & Official Submission -->
+        <div class="flex items-center space-x-3 sm:space-x-5 flex-wrap gap-y-2 justify-end">
+            <!-- TW Marks -->
+            <div class="text-right">
+                <span class="text-[9px] uppercase font-mono text-slate-400 block">TW Marks (Max 5)</span>
+                <span class="text-lg font-black font-mono text-teal-300" id="tw_marks_bottom">
+                    {{ tw_marks|floatformat:2 }}
+                </span>
+                <span class="text-[9px] font-mono text-slate-400 block" id="tw_bracket_bottom">
+                    Below 150s (0 marks)
+                </span>
+            </div>
+
+            <!-- Overtime -->
+            <div class="text-right border-l border-slate-800 pl-3">
+                <span class="text-[9px] uppercase font-mono text-slate-400 block">Overtime (&gt;180s)</span>
+                <span class="text-lg font-black font-mono text-rose-400" id="ot_marks_bottom">
+                    -{{ ot_deduction|floatformat:2 }}
+                </span>
+                <span class="text-[9px] font-mono text-slate-400 block" id="ot_sec_bottom">
+                    {{ ot_seconds }}s extra
+                </span>
+            </div>
+
+            <!-- TA Total Marks -->
+            <div class="text-right border-l border-slate-800 pl-3">
+                <span class="text-[9px] uppercase font-mono text-slate-400 block">TA Holds (Max 5)</span>
+                <span class="text-lg font-black font-mono text-emerald-300" id="ta_marks_bottom">
+                    {{ ta_marks|floatformat:2 }}
+                </span>
+                <span class="text-[9px] font-mono text-slate-400 block">
+                    <span id="ta_valid_bottom">{{ ta_valid_count }}</span>/10 &ge; 5s
+                </span>
+            </div>
+
+            <!-- Total Timing Score -->
+            <div class="bg-teal-950 px-3.5 py-1.5 rounded-xl border border-teal-500/50 text-right shadow-inner">
+                <span class="text-[9px] uppercase font-mono text-teal-300 block font-bold">TOTAL TIMING (/10)</span>
+                <span class="text-2xl font-black font-mono text-white tracking-wider" id="total_timing_bottom">
+                    {{ total_timing_score|floatformat:2 }}
+                </span>
+            </div>
+
+            <!-- Submit & Lock Button -->
+            <div class="flex items-center space-x-2">
+                <button type="button" onclick="submitFinalSheet()"
+                        {% if sub.is_locked %}disabled{% endif %}
+                        class="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-1.5 shadow-lg transition cursor-pointer disabled:opacity-50">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                    <span>Submit & Lock</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- SCRIPTS: Universal Stopwatch, Manual Hold Entry, Automatic Calculations, AJAX Persistence -->
 <script>
-let routineTimer = null;
+// State of all 10 Asanas
+const asanas = [
+    {% for itm in items %}
+    {
+        seq: {{ itm.seq }},
+        code: "{{ itm.pose.declared_code|default:''|escapejs }}",
+        duration: parseFloat("{{ itm.hold_duration|default:'0' }}") || 0.0,
+        isValid: {% if itm.is_valid %}true{% else %}false{% endif %},
+        isCompleted: {% if itm.is_completed %}true{% else %}false{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
 
-function startRoutineTimer() {
-    if (routineTimer) return;
+const perfId = "{{ perf.id|default:'' }}";
+const panelId = "{{ panel.id|default:'' }}";
+const entryId = "{{ entry.id|default:'' }}";
+const csrfToken = "{{ csrf_token }}";
+
+// -------------------------------------------------------------------------
+// 1. UNIVERSAL WHOLE-PERFORMANCE STOPWATCH (TW) - CONTINUOUS & AT BOTTOM
+// -------------------------------------------------------------------------
+let twTimer = null;
+let twStartTime = null;
+let twElapsedSeconds = parseFloat(document.getElementById('routine_duration')?.value) || 0.0;
+let twIsRunning = false;
+let autoSaveTimeout = null;
+
+function updateTwDisplay(secs) {
+    const wholeSecs = Math.floor(Math.max(0, secs));
+    const disp = document.getElementById('tw_digital_display');
+    if (disp) disp.textContent = wholeSecs + 's';
     const input = document.getElementById('routine_duration');
-    let secs = parseFloat(input.value) || 0;
-    const startTime = performance.now() - (secs * 1000);
+    if (input && document.activeElement !== input) {
+        input.value = wholeSecs;
+    }
+}
 
-    routineTimer = setInterval(() => {
-        const elapsed = (performance.now() - startTime) / 1000;
-        input.value = elapsed.toFixed(1);
-        document.getElementById('routine_display').textContent = elapsed.toFixed(1) + 's';
+function startWholeTimer() {
+    if (twIsRunning) return;
+    twIsRunning = true;
+    twStartTime = performance.now() - (twElapsedSeconds * 1000);
+    twTimer = setInterval(() => {
+        twElapsedSeconds = (performance.now() - twStartTime) / 1000;
+        updateTwDisplay(twElapsedSeconds);
+        recalculateAndRender();
     }, 100);
+    updateStopwatchButtons();
 }
 
-function pauseRoutineTimer() {
-    if (routineTimer) {
-        clearInterval(routineTimer);
-        routineTimer = null;
+function pauseWholeTimer() {
+    if (!twIsRunning) return;
+    clearInterval(twTimer);
+    twTimer = null;
+    twIsRunning = false;
+    updateStopwatchButtons();
+    scheduleAutoSave();
+}
+
+function resumeWholeTimer() {
+    startWholeTimer();
+}
+
+function stopWholeTimer() {
+    pauseWholeTimer();
+    scheduleAutoSave();
+}
+
+function resetWholeTimer() {
+    pauseWholeTimer();
+    twElapsedSeconds = 0.0;
+    updateTwDisplay(0.0);
+    const input = document.getElementById('routine_duration');
+    if (input) input.value = "0.0";
+    recalculateAndRender();
+    scheduleAutoSave();
+}
+
+function onManualTwChange(valStr) {
+    const wholeSecs = Math.max(0, Math.round(parseFloat(valStr) || 0));
+    twElapsedSeconds = wholeSecs;
+    const input = document.getElementById('routine_duration');
+    if (input && input.value !== '' && input.value !== String(wholeSecs)) {
+        input.value = wholeSecs;
+    }
+    updateTwDisplay(wholeSecs);
+    if (twIsRunning) {
+        twStartTime = performance.now() - (twElapsedSeconds * 1000);
+    }
+    recalculateAndRender();
+}
+
+function commitTwChange(valStr) {
+    onManualTwChange(valStr);
+    scheduleAutoSave();
+}
+
+function updateStopwatchButtons() {
+    const startBtn = document.getElementById('tw_start_btn');
+    if (startBtn) {
+        if (twIsRunning) {
+            startBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+            startBtn.classList.add('bg-slate-700', 'opacity-60');
+        } else {
+            startBtn.classList.remove('bg-slate-700', 'opacity-60');
+            startBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+        }
     }
 }
 
-function resetRoutineTimer() {
-    pauseRoutineTimer();
-    document.getElementById('routine_duration').value = '0.0';
-    document.getElementById('routine_display').textContent = '0.0s';
+// -------------------------------------------------------------------------
+// 2. MANUAL INDIVIDUAL ASANA HOLD DURATION ENTRY & VALIDATION (NO TIMERS)
+// -------------------------------------------------------------------------
+function handleHoldChange(seq, valStr) {
+    const idx = seq - 1;
+    if (idx < 0 || idx >= asanas.length) return;
+
+    const raw = parseFloat(valStr);
+    const wholeSecs = isNaN(raw) ? 0 : Math.max(0, Math.round(raw));
+    const input = document.getElementById('hold_input_' + seq);
+    if (input && valStr !== '' && input.value !== String(wholeSecs)) {
+        input.value = wholeSecs;
+    }
+
+    asanas[idx].duration = wholeSecs;
+    asanas[idx].isValid = (wholeSecs >= 5);
+    asanas[idx].isCompleted = (wholeSecs > 0 || valStr === "0");
+
+    updateAsanaCardUI(seq);
+    recalculateAndRender();
 }
 
-function updateDurationDisplay() {
-    const val = parseFloat(document.getElementById('routine_duration').value) || 0;
-    document.getElementById('routine_display').textContent = val.toFixed(1) + 's';
-    recalcCombinedTiming();
+function commitHoldChange(seq, valStr) {
+    handleHoldChange(seq, valStr);
+    scheduleAutoSave(seq);
 }
 
-function setHoldValue(seq, val) {
-    const el = document.getElementById('hold_' + seq);
-    if (el) {
-        el.value = val.toFixed(1);
-        updateHoldItem(seq);
+function setQuickHold(seq, secs) {
+    const wholeSecs = Math.round(secs);
+    const input = document.getElementById('hold_input_' + seq);
+    if (input) {
+        input.value = wholeSecs > 0 ? wholeSecs : "";
+    }
+    commitHoldChange(seq, wholeSecs > 0 ? String(wholeSecs) : "0");
+}
+
+function updateAsanaCardUI(seq) {
+    const idx = seq - 1;
+    const itm = asanas[idx];
+    const card = document.getElementById('asana_card_' + seq);
+    const badge = document.getElementById('status_badge_' + seq);
+    const markDisp = document.getElementById('ta_mark_disp_' + seq);
+
+    if (markDisp) {
+        markDisp.textContent = (itm.isValid ? "0.50" : "0.00") + " marks";
+    }
+
+    if (badge) {
+        if (itm.isValid) {
+            badge.innerHTML = '<span class="text-emerald-700 bg-emerald-100/80 px-1 py-0.5 rounded">Valid (+0.5)</span>';
+        } else if (itm.isCompleted) {
+            badge.innerHTML = '<span class="text-rose-700 bg-rose-100/80 px-1 py-0.5 rounded">&lt;5s (0.0)</span>';
+        } else {
+            badge.innerHTML = '<span class="text-slate-400 bg-slate-100 px-1 py-0.5 rounded">Pending</span>';
+        }
+    }
+
+    if (card) {
+        if (itm.isValid) {
+            card.className = "rounded-xl border p-2.5 transition flex flex-col justify-between space-y-2 relative bg-emerald-50/40 border-emerald-200";
+        } else if (itm.isCompleted) {
+            card.className = "rounded-xl border p-2.5 transition flex flex-col justify-between space-y-2 relative bg-rose-50/40 border-rose-200";
+        } else {
+            card.className = "rounded-xl border p-2.5 transition flex flex-col justify-between space-y-2 relative bg-slate-50/60 border-slate-200/90";
+        }
     }
 }
 
-function updateHoldItem(seq) {
-    const el = document.getElementById('hold_' + seq);
-    const badge = document.getElementById('badge_hold_' + seq);
-    const val = parseFloat(el.value) || 0;
-    if (val >= 5.0) {
-        badge.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800";
-        badge.textContent = "Valid (+0.5)";
-    } else {
-        badge.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800";
-        badge.textContent = "Invalid (0.0)";
-    }
-    recalcCombinedTiming();
-}
+// -------------------------------------------------------------------------
+// 3. OFFICIAL COP CALCULATIONS (TW + TA + OVERTIME)
+// -------------------------------------------------------------------------
+function calculateCOP() {
+    const rawTw = parseFloat(document.getElementById('routine_duration')?.value) || twElapsedSeconds || 0.0;
+    const d = Math.round(rawTw);
+    let twMarks = 0.0;
+    let bracketText = "Below 150s (0 marks)";
 
-function recalcCombinedTiming() {
-    const d = Math.round(parseFloat(document.getElementById('routine_duration')?.value) || 0);
-    let tw = 0.0;
     if (d < 150) {
-        tw = 0.0;
+        twMarks = 0.0;
+        bracketText = "Below 150s (0 marks)";
     } else if (d <= 160) {
-        tw = 3.0;
+        twMarks = 3.0;
+        bracketText = "150?160s (3.0 marks)";
     } else if (d <= 170) {
-        tw = 4.0;
+        twMarks = 4.0;
+        bracketText = "161?170s (4.0 marks)";
     } else {
-        tw = 5.0;
+        twMarks = 5.0;
+        bracketText = "171?180s (5.0 marks)";
     }
 
     const otSecs = Math.max(0, d - 180);
     const otDed = otSecs * 0.5;
 
-    let taCount = 0;
-    for (let i = 1; i <= 10; i++) {
-        const h = parseFloat(document.getElementById('hold_' + i)?.value) || 0;
-        if (h >= 5.0) taCount++;
+    let completedCount = 0;
+    let validCount = 0;
+    for (let i = 0; i < asanas.length; i++) {
+        if (asanas[i].isCompleted) completedCount++;
+        if (asanas[i].isValid) validCount++;
     }
-    const ta = taCount * 0.5;
-    const total = Math.max(0, tw + ta - otDed);
+    const taMarks = Math.min(5.0, validCount * 0.5);
+    const totalScore = Math.max(0.0, twMarks + taMarks - otDed);
 
-    document.getElementById('summary_tw').textContent = tw.toFixed(2);
-    document.getElementById('summary_ta').textContent = ta.toFixed(2) + ' / 5.00';
-    document.getElementById('summary_ot').textContent = (otDed > 0 ? '-' + otDed.toFixed(2) : '-0.00');
-    document.getElementById('summary_total').textContent = total.toFixed(2) + ' / 10.00';
+    return {
+        rawTw,
+        d,
+        twMarks,
+        bracketText,
+        otSecs,
+        otDed,
+        completedCount,
+        validCount,
+        taMarks,
+        totalScore
+    };
 }
 
-document.addEventListener('DOMContentLoaded', recalcCombinedTiming);
+function recalculateAndRender() {
+    const res = calculateCOP();
+
+    const taEnteredEl = document.getElementById('ta_entered_count');
+    if (taEnteredEl) taEnteredEl.textContent = res.completedCount;
+    const taValidEl = document.getElementById('ta_valid_count');
+    if (taValidEl) taValidEl.textContent = res.validCount;
+    const taHdrEl = document.getElementById('ta_total_header');
+    if (taHdrEl) taHdrEl.textContent = res.taMarks.toFixed(2);
+
+    const twBottom = document.getElementById('tw_marks_bottom');
+    if (twBottom) twBottom.textContent = res.twMarks.toFixed(2);
+    const twBrkBottom = document.getElementById('tw_bracket_bottom');
+    if (twBrkBottom) twBrkBottom.textContent = res.bracketText;
+
+    const otMarksBottom = document.getElementById('ot_marks_bottom');
+    if (otMarksBottom) otMarksBottom.textContent = res.otDed > 0 ? ("-" + res.otDed.toFixed(2)) : "-0.00";
+    const otSecBottom = document.getElementById('ot_sec_bottom');
+    if (otSecBottom) otSecBottom.textContent = res.otSecs + "s extra";
+
+    const taMarksBottom = document.getElementById('ta_marks_bottom');
+    if (taMarksBottom) taMarksBottom.textContent = res.taMarks.toFixed(2);
+    const taValidBottom = document.getElementById('ta_valid_bottom');
+    if (taValidBottom) taValidBottom.textContent = res.validCount;
+
+    const totalBottom = document.getElementById('total_timing_bottom');
+    if (totalBottom) totalBottom.textContent = res.totalScore.toFixed(2);
+}
+
+// -------------------------------------------------------------------------
+// 4. DATABASE INTEGRATION & LIVE AUTO-SAVE / SUBMIT
+// -------------------------------------------------------------------------
+function setSaveIndicator(state, text) {
+    const dot = document.getElementById('save_status_dot');
+    const label = document.getElementById('save_status_text');
+    const container = document.getElementById('save_status_indicator');
+    if (!dot || !label || !container) return;
+
+    if (state === 'saving') {
+        dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+        label.textContent = text || "Saving...";
+        container.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 transition";
+    } else if (state === 'saved') {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+        label.textContent = text || "Saved";
+        container.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 transition";
+    } else if (state === 'error') {
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        label.textContent = text || "Error";
+        container.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 transition";
+    } else {
+        dot.className = "w-2 h-2 rounded-full bg-slate-400";
+        label.textContent = "Ready";
+        container.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 text-slate-600 transition";
+    }
+}
+
+function scheduleAutoSave(seq) {
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+    setSaveIndicator('saving', 'Saving...');
+    autoSaveTimeout = setTimeout(() => {
+        performSave('auto_save', false);
+    }, 400);
+}
+
+function buildFormData(action) {
+    const fd = new FormData();
+    fd.append('csrfmiddlewaretoken', csrfToken);
+    fd.append('action', action || 'auto_save');
+    const wholeTw = Math.round(parseFloat(document.getElementById('routine_duration')?.value) || twElapsedSeconds || 0);
+    fd.append('routine_duration', String(wholeTw));
+
+    for (let i = 0; i < asanas.length; i++) {
+        const seq = asanas[i].seq;
+        const input = document.getElementById('hold_input_' + seq);
+        const rawVal = input ? input.value : asanas[i].duration;
+        const wholeHold = Math.round(parseFloat(rawVal) || 0);
+        fd.append('hold_' + seq, (rawVal !== '' && rawVal !== null && rawVal !== undefined) ? String(wholeHold) : '0');
+    }
+    return fd;
+}
+
+function performSave(action, isFinal) {
+    const fd = buildFormData(action);
+    let postUrl = window.location.pathname;
+    const params = [];
+    if (perfId) params.push('perf_id=' + encodeURIComponent(perfId));
+    if (panelId) params.push('panel_id=' + encodeURIComponent(panelId));
+    if (entryId) params.push('entry_id=' + encodeURIComponent(entryId));
+    if (params.length > 0) postUrl += '?' + params.join('&');
+
+    fetch(postUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: fd
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            setSaveIndicator('saved', isFinal ? 'Locked & Submitted' : 'All Changes Saved');
+            if (isFinal) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 600);
+            }
+        } else {
+            setSaveIndicator('error', 'Save Failed');
+        }
+    })
+    .catch(err => {
+        console.error('Save error:', err);
+        setSaveIndicator('error', 'Network Error');
+    });
+}
+
+function submitFinalSheet() {
+    if (!confirm('Are you sure you want to finalize and lock the Timing Score Sheet? Once submitted, it cannot be edited without CD permission.')) {
+        return;
+    }
+    setSaveIndicator('saving', 'Submitting...');
+    performSave('submit_sheet', true);
+}
+
+// Initial setup on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    updateTwDisplay(twElapsedSeconds);
+    recalculateAndRender();
+});
 </script>
 {% endblock %}
