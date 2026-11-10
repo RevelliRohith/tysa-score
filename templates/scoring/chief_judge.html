@@ -412,18 +412,34 @@
         }
 
         let secondsLeft = 6;
+        let refreshTimer = null;
         const counterEl = document.getElementById('sync-counter');
         
+        // Stop any pending reload if user clicks a link or submits a form to navigate away
+        document.querySelectorAll('a, button[type="submit"]').forEach(function(el) {
+            el.addEventListener('click', function() {
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
+                    refreshTimer = null;
+                }
+                if (counterEl) {
+                    counterEl.textContent = '(loading...)';
+                }
+            });
+        });
+
         // Only auto-refresh if performance is still pending/unreleased
         const isReleased = {% if selected_perf and selected_perf.status == 'PROVISIONAL_RELEASED' %}true{% else %}false{% endif %};
         
         if (!isReleased) {
-            setInterval(function() {
+            refreshTimer = setInterval(function() {
                 secondsLeft--;
                 if (counterEl) {
                     counterEl.textContent = `(refreshing in ${secondsLeft}s)`;
                 }
                 if (secondsLeft <= 0) {
+                    clearInterval(refreshTimer);
+                    refreshTimer = null;
                     // Retain current URL so if user switched to another chest (?perf_id=...), it refreshes on THAT chest
                     window.location.reload();
                 }
