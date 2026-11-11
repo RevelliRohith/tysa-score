@@ -21,19 +21,12 @@
             <p class="text-xs text-slate-500">Call athletes, persist operational attendance, push authorized batches to judges, and publish official scores.</p>
         </div>
 
-        {% if panels.count > 1 %}
-        <form method="GET" class="flex items-center space-x-2 shrink-0">
-            <span class="text-xs font-bold text-slate-500 shrink-0">Switch Panel:</span>
-            <select name="panel_id" onchange="this.form.submit()" class="px-3 py-2 text-xs font-bold bg-white border border-slate-300 rounded-xl outline-none shadow-2xs focus:border-teal-600">
-                {% for p in panels %}
-                <option value="{{ p.id }}" {% if current_panel.id == p.id %}selected{% endif %}>
-                    {{ p.stage_name }} • {{ p.event_config.get_event_type_display }} ({{ p.gender }}) [{{ p.round_type }}]
-                    {% if p.stage_manager == request.user %} ★ (Your Desk){% endif %}
-                </option>
-                {% endfor %}
-            </select>
-        </form>
-        {% endif %}
+                <div class="flex items-center space-x-2 shrink-0">
+            <div class="px-3 py-2 text-xs font-black bg-teal-50 border border-teal-200 text-teal-800 rounded-xl shadow-2xs flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-4 h-4 text-teal-600"></i>
+                <span>Assigned Desk: {{ current_panel.stage_name }}</span>
+            </div>
+        </div>
     </div>
 
     <!-- Metadata Chips -->
@@ -200,10 +193,32 @@
 
                     <!-- Push to All Assigned Judges CTA -->
                     <div class="pt-4 space-y-2">
+                        {% if not can_push_next %}
+                        <div class="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center space-x-2 text-xs text-amber-900">
+                            <i data-lucide="lock" class="w-4 h-4 text-amber-700 shrink-0"></i>
+                            <span>
+                                <strong>Stage Locked:</strong>
+                                {% if is_held %}
+                                Current performance is ON HOLD by Stage Manager. Resume or resolve before pushing next athlete.
+                                {% elif is_stopped %}
+                                Current performance has been STOPPED by Stage Manager. Technical decision / re-attempt authorization pending.
+                                {% elif repush_authorized %}
+                                A New Attempt is AUTHORIZED for Chest #{{ active_perf.chest_number }}. You must push Attempt #{{ active_perf.attempt_number|add:1 }} before any next athlete.
+                                {% else %}
+                                Chief Judge has not yet finalized and released provisional scores for current athlete(s).
+                                {% endif %}
+                            </span>
+                        </div>
+                        <button type="button" disabled class="w-full py-3.5 px-4 bg-slate-300 text-slate-500 rounded-xl font-bold text-sm flex items-center justify-center space-x-2 cursor-not-allowed">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                            <span>Push Blocked: Stage Not Eligible</span>
+                        </button>
+                        {% else %}
                         <button type="submit" id="push-btn" class="w-full py-3.5 px-4 bg-teal-800 hover:bg-teal-900 text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2 shadow-sm transition">
                             <i data-lucide="send" class="w-4 h-4"></i>
                             <span id="push-btn-text">Push Selected Athletes to All Assigned Judges</span>
                         </button>
+                        {% endif %}
                         <p class="text-[11px] text-slate-400 text-center">
                             Only athletes in <strong>Present</strong> status can be pushed. Pushing releases the active batch to D-Judges, Time, Evaluator, and Chief Judge desks.
                         </p>
@@ -239,21 +254,148 @@
                 {% if active_batch %}
                 <!-- Pushed Athletes in Batch -->
                 <div class="space-y-2">
-                    <span class="text-xs font-bold text-slate-600 block">Athletes Currently on Stage:</span>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {% for entry in active_batch.entries.all %}
-                        <div class="p-2.5 rounded-xl border border-teal-200 bg-teal-50/40 flex items-center space-x-3">
-                            <span class="font-mono font-black text-sm text-teal-900 bg-teal-100 px-2 py-1 rounded-lg">
-                                #{{ entry.chest_number }}
-                            </span>
-                            <div class="truncate">
-                                <span class="font-bold text-xs text-slate-900 block truncate">{{ entry.registration.athlete.full_name }}</span>
-                                <span class="text-[10px] text-slate-500">{{ entry.registration.athlete.district }}</span>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-600 block">Athletes Currently on Stage:</span>
+                        {% if active_perf %}
+                        <span class="text-xs font-mono font-black px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            Attempt #{{ active_perf.attempt_number|default:1 }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="grid grid-cols-1 gap-2">
+                        {% for p in active_perfs %}
+                        <div class="p-3 rounded-xl border {% if p.status == 'HELD' %}border-amber-400 bg-amber-50/60{% elif p.status == 'STOPPED_PENDING_DECISION' %}border-rose-400 bg-rose-50/60{% else %}border-teal-200 bg-teal-50/40{% endif %} flex items-center justify-between">
+                            <div class="flex items-center space-x-3 truncate">
+                                <span class="font-mono font-black text-sm text-teal-900 bg-teal-100 px-2.5 py-1 rounded-lg shrink-0">
+                                    #{{ p.chest_number }}
+                                </span>
+                                <div class="truncate">
+                                    <span class="font-bold text-xs text-slate-900 block truncate">{{ p.event_entry.registration.athlete.full_name }}</span>
+                                    <span class="text-[10px] text-slate-500">{{ p.event_entry.registration.athlete.district }} &bull; Performance #{{ p.id }}</span>
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold 
+                                    {% if p.status == 'HELD' %}bg-amber-100 text-amber-800 border border-amber-300
+                                    {% elif p.status == 'STOPPED_PENDING_DECISION' %}bg-rose-100 text-rose-800 border border-rose-300
+                                    {% elif p.status == 'IN_PROGRESS' %}bg-emerald-100 text-emerald-800 border border-emerald-300
+                                    {% elif p.status == 'PROVISIONAL_RELEASED' %}bg-purple-100 text-purple-800 border border-purple-300
+                                    {% else %}bg-slate-100 text-slate-600{% endif %}">
+                                    {{ p.get_status_display }}
+                                </span>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
+
+                <!-- STAGE MANAGER INTERRUPTION & LIVE STAGE CONTROLS (EXCLUSIVE TO STAGE MANAGER) -->
+                {% if active_perf %}
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5">
+                            <i data-lucide="sliders" class="w-4 h-4 text-teal-700"></i>
+                            <span>Stage Interruption Controls (Stage Manager Only)</span>
+                        </span>
+                        <span class="text-[10px] font-bold text-slate-500 font-mono">Live Control Desk</span>
+                    </div>
+
+                    {% if is_held %}
+                    <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900 space-y-1">
+                        <div class="font-bold flex items-center space-x-1">
+                            <span>⏸ Performance is currently ON HOLD</span>
+                        </div>
+                        <p class="text-[11px] text-amber-800">
+                            Reason: <em>{{ active_perf.interruption_reason }}</em>
+                            {% if active_perf.interruption_remarks %}&mdash; {{ active_perf.interruption_remarks }}{% endif %}
+                        </p>
+                    </div>
+                    {% elif is_stopped %}
+                    <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-xs text-rose-900 space-y-1">
+                        <div class="font-bold flex items-center space-x-1">
+                            <span>🛑 Performance is STOPPED pending decision</span>
+                        </div>
+                        <p class="text-[11px] text-rose-800">
+                            Reason: <em>{{ active_perf.interruption_reason }}</em>
+                            {% if active_perf.interruption_remarks %}&mdash; {{ active_perf.interruption_remarks }}{% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Interruption Action Buttons -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        {% if not is_held and not is_stopped and not repush_authorized %}
+                        <!-- HOLD BUTTON -->
+                        <button type="button" onclick="openHoldModal('{{ active_perf.id }}', '{{ active_perf.chest_number }}')" class="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-xs transition">
+                            <i data-lucide="pause-circle" class="w-4 h-4"></i>
+                            <span>Hold Performance</span>
+                        </button>
+                        <!-- STOP BUTTON -->
+                        <button type="button" onclick="openStopModal('{{ active_perf.id }}', '{{ active_perf.chest_number }}')" class="py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-xs transition">
+                            <i data-lucide="stop-circle" class="w-4 h-4"></i>
+                            <span>Stop Performance</span>
+                        </button>
+
+                        {% elif is_held %}
+                        <!-- RESUME BUTTON -->
+                        <form method="POST" class="col-span-1">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="resume_performance">
+                            <input type="hidden" name="performance_id" value="{{ active_perf.id }}">
+                            <button type="submit" class="w-full py-2.5 px-3 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-xs transition">
+                                <i data-lucide="play-circle" class="w-4 h-4"></i>
+                                <span>Resume Performance</span>
+                            </button>
+                        </form>
+                        <!-- STOP BUTTON -->
+                        <button type="button" onclick="openStopModal('{{ active_perf.id }}', '{{ active_perf.chest_number }}')" class="py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-xs transition">
+                            <i data-lucide="stop-circle" class="w-4 h-4"></i>
+                            <span>Stop Performance</span>
+                        </button>
+
+                        {% elif is_stopped and not repush_authorized %}
+                        <!-- AUTHORIZE REPUSH BUTTON -->
+                        <button type="button" onclick="openAuthorizeRepushModal('{{ active_perf.id }}', '{{ active_perf.chest_number }}')" class="col-span-2 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-xs transition">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            <span>Authorize Repush / New Attempt</span>
+                        </button>
+
+                        {% elif repush_authorized %}
+                        <!-- PUSH RE-PUSH BUTTON -->
+                        <form method="POST" class="col-span-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="push_repush">
+                            <input type="hidden" name="performance_id" value="{{ active_perf.id }}">
+                            <button type="submit" class="w-full py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-xs transition animate-pulse">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                                <span>Push New Attempt #{{ active_perf.attempt_number|add:1 }} to Judges</span>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Interruption Audit Log for this Performance -->
+                {% if interruption_logs %}
+                <div class="space-y-1.5 pt-1">
+                    <span class="text-[11px] font-bold text-slate-600 block">Performance Interruption Audit Trail:</span>
+                    <div class="max-h-36 overflow-y-auto space-y-1 pr-1">
+                        {% for log in interruption_logs %}
+                        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 text-[11px] flex items-center justify-between">
+                            <div class="truncate mr-2">
+                                <span class="font-mono font-bold {% if log.action == 'HOLD' %}text-amber-700{% elif log.action == 'RESUME' %}text-teal-700{% elif log.action == 'STOP' %}text-rose-700{% else %}text-indigo-700{% endif %}">
+                                    [{{ log.action }}]
+                                </span>
+                                <span class="text-slate-800 font-semibold">Att #{{ log.attempt_number }}:</span>
+                                <span class="text-slate-600">{{ log.reason }}</span>
+                            </div>
+                            <span class="text-slate-400 font-mono text-[10px] shrink-0">{{ log.timestamp|date:"H:i:s" }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
 
                 <!-- Judge Submission Progress Monitor -->
                 <div class="space-y-3 pt-2">
@@ -343,6 +485,129 @@
 </form>
 
 <!-- Disqualification Modal -->
+
+<!-- HOLD PERFORMANCE MODAL -->
+<div id="hold-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2 text-amber-700 font-bold text-sm">
+                <i data-lucide="pause-circle" class="w-5 h-5"></i>
+                <span>Hold Performance</span>
+            </div>
+            <button type="button" onclick="closeHoldModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <p class="text-xs text-slate-600" id="hold-modal-athlete-info">
+            Placing performance on hold temporarily pauses judge desks while preserving all saved marks.
+        </p>
+        <form method="POST" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="hold_performance">
+            <input type="hidden" name="performance_id" id="hold-perf-id">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Reason for Hold</label>
+                <select name="reason" class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold">
+                    {% for r_code, r_label in interruption_reasons %}
+                    <option value="{{ r_label }}">{{ r_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Remarks (Optional)</label>
+                <textarea name="remarks" rows="2" placeholder="Brief context for official log..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 outline-none focus:border-teal-600"></textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="closeHoldModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition">
+                    Confirm Hold
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- STOP PERFORMANCE MODAL -->
+<div id="stop-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2 text-rose-700 font-bold text-sm">
+                <i data-lucide="stop-circle" class="w-5 h-5"></i>
+                <span>Stop Performance</span>
+            </div>
+            <button type="button" onclick="closeStopModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <p class="text-xs text-slate-600" id="stop-modal-athlete-info">
+            Stopping the performance requires a mandatory official reason. Further scoring is halted pending technical decision.
+        </p>
+        <form method="POST" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="stop_performance">
+            <input type="hidden" name="performance_id" id="stop-perf-id">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mandatory Reason <span class="text-rose-600">*</span></label>
+                <select name="reason" required class="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold">
+                    <option value="">-- Select Valid Interruption Reason --</option>
+                    {% for r_code, r_label in interruption_reasons %}
+                    <option value="{{ r_label }}">{{ r_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Technical Remarks</label>
+                <textarea name="remarks" rows="2" placeholder="Describe the unexpected event / situation..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 outline-none focus:border-teal-600"></textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="closeStopModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition">
+                    Confirm Stop Performance
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- AUTHORIZE REPUSH MODAL -->
+<div id="repush-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2 text-indigo-700 font-bold text-sm">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                <span>Authorize Repush / New Attempt</span>
+            </div>
+            <button type="button" onclick="closeAuthorizeRepushModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <p class="text-xs text-slate-600" id="repush-modal-athlete-info">
+            Authorizing a repush permits a new attempt for this athlete per competition rules. The previous attempt history is permanently preserved in the audit log.
+        </p>
+        <form method="POST" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="authorize_repush">
+            <input type="hidden" name="performance_id" id="repush-perf-id">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Decision / Authority Remarks</label>
+                <textarea name="remarks" rows="2" placeholder="e.g. Authorized under COP Technical Rule by Stage Manager..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 outline-none focus:border-teal-600"></textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="closeAuthorizeRepushModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition">
+                    Authorize New Attempt
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="dq-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -396,6 +661,34 @@
 </div>
 
 <script>
+
+function openHoldModal(perfId, chestNo) {
+    document.getElementById('hold-perf-id').value = perfId;
+    document.getElementById('hold-modal-athlete-info').textContent = `Hold performance for Chest #${chestNo}. Temporarily suspends judge scoring and timing desks while preserving marks.`;
+    document.getElementById('hold-modal').classList.remove('hidden');
+}
+function closeHoldModal() {
+    document.getElementById('hold-modal').classList.add('hidden');
+}
+
+function openStopModal(perfId, chestNo) {
+    document.getElementById('stop-perf-id').value = perfId;
+    document.getElementById('stop-modal-athlete-info').textContent = `Stop performance for Chest #${chestNo}. Requires mandatory reason. Halts further scoring.`;
+    document.getElementById('stop-modal').classList.remove('hidden');
+}
+function closeStopModal() {
+    document.getElementById('stop-modal').classList.add('hidden');
+}
+
+function openAuthorizeRepushModal(perfId, chestNo) {
+    document.getElementById('repush-perf-id').value = perfId;
+    document.getElementById('repush-modal-athlete-info').textContent = `Authorize new attempt for Chest #${chestNo}. Preserves previous attempt in audit log.`;
+    document.getElementById('repush-modal').classList.remove('hidden');
+}
+function closeAuthorizeRepushModal() {
+    document.getElementById('repush-modal').classList.add('hidden');
+}
+
 function submitStatusUpdate(entryId, status) {
     document.getElementById('status-entry-id').value = entryId;
     document.getElementById('status-new-value').value = status;

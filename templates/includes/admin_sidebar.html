@@ -568,9 +568,33 @@
             </div>
 
         <!-- ======================================================== -->
-        <!-- 5. JUDGES (INCL. CHIEF & STAGE MANAGER): PROFILE & ASSIGNED PANELS -->
+        <!-- 5. STAGE MANAGER DEDICATED WORKSPACE                      -->
         <!-- ======================================================== -->
-        {% elif is_judge or is_stage %}
+        {% elif is_stage %}
+            <div>
+                <a href="{% url 'stage_manager' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="font-semibold">Stage Manager Console</span>
+                    </div>
+                    <span class="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded">Active</span>
+                </a>
+            </div>
+
+            <div>
+                <a href="{% url 'second_screen' %}" target="_blank" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="monitor" class="w-4 h-4 text-slate-400"></i>
+                        <span class="font-semibold">Audience 2nd Screen</span>
+                    </div>
+                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400"></i>
+                </a>
+            </div>
+
+        <!-- ======================================================== -->
+        <!-- 6. JUDGES (D, TIME, ARTISTRY, EVALUATOR, CHIEF)           -->
+        <!-- ======================================================== -->
+        {% elif is_judge %}
             <div>
                 <a href="{% url 'judge_portal' %}#profile" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
                     <div class="flex items-center space-x-2.5">
@@ -588,8 +612,6 @@
                     </div>
                     {% if is_chief_judge %}
                     <span class="text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded">Chief</span>
-                    {% elif is_stage %}
-                    <span class="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded">Stage</span>
                     {% endif %}
                 </a>
             </div>
@@ -604,27 +626,6 @@
                 </a>
             </div>
 
-            {% if is_stage %}
-            <div>
-                <a href="{% url 'stage_manager' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
-                    <div class="flex items-center space-x-2.5">
-                        <i data-lucide="sliders" class="w-4 h-4 text-slate-400"></i>
-                        <span class="font-semibold">Stage Control</span>
-                    </div>
-                </a>
-            </div>
-
-            <div>
-                <a href="{% url 'second_screen' %}" target="_blank" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
-                    <div class="flex items-center space-x-2.5">
-                        <i data-lucide="monitor" class="w-4 h-4 text-slate-400"></i>
-                        <span class="font-semibold">Audience 2nd Screen</span>
-                    </div>
-                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400"></i>
-                </a>
-            </div>
-            {% endif %}
-
             {% if is_scoring_desk %}
             <!-- Shortcut when inside active judging desk -->
             <div class="pt-3 border-t border-slate-100">
@@ -632,7 +633,7 @@
                     Active Desk Session
                 </span>
                 <a href="{% url 'judge_portal' %}#panels" class="sidebar-sublink block py-1.5 px-3 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition text-xs font-semibold">
-                    ← Return to Panels List
+                    Return to Panels List
                 </a>
             </div>
             {% endif %}

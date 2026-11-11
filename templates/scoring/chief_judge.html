@@ -4,16 +4,17 @@
 {% block title %}Chief Judge Live Review — Arena {{ panel.id }} — TYSA Score{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-5 py-2">
+{% include 'scoring/interruption_banner.html' %}
+<div class="max-w-[1600px] mx-auto space-y-4 py-2">
 
     <!-- Top Live Arena Header & Status Bar -->
-    <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl p-5 shadow-md border border-slate-800">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl p-4 shadow-md border border-slate-800">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div class="space-y-1">
                 <div class="flex items-center space-x-2">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
                         <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mr-1.5"></span>
-                        CHIEF JUDGE LIVE DESK
+                        CHIEF JUDGE LIVE REVIEW
                     </span>
                     <span class="text-xs text-slate-400">•</span>
                     <span class="text-xs font-semibold text-sky-300">{{ panel.stage_name }}</span>
@@ -37,13 +38,13 @@
             <div class="flex items-center gap-3">
                 <div class="bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 flex items-center space-x-2 text-xs">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span class="text-slate-300 font-medium text-[11px]">Live Sync Active</span>
+                    <span class="text-slate-300 font-medium text-[11px]">Live Sync</span>
                     <span class="text-slate-500 font-mono text-[10px] hidden sm:inline" id="sync-counter">(refreshing in 6s)</span>
                 </div>
                 <button type="button" onclick="window.location.reload();" 
                         class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                    <span>Refresh Now</span>
+                    <span>Refresh</span>
                 </button>
             </div>
         </div>
@@ -62,14 +63,10 @@
                 As soon as the Stage Manager calls an athlete, their live scorecard will appear here automatically.
             </p>
         </div>
-        <div class="inline-flex items-center space-x-2 text-xs text-slate-400 bg-slate-50 border border-slate-200 px-4 py-2 rounded-full">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Live listener connected to Stage Manager desk...</span>
-        </div>
     </div>
     {% else %}
 
-    <!-- Mat Performer Calling Strip -->
+    <!-- 1. PART 4: OVERALL PERFORMANCE SCORECARD -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <!-- Chest & Performer Details -->
@@ -90,6 +87,8 @@
                     <p class="text-xs text-slate-500 mt-0.5">
                         DOB: {{ selected_perf.event_entry.registration.athlete.date_of_birth|date:"d M Y"|default:"--" }}
                         &bull; Registration: <code class="text-slate-600 font-mono">{{ selected_perf.event_entry.registration.athlete.athlete_id|default:selected_perf.event_entry.id }}</code>
+                        &bull; Performance ID: <code class="text-teal-700 font-bold font-mono">#{{ selected_perf.id }}</code>
+                        &bull; <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Attempt #{{ selected_perf.attempt_number|default:1 }}</span>
                     </p>
                 </div>
             </div>
@@ -115,7 +114,7 @@
 
             <!-- Current Review Status -->
             <div class="text-right shrink-0">
-                <span class="text-[10px] text-slate-400 uppercase font-bold block">Status</span>
+                <span class="text-[10px] text-slate-400 uppercase font-bold block">Overall Status</span>
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold 
                     {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}bg-emerald-100 text-emerald-800 border border-emerald-300
                     {% elif selected_perf.status == 'CD_FINALIZED' %}bg-purple-100 text-purple-800 border border-purple-300
@@ -130,15 +129,50 @@
         </div>
     </div>
 
-    <!-- Live Judges Seat Status Cards (Who has submitted, who is still judging) -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+    {% if interruption_logs %}
+    <!-- Interruption & Attempt Audit History (Logged by Stage Manager) -->
+    <div class="bg-amber-50/60 border border-amber-200 rounded-2xl p-3.5 space-y-2">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center space-x-1.5">
+                <i data-lucide="history" class="w-4 h-4 text-amber-700"></i>
+                <span>Stage Interruption History (Logged by Stage Manager)</span>
+            </span>
+            <span class="text-[11px] text-amber-700 font-medium">{{ interruption_logs|length }} event(s) recorded</span>
+        </div>
+        <div class="space-y-1.5">
+            {% for log in interruption_logs %}
+            <div class="text-xs flex flex-col sm:flex-row sm:items-center justify-between bg-white/80 p-2 rounded-xl border border-amber-200/60 text-slate-700">
+                <div class="flex items-center space-x-2">
+                    <span class="px-2 py-0.5 rounded font-mono font-bold text-[10px] 
+                        {% if log.action == 'HOLD' %}bg-amber-100 text-amber-800
+                        {% elif log.action == 'RESUME' %}bg-teal-100 text-teal-800
+                        {% elif log.action == 'STOP' %}bg-rose-100 text-rose-800
+                        {% else %}bg-indigo-100 text-indigo-800{% endif %}">
+                        {{ log.action }}
+                    </span>
+                    <span class="font-bold text-slate-900">Attempt #{{ log.attempt_number }}</span>
+                    <span class="text-slate-600">&bull; Reason: <em>{{ log.reason }}</em></span>
+                    {% if log.remarks %}<span class="text-slate-500">&mdash; {{ log.remarks }}</span>{% endif %}
+                </div>
+                <div class="text-[11px] text-slate-400 font-mono mt-1 sm:mt-0">
+                    by {{ log.user.get_full_name|default:log.user.username }} &bull; {{ log.timestamp|date:"H:i:s" }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- 2. PART 3 (#8): SUBMISSION STATUS VISIBILITY (All Assigned Judges) -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
             <div>
                 <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <span>Panel Judges Live Progress</span>
+                    <span>Assigned Judges Submission Monitor</span>
                     <span class="text-[11px] font-normal text-slate-400">({{ score_calc.seat_status|length }} official seats)</span>
                 </h3>
-                <p class="text-[11px] text-slate-500">Live submission status of all assigned Difficulty, Timing, and Evaluator judges.</p>
+                <p class="text-[11px] text-slate-500">Live submission status, timestamps, and saved scores across all judges for Performance #{{ selected_perf.id }}.</p>
             </div>
             <div>
                 {% if score_calc.missing_seats %}
@@ -154,26 +188,34 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-{{ score_calc.seat_status|length|default:7 }} gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-{{ score_calc.seat_status|length|default:7 }} gap-2.5">
             {% for seat in score_calc.seat_status %}
             <div class="rounded-xl p-3 border transition-all text-center
-                {% if seat.is_submitted %}bg-emerald-50/50 border-emerald-200 shadow-2xs{% else %}bg-slate-50/60 border-slate-200{% endif %}">
+                {% if seat.is_submitted %}bg-emerald-50/50 border-emerald-200 shadow-2xs{% elif seat.is_draft %}bg-amber-50/40 border-amber-200{% else %}bg-slate-50/60 border-slate-200{% endif %}">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block truncate" title="{{ seat.role_label }}">
                     {{ seat.role_label }}
                 </span>
                 <span class="text-xs font-bold text-slate-800 block truncate mt-0.5" title="{{ seat.judge_name }}">
                     {{ seat.judge_name }}
                 </span>
-                <div class="my-2">
+                <div class="my-1.5">
                     {% if seat.is_submitted %}
                     <span class="text-lg font-black font-mono text-emerald-800 block">{{ seat.score|stringformat:".3f" }}</span>
                     <span class="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
                         <i data-lucide="check" class="w-2.5 h-2.5 mr-0.5"></i> Submitted
                     </span>
-                    {% else %}
-                    <span class="text-sm font-bold font-mono text-slate-400 block py-1">—</span>
+                    {% if seat.submitted_at %}
+                    <span class="block text-[9px] text-slate-400 font-mono mt-0.5">{{ seat.submitted_at|date:"H:i:s" }}</span>
+                    {% endif %}
+                    {% elif seat.is_draft %}
+                    <span class="text-sm font-bold font-mono text-amber-700 block py-0.5">Drafting</span>
                     <span class="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
-                        <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse mr-1"></span> Pending
+                        <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse mr-1"></span> Active Draft
+                    </span>
+                    {% else %}
+                    <span class="text-sm font-bold font-mono text-slate-400 block py-0.5">—</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                        Pending
                     </span>
                     {% endif %}
                 </div>
@@ -182,58 +224,222 @@
         </div>
     </div>
 
-    <!-- Live Composite Score Summary Card -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <!-- 3. PART 4 (#10): FINAL SCORE CALCULATION COMPOSITE CARD -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
             <div>
                 <h3 class="text-sm font-black text-slate-900 tracking-tight">
-                    Official Composite Score & Trimmed Mean — Chest {{ selected_perf.chest_number }}
+                    Final Score Calculation Breakdown (COP Formula)
                 </h3>
-                <p class="text-xs text-slate-500">Calculated strictly per Yogasana Bharat Official COP 2024–2026</p>
+                <p class="text-xs text-slate-500">Final Score = Retained D-Average + Average Artistry + Average Timing − Approved Evaluator Penalties</p>
             </div>
-            {% if score_calc.d_trimmed_scores %}
-            <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg">
-                <span>Retained D-Marks: <strong class="font-mono text-slate-800">{{ score_calc.d_trimmed_scores|join:", " }}</strong></span>
+            {% if score_calc.panel_trim_details.formula_display %}
+            <div class="text-xs text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-lg font-mono font-bold">
+                D-Formula: {{ score_calc.panel_trim_details.formula_display }}
             </div>
             {% endif %}
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
             <div class="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/50">
-                <span class="text-[11px] text-slate-500 font-medium block">D-Average (Mean)</span>
+                <span class="text-[11px] text-slate-500 font-medium block uppercase">Retained D Average</span>
                 <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.retained_d|default:"0.000" }}</span>
-                <span class="text-[10px] text-slate-400 block mt-0.5">Olympic Trimmed</span>
+                <span class="text-[10px] text-slate-400 block mt-0.5">Olympic Trimmed Mean</span>
             </div>
             {% if not score_calc.is_traditional %}
             <div class="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/50">
-                <span class="text-[11px] text-slate-500 font-medium block">Artistry (A)</span>
+                <span class="text-[11px] text-slate-500 font-medium block uppercase">Average Artistry</span>
                 <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.artistry_total|default:"0.000" }}</span>
-                <span class="text-[10px] text-slate-400 block mt-0.5">Choreography & Sync</span>
+                <span class="text-[10px] text-slate-400 block mt-0.5">Mean of A1 & A2 (Net /20)</span>
             </div>
             {% endif %}
             <div class="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/50">
-                <span class="text-[11px] text-slate-500 font-medium block">Timing Mark</span>
+                <span class="text-[11px] text-slate-500 font-medium block uppercase">Average Timing</span>
                 <span class="text-2xl font-black text-slate-900 font-mono">{{ score_calc.timing_score|default:"0.000" }}</span>
-                <span class="text-[10px] text-slate-400 block mt-0.5">Hold Duration</span>
+                <span class="text-[10px] text-slate-400 block mt-0.5">TW + TA Reconciled</span>
             </div>
             <div class="border border-slate-200 rounded-xl p-3 text-center bg-rose-50/40 border-rose-200">
-                <span class="text-[11px] text-rose-700 font-medium block">Penalties</span>
+                <span class="text-[11px] text-rose-700 font-medium block uppercase">Approved Penalties</span>
                 <span class="text-2xl font-black text-rose-700 font-mono">-{{ score_calc.penalties|default:"0.000" }}</span>
                 <span class="text-[10px] text-rose-600/80 block mt-0.5">Evaluator Deductions</span>
             </div>
             <div class="border-2 border-emerald-500 rounded-xl p-3 text-center bg-gradient-to-br from-emerald-50 to-teal-50 col-span-2 sm:col-span-1 shadow-xs">
-                <span class="text-[11px] text-emerald-900 font-bold uppercase tracking-wider block">Provisional Total</span>
+                <span class="text-[11px] text-emerald-900 font-bold uppercase tracking-wider block">Final Composite Score</span>
                 <span class="text-3xl font-black text-emerald-900 font-mono">{{ score_calc.provisional_total|default:"0.000" }}</span>
                 <span class="text-[10px] text-emerald-700 font-semibold block mt-0.5">Ready for Release</span>
             </div>
         </div>
-
-        <!-- Detailed Breakdown of Judge Scores per Asana -->
-        {% include "includes/d_average_breakdown.html" %}
     </div>
 
-    <!-- Evaluator Technical Incidents & Infractions -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3">
+    <!-- 4. PART 2 (#4, #5): D JUDGE ASANA-BY-ASANA COMPARISON MATRIX (With Code & Actual Photos) -->
+    {% include "includes/d_average_breakdown.html" %}
+
+    <!-- 5. PART 3 (#6, #7): TIME JUDGE SCORE VISIBILITY & RECONCILIATION -->
+    {% if not score_calc.is_traditional %}
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <div>
+                <h3 class="text-sm font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-sky-600"></span>
+                    <span>Time Judge Score Visibility & Reconciliation (T1 & T2)</span>
+                </h3>
+                <p class="text-xs text-slate-500">Original stopwatch readings, accepted reconciliations, TW and TA marks per Code of Points.</p>
+            </div>
+            <div class="text-xs font-mono font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-lg">
+                Reconciled Timing: {{ score_calc.timing_score|default:"0.000" }} Marks
+            </div>
+        </div>
+
+        <!-- Whole Performance Duration (TW) Summary Cards -->
+        {% if score_calc.reconciled_timing %}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <span class="text-[10px] text-slate-400 uppercase font-bold block">T1 Duration</span>
+                <span class="text-lg font-black font-mono text-slate-900">{{ score_calc.reconciled_timing.t1_tw_seconds }}s</span>
+                <span class="text-[10px] text-slate-500 font-mono block">Marks: {{ score_calc.reconciled_timing.t1_tw_marks }}</span>
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <span class="text-[10px] text-slate-400 uppercase font-bold block">T2 Duration</span>
+                <span class="text-lg font-black font-mono text-slate-900">{{ score_calc.reconciled_timing.t2_tw_seconds }}s</span>
+                <span class="text-[10px] text-slate-500 font-mono block">Marks: {{ score_calc.reconciled_timing.t2_tw_marks }}</span>
+            </div>
+            <div class="bg-sky-50 p-2.5 rounded-xl border border-sky-200">
+                <span class="text-[10px] text-sky-800 uppercase font-bold block">Accepted TW</span>
+                <span class="text-lg font-black font-mono text-sky-900">{{ score_calc.reconciled_timing.reconciled_tw_seconds }}s</span>
+                <span class="text-[10px] text-sky-700 font-mono font-bold block">TW Marks: {{ score_calc.reconciled_timing.tw_marks }}</span>
+            </div>
+            <div class="bg-teal-50 p-2.5 rounded-xl border border-teal-200">
+                <span class="text-[10px] text-teal-800 uppercase font-bold block">Accepted TA (10 Holds)</span>
+                <span class="text-lg font-black font-mono text-teal-900">{{ score_calc.reconciled_timing.ta_marks }}</span>
+                <span class="text-[10px] text-teal-700 font-mono block">{{ score_calc.reconciled_timing.ta_valid_holds_count }}/10 Valid Holds</span>
+            </div>
+        </div>
+
+        <!-- Individual Asana Holds (TA) Table: Asana, Code, Image, T1, T2, Accepted Hold, TA Marks, Validity -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs font-medium">
+                <thead>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px] tracking-wider">
+                        <th class="py-2.5 px-3 w-10 text-center">#</th>
+                        <th class="py-2.5 px-3 w-20 text-center">Code</th>
+                        <th class="py-2.5 px-3 w-14 text-center">Image</th>
+                        <th class="py-2.5 px-3 w-20 text-right bg-sky-50/50">T1 Hold</th>
+                        <th class="py-2.5 px-3 w-20 text-right bg-sky-50/50">T2 Hold</th>
+                        <th class="py-2.5 px-3 w-24 text-center bg-teal-50/50">Accepted Hold</th>
+                        <th class="py-2.5 px-3 w-20 text-right">TA Marks</th>
+                        <th class="py-2.5 px-3 w-24 text-center">Validity Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800 font-mono text-xs">
+                    {% for h in score_calc.reconciled_timing.reconciled_holds %}
+                    <tr class="hover:bg-slate-50/60 {% if not h.is_valid %}bg-rose-50/40{% endif %}">
+                        <td class="py-2 px-3 text-center font-bold text-slate-400 font-sans">#{{ h.sequence_order }}</td>
+                        <td class="py-2 px-3 text-center font-sans">
+                            {% for row in score_calc.d_matrix %}
+                                {% if row.seq == h.sequence_order %}
+                                <span class="font-bold text-slate-900 font-mono text-xs px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+                                    {{ row.code }}
+                                </span>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                            {% for row in score_calc.d_matrix %}
+                                {% if row.seq == h.sequence_order %}
+                                <div class="w-9 h-9 bg-white rounded border border-slate-200 p-0.5 mx-auto flex items-center justify-center overflow-hidden">
+                                    {% if row.image_url %}
+                                    <img src="{{ row.image_url }}" alt="{{ row.code }}" class="h-full w-full object-contain">
+                                    {% else %}
+                                    <span class="text-[8px] text-slate-400 font-mono">{{ row.code }}</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td class="py-2 px-3 text-right bg-sky-50/20 font-bold text-slate-900">{{ h.t1_raw }}s</td>
+                        <td class="py-2 px-3 text-right bg-sky-50/20 font-bold text-slate-900">{{ h.t2_raw }}s</td>
+                        <td class="py-2 px-3 text-center bg-teal-50/20 font-black text-teal-900">{{ h.accepted_hold }}s</td>
+                        <td class="py-2 px-3 text-right font-bold {% if h.is_valid %}text-teal-800{% else %}text-rose-600{% endif %}">
+                            {% if h.is_valid %}0.50{% else %}0.00{% endif %}
+                        </td>
+                        <td class="py-2 px-3 text-center font-sans">
+                            {% if h.is_valid %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Valid (&ge;5s)
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                Invalid (&lt;5s)
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="border border-slate-200 rounded-xl p-3 text-center text-slate-400 text-xs italic bg-slate-50/50">
+            Timing submissions pending from Time Judges.
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 6. PART 4 (#9-B): ARTISTRY JUDGE SUMMARY (A1 & A2) -->
+    {% if not score_calc.is_traditional and score_calc.artistry_breakdown %}
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <div>
+                <h3 class="text-sm font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                    <span>Artistry Judge Scores (Artistry 1 & Artistry 2)</span>
+                </h3>
+                <p class="text-xs text-slate-500">Breakdown of costume, theme music, character expression, rhythm steps, floor usage, and deductions.</p>
+            </div>
+            <div class="text-xs font-mono font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-lg">
+                Average Artistry: {{ score_calc.artistry_total|default:"0.000" }} / 20.00
+            </div>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs font-medium">
+                <thead>
+                    <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px] tracking-wider">
+                        <th class="py-2.5 px-3">Judge</th>
+                        <th class="py-2.5 px-3 text-right">Costume (/1)</th>
+                        <th class="py-2.5 px-3 text-right">Music (/1)</th>
+                        <th class="py-2.5 px-3 text-right">Expression (/3)</th>
+                        <th class="py-2.5 px-3 text-right">Rhythm (/10)</th>
+                        <th class="py-2.5 px-3 text-right">Floor (/5)</th>
+                        <th class="py-2.5 px-3 text-right text-rose-700">Deductions</th>
+                        <th class="py-2.5 px-3 text-right bg-indigo-50/50 font-bold">Net Score (/20)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800 font-mono text-xs">
+                    {% for art in score_calc.artistry_breakdown %}
+                    <tr class="hover:bg-slate-50/60">
+                        <td class="py-2.5 px-3 font-sans font-bold text-slate-900">
+                            {{ art.judge_role }}
+                            <span class="block text-[10px] font-normal text-slate-500">{{ art.judge_name }}</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right">{{ art.costume }}</td>
+                        <td class="py-2.5 px-3 text-right">{{ art.theme_music }}</td>
+                        <td class="py-2.5 px-3 text-right">{{ art.character_expression }}</td>
+                        <td class="py-2.5 px-3 text-right">{{ art.rhythm_artistic_steps }}</td>
+                        <td class="py-2.5 px-3 text-right">{{ art.use_of_floor }}</td>
+                        <td class="py-2.5 px-3 text-right text-rose-700 font-bold">-{{ art.deductions }}</td>
+                        <td class="py-2.5 px-3 text-right bg-indigo-50/30 font-black text-indigo-900 text-sm">{{ art.net_score }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 7. Evaluator Technical Incidents & COP Penalties -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div>
                 <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">

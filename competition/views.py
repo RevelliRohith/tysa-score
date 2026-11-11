@@ -1,6 +1,7 @@
 import random
 import datetime
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import csv
@@ -11,7 +12,7 @@ from .models import DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, Stage
 from championships.models import Championship, EventConfiguration, AgeCategory, EventType
 from registrations.models import EventEntry, RegistrationStatus
 from judges.models import UniversalJudge, ApprovalStatus
-from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem
+from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem, PerformanceInterruptionLog, InterruptionAction, InterruptionReason
 from accounts.models import RoleChoices, ScopedRole
 from audit.models import AuditLog
 from accounts.permissions import get_active_championship, role_required
@@ -1031,25 +1032,52 @@ def stage_manager(request):
     """
     championship = get_active_championship(request)
     panels = JudgePanel.objects.filter(championship=championship, is_active=True).select_related('event_config', 'age_category', 'stage_manager')
-    panel_id = request.GET.get('panel_id')
-    
-    # Prioritize user's own assigned panel if judge
-    user_panels = panels.filter(stage_manager=request.user)
-    if panel_id:
-        current_panel = panels.filter(id=panel_id).first()
-    elif user_panels.exists():
-        current_panel = user_panels.first()
+    # Check if user is superuser or Championship Director (CD)
+    is_cd_or_admin = (
+        request.user.is_superuser or 
+        (hasattr(request.user, 'role') and request.user.role in [RoleChoices.ADMIN, RoleChoices.CD]) or
+        ScopedRole.objects.filter(user=request.user, championship=championship, role__in=[RoleChoices.ADMIN, RoleChoices.CD]).exists()
+    )
+
+    requested_panel_id = request.GET.get('panel_id') or request.POST.get('panel_id')
+
+    if is_cd_or_admin:
+        # Admins and CDs can inspect/manage any panel
+        if requested_panel_id:
+            current_panel = panels.filter(id=requested_panel_id).first()
+        else:
+            current_panel = panels.first()
+        if not current_panel:
+            messages.info(request, "No active panels configured for this championship yet.")
+            return redirect('panel_assignments')
     else:
-        current_panel = panels.first()
-
-    if not current_panel:
-        messages.info(request, "No active panels configured for this championship yet.")
-        return redirect('judge_portal')
-
-    # Security check: If user is pure Stage Manager judge (not admin/CD), ensure panel is assigned to them
-    if not request.user.is_superuser and not ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists():
-        if current_panel.stage_manager != request.user and user_panels.exists():
-            current_panel = user_panels.first()
+        # Dedicated Stage Manager Access:
+        # Look up the specific panel assigned to this Stage Manager
+        user_panel = panels.filter(stage_manager=request.user).first()
+        if not user_panel:
+            AuditLog.log(
+                action='SECURITY_UNASSIGNED_STAGE_ACCESS',
+                resource_type='JudgePanel',
+                resource_id=requested_panel_id or '',
+                details={'path': request.path, 'user_id': request.user.id},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return render(request, '403.html', {'message': "You have not been assigned as a Stage Manager to any active panel in this championship. Please contact the administrator."}, status=403)
+        
+        # Backend Security: If panel_id parameter is tampered or provided, verify it matches their dedicated panel
+        if requested_panel_id and str(requested_panel_id) != str(user_panel.id):
+            AuditLog.log(
+                action='SECURITY_CROSS_PANEL_STAGE_TAMPER',
+                resource_type='JudgePanel',
+                resource_id=requested_panel_id,
+                details={'path': request.path, 'user_id': request.user.id, 'attempted_panel_id': requested_panel_id, 'assigned_panel_id': user_panel.id},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return render(request, '403.html', {'message': "Access Denied: You are restricted to your dedicated assigned panel and cannot switch or access another panel."}, status=403)
+            
+        current_panel = user_panel
 
     # Active batch on stage for this specific panel
     active_batch = StageBatch.objects.filter(panel=current_panel, status='ACTIVE').first()
@@ -1128,6 +1156,18 @@ def stage_manager(request):
             new_status = request.POST.get('status')
             roll_entry = get_object_or_404(MasterRollEntry, id=entry_id, master_roll__championship=championship)
 
+            # Strict panel scoping: ensure entry belongs to current_panel's roll
+            if roll and roll_entry.master_roll_id != roll.id:
+                AuditLog.log(
+                    action='SECURITY_CROSS_PANEL_ROLL_TAMPER',
+                    resource_type='MasterRollEntry',
+                    resource_id=entry_id,
+                    details={'user_id': request.user.id, 'panel_id': current_panel.id},
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                return render(request, '403.html', {'message': "Access Denied: Cannot modify athlete status for another panel's roll."}, status=403)
+
             if new_status == 'DISQUALIFIED':
                 reason = request.POST.get('disqualification_reason', '').strip()
                 dq_type = request.POST.get('dq_type', 'OPERATIONAL')
@@ -1177,6 +1217,256 @@ def stage_manager(request):
                 messages.info(request, f"Entry #{roll_entry.event_entry.chest_number} status set to {new_status}.")
                 return redirect(redirect_url)
 
+        # Performance Interruption Controls (Stage Manager Exclusively)
+        elif action == 'hold_performance':
+            perf_id = request.POST.get('performance_id')
+            reason = request.POST.get('reason', '').strip()
+            remarks = request.POST.get('remarks', '').strip()
+            
+            perf = get_object_or_404(Performance, id=perf_id, batch__panel=current_panel)
+            if perf.status not in [PerformanceStatus.IN_PROGRESS, PerformanceStatus.PENDING]:
+                messages.error(request, f"Cannot hold: Performance #{perf.chest_number} is currently in {perf.get_status_display()} status.")
+                return redirect(redirect_url)
+
+            prev_status = perf.status
+            perf.status = PerformanceStatus.HELD
+            perf.interrupted_at = timezone.now()
+            perf.interruption_reason = reason or "Stage Manager Hold"
+            perf.interruption_remarks = remarks
+            perf.save(update_fields=['status', 'interrupted_at', 'interruption_reason', 'interruption_remarks'])
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action=InterruptionAction.HOLD,
+                user=request.user,
+                reason=reason or "Stage Manager Hold",
+                remarks=remarks,
+                previous_status=prev_status,
+                new_status=PerformanceStatus.HELD,
+                attempt_number=perf.attempt_number,
+                attempt_id=perf.attempt_id
+            )
+
+            AuditLog.log(
+                action="STAGE_PERFORMANCE_HOLD",
+                resource_type="Performance",
+                resource_id=str(perf.id),
+                details={
+                    "chest_number": perf.chest_number,
+                    "attempt_number": perf.attempt_number,
+                    "panel_id": current_panel.id,
+                    "reason": reason,
+                    "remarks": remarks,
+                },
+                user=request.user
+            )
+            messages.warning(request, f"Performance for Chest #{perf.chest_number} is now ON HOLD. All judge desks have been notified and paused.")
+            return redirect(redirect_url)
+
+        elif action == 'resume_performance':
+            perf_id = request.POST.get('performance_id')
+            remarks = request.POST.get('remarks', '').strip()
+
+            perf = get_object_or_404(Performance, id=perf_id, batch__panel=current_panel)
+            if perf.status != PerformanceStatus.HELD:
+                messages.error(request, f"Cannot resume: Performance #{perf.chest_number} is not on HOLD.")
+                return redirect(redirect_url)
+
+            prev_status = perf.status
+            perf.status = PerformanceStatus.IN_PROGRESS
+            perf.resumed_at = timezone.now()
+            perf.save(update_fields=['status', 'resumed_at'])
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action=InterruptionAction.RESUME,
+                user=request.user,
+                reason="Performance Resumed",
+                remarks=remarks,
+                previous_status=prev_status,
+                new_status=PerformanceStatus.IN_PROGRESS,
+                attempt_number=perf.attempt_number,
+                attempt_id=perf.attempt_id
+            )
+
+            AuditLog.log(
+                action="STAGE_PERFORMANCE_RESUME",
+                resource_type="Performance",
+                resource_id=str(perf.id),
+                details={
+                    "chest_number": perf.chest_number,
+                    "attempt_number": perf.attempt_number,
+                    "panel_id": current_panel.id,
+                    "remarks": remarks,
+                },
+                user=request.user
+            )
+            messages.success(request, f"Performance for Chest #{perf.chest_number} RESUMED to In Progress. Scoring desks are active again.")
+            return redirect(redirect_url)
+
+        elif action == 'stop_performance':
+            perf_id = request.POST.get('performance_id')
+            reason = request.POST.get('reason', '').strip()
+            remarks = request.POST.get('remarks', '').strip()
+
+            if not reason:
+                messages.error(request, "A mandatory reason is required to stop a performance.")
+                return redirect(redirect_url)
+
+            perf = get_object_or_404(Performance, id=perf_id, batch__panel=current_panel)
+            if perf.status in [PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED, PerformanceStatus.DISQUALIFIED]:
+                messages.error(request, f"Cannot stop: Performance #{perf.chest_number} is already {perf.get_status_display()}.")
+                return redirect(redirect_url)
+
+            prev_status = perf.status
+            perf.status = PerformanceStatus.STOPPED_PENDING_DECISION
+            perf.interrupted_at = timezone.now()
+            perf.interruption_reason = reason
+            perf.interruption_remarks = remarks
+            perf.save(update_fields=['status', 'interrupted_at', 'interruption_reason', 'interruption_remarks'])
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action=InterruptionAction.STOP,
+                user=request.user,
+                reason=reason,
+                remarks=remarks,
+                previous_status=prev_status,
+                new_status=PerformanceStatus.STOPPED_PENDING_DECISION,
+                attempt_number=perf.attempt_number,
+                attempt_id=perf.attempt_id
+            )
+
+            AuditLog.log(
+                action="STAGE_PERFORMANCE_STOP",
+                resource_type="Performance",
+                resource_id=str(perf.id),
+                details={
+                    "chest_number": perf.chest_number,
+                    "attempt_number": perf.attempt_number,
+                    "panel_id": current_panel.id,
+                    "reason": reason,
+                    "remarks": remarks,
+                },
+                user=request.user
+            )
+            messages.error(request, f"Performance for Chest #{perf.chest_number} has been STOPPED: {reason}. Awaiting technical decision / re-attempt authorization.")
+            return redirect(redirect_url)
+
+        elif action == 'authorize_repush':
+            perf_id = request.POST.get('performance_id')
+            remarks = request.POST.get('remarks', '').strip()
+
+            perf = get_object_or_404(Performance, id=perf_id, batch__panel=current_panel)
+            if perf.status != PerformanceStatus.STOPPED_PENDING_DECISION:
+                messages.error(request, f"Cannot authorize repush: Performance #{perf.chest_number} is not in Stopped Pending Decision status.")
+                return redirect(redirect_url)
+
+            perf.repush_authorized = True
+            perf.repush_authorized_at = timezone.now()
+            perf.repush_authorized_by = request.user
+            perf.save(update_fields=['repush_authorized', 'repush_authorized_at', 'repush_authorized_by'])
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action=InterruptionAction.AUTHORIZE_REPUSH,
+                user=request.user,
+                reason="Repush Authorized by Stage Manager",
+                remarks=remarks,
+                previous_status=perf.status,
+                new_status=perf.status,
+                attempt_number=perf.attempt_number,
+                attempt_id=perf.attempt_id
+            )
+
+            AuditLog.log(
+                action="STAGE_PERFORMANCE_AUTHORIZE_REPUSH",
+                resource_type="Performance",
+                resource_id=str(perf.id),
+                details={
+                    "chest_number": perf.chest_number,
+                    "attempt_number": perf.attempt_number,
+                    "panel_id": current_panel.id,
+                    "remarks": remarks,
+                },
+                user=request.user
+            )
+            messages.success(request, f"New Attempt Authorized for Chest #{perf.chest_number}! You may now push New Attempt #{perf.attempt_number + 1}.")
+            return redirect(redirect_url)
+
+        elif action == 'push_repush':
+            perf_id = request.POST.get('performance_id')
+            perf = get_object_or_404(Performance, id=perf_id, batch__panel=current_panel)
+            if not perf.repush_authorized:
+                messages.error(request, f"Cannot push new attempt: Repush has not been authorized for Chest #{perf.chest_number}.")
+                return redirect(redirect_url)
+
+            old_attempt = perf.attempt_number
+            new_attempt = old_attempt + 1
+            new_attempt_id = f"ATT-{perf.id}-{new_attempt}"
+            prev_status = perf.status
+
+            # Advance attempt count and reset status to IN_PROGRESS
+            perf.attempt_number = new_attempt
+            perf.attempt_id = new_attempt_id
+            perf.status = PerformanceStatus.IN_PROGRESS
+            perf.repush_authorized = False
+            perf.interruption_reason = ""
+            perf.interruption_remarks = ""
+            perf.resumed_at = timezone.now()
+            perf.save(update_fields=['attempt_number', 'attempt_id', 'status', 'repush_authorized', 'interruption_reason', 'interruption_remarks', 'resumed_at'])
+
+            # Reset judge submissions for this new attempt so judges can score cleanly
+            subs = JudgeSubmission.objects.filter(performance=perf)
+            for s in subs:
+                s.is_draft = True
+                s.is_submitted = False
+                s.is_locked = False
+                s.raw_total = 0
+                s.effective_total = 0
+                s.submitted_at = None
+                s.save()
+                # Reset score items
+                s.items.all().update(
+                    is_draft=True,
+                    is_submitted=False,
+                    is_locked=False,
+                    execution_score=0,
+                    posture_score=0,
+                    stability_score=0,
+                    timing_contribution=0,
+                    hold_duration_seconds=0,
+                    raw_item_score=0,
+                    effective_item_score=0
+                )
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action=InterruptionAction.REPUSH,
+                user=request.user,
+                reason=f"New Attempt #{new_attempt} Pushed to Stage",
+                remarks="",
+                previous_status=prev_status,
+                new_status=PerformanceStatus.IN_PROGRESS,
+                attempt_number=new_attempt,
+                attempt_id=new_attempt_id
+            )
+
+            AuditLog.log(
+                action="STAGE_PERFORMANCE_REPUSH_LAUNCHED",
+                resource_type="Performance",
+                resource_id=str(perf.id),
+                details={
+                    "chest_number": perf.chest_number,
+                    "new_attempt_number": new_attempt,
+                    "attempt_id": new_attempt_id,
+                    "panel_id": current_panel.id,
+                },
+                user=request.user
+            )
+            messages.success(request, f"New Attempt #{new_attempt} for Chest #{perf.chest_number} pushed to all assigned judges! Scoring desks are now open.")
+            return redirect(redirect_url)
+
         # 2. Push eligible batch to judges
         elif action == 'push_batch':
             selected_entry_ids = request.POST.getlist('entry_ids')
@@ -1195,6 +1485,61 @@ def stage_manager(request):
                 names = [e.event_entry.display_names for e in invalid_entries]
                 messages.error(request, f"Cannot push: The following athletes are not in Present status: {', '.join(names)}")
                 return redirect(redirect_url)
+
+            # Check if any authorized repush is pending on this panel
+            pending_repush_perf = Performance.objects.filter(
+                batch__panel=current_panel,
+                repush_authorized=True
+            ).first()
+            if pending_repush_perf:
+                messages.error(
+                    request,
+                    f"A New Attempt is currently authorized for Chest #{pending_repush_perf.chest_number}. "
+                    f"Per competition rules, you must push the new attempt for Chest #{pending_repush_perf.chest_number} before pushing any next athlete."
+                )
+                return redirect(redirect_url)
+
+            # Strict Official Workflow: Interruption and Chief Judge submission check
+            # Cannot push next athlete/batch while current performance is HELD, STOPPED, or awaiting Chief Judge approval
+            if active_batch:
+                active_perfs = Performance.objects.filter(batch=active_batch)
+                
+                # Check for HELD performances
+                held_perfs = [p for p in active_perfs if p.status == PerformanceStatus.HELD]
+                if held_perfs:
+                    chest_list = [p.chest_number or f'Chest #{p.event_entry.chest_number}' for p in held_perfs]
+                    messages.error(
+                        request,
+                        f"Cannot push next athlete/batch! Current performance for {', '.join(chest_list)} is currently ON HOLD. "
+                        "Resume or resolve the current performance first."
+                    )
+                    return redirect(redirect_url)
+
+                # Check for STOPPED performances
+                stopped_perfs = [p for p in active_perfs if p.status == PerformanceStatus.STOPPED_PENDING_DECISION]
+                if stopped_perfs:
+                    chest_list = [p.chest_number or f'Chest #{p.event_entry.chest_number}' for p in stopped_perfs]
+                    messages.error(
+                        request,
+                        f"Cannot push next athlete/batch! Performance for {', '.join(chest_list)} is STOPPED pending decision / re-attempt authorization. "
+                        "Resolve this performance before pushing a new athlete."
+                    )
+                    return redirect(redirect_url)
+
+                # Check for unapproved / unfinalized performances
+                unapproved_perfs = [
+                    p for p in active_perfs 
+                    if p.status not in [PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED] 
+                    and not p.chief_approved_by
+                ]
+                if unapproved_perfs:
+                    chest_list = [p.chest_number or f'Chest #{p.event_entry.chest_number}' for p in unapproved_perfs]
+                    messages.error(
+                        request,
+                        f"Cannot push next athlete/batch! Chief Judge has not yet finalized and released scores for current athlete(s): {', '.join(chest_list)}. "
+                        "The Chief Judge must review and release provisional scores before moving to the next athlete."
+                    )
+                    return redirect(redirect_url)
 
             # Retire any previous ACTIVE batch on this panel
             StageBatch.objects.filter(panel=current_panel, status='ACTIVE').update(status='COMPLETED')
@@ -1269,10 +1614,15 @@ def stage_manager(request):
             ('D4 Judge', current_panel.d4_judge, 'D4_JUDGE'),
             ('D5 Judge', current_panel.d5_judge, 'D5_JUDGE'),
             ('Time Judge', current_panel.time_judge, 'TIME_JUDGE'),
+            ('Time Judge 2', current_panel.time_judge_2, 'TIME_JUDGE_2'),
             ('Evaluator', current_panel.evaluator, 'EVALUATOR'),
         ]
+        if current_panel.evaluator_2:
+            seat_definitions.append(('Evaluator 2', current_panel.evaluator_2, 'EVALUATOR_2'))
         if current_panel.artistry_judge:
             seat_definitions.append(('Artistry Judge', current_panel.artistry_judge, 'ARTISTRY_JUDGE'))
+        if current_panel.artistry_judge_2:
+            seat_definitions.append(('Artistry Judge 2', current_panel.artistry_judge_2, 'ARTISTRY_JUDGE_2'))
 
         for seat_title, judge_user, role_code in seat_definitions:
             if not judge_user:
@@ -1320,17 +1670,46 @@ def stage_manager(request):
                 'is_complete': is_complete
             })
 
+    # Check if Chief Judge has submitted/released the current active batch
+    is_chief_submitted = True
+    active_perfs = list(Performance.objects.filter(batch=active_batch).select_related('event_entry__registration__athlete')) if active_batch else []
+    
+    # Interruption status evaluation for active performance
+    active_perf = active_perfs[0] if active_perfs else None
+    is_held = active_perf and active_perf.status == PerformanceStatus.HELD
+    is_stopped = active_perf and active_perf.status == PerformanceStatus.STOPPED_PENDING_DECISION
+    repush_authorized = active_perf and active_perf.repush_authorized
+    
+    # Next athlete push is eligible ONLY if stage is clear OR Chief Judge has finalized/released and no hold/stop/repush is pending
+    can_push_next = (
+        active_batch is None or (
+            all(p.status in [PerformanceStatus.PROVISIONAL_RELEASED, PerformanceStatus.CD_FINALIZED] or p.chief_approved_by is not None for p in active_perfs)
+            and not is_held and not is_stopped and not repush_authorized
+        )
+    )
+
+    interruption_logs = PerformanceInterruptionLog.objects.filter(performance=active_perf).order_by('-timestamp') if active_perf else []
+
     return render(request, 'competition/stage_manager.html', {
         'championship': championship,
         'panels': panels,
         'current_panel': current_panel,
         'active_batch': active_batch,
+        'active_perf': active_perf,
+        'active_perfs': active_perfs,
+        'is_held': is_held,
+        'is_stopped': is_stopped,
+        'repush_authorized': repush_authorized,
+        'can_push_next': can_push_next,
+        'interruption_logs': interruption_logs,
+        'interruption_reasons': InterruptionReason.choices,
         'roll': roll,
         'roll_entries': roll_entries,
         'max_batch_size': max_batch_size,
         'batch_limit_text': batch_limit_text,
         'judge_progress_list': judge_progress_list,
         'total_required_items': total_required_items,
+        'is_chief_submitted': is_chief_submitted,
     })
 
 def second_screen(request):

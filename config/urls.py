@@ -113,6 +113,8 @@ urlpatterns = [
     path('appeals/<int:appeal_id>/', corr_views.appeal_detail, name='appeal_detail'),
 
     # Live Audience & Results
+        path('display/live/<int:championship_id>/<int:panel_id>/<int:event_id>/<int:cat_id>/', result_views.public_live_display, name='public_live_display_scoped'),
+    path('display/live/<int:panel_id>/', result_views.public_live_display, name='public_live_display_panel'),
     path('display/live/', result_views.public_live_display, name='public_live_display'),
     path('results/scoreboard/', result_views.scoreboard_view, name='scoreboard_view'),
 

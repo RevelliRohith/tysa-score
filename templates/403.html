@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Unauthorized Access - 403 Forbidden | TYSA Score{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center p-4">
+    <div class="max-w-lg w-full bg-white rounded-3xl border border-rose-100 shadow-xl p-8 sm:p-10 text-center relative overflow-hidden">
+        <!-- Background accent watermark -->
+        <div class="absolute -right-8 -top-8 w-36 h-36 bg-rose-50 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -left-8 -bottom-8 w-36 h-36 bg-amber-50 rounded-full blur-2xl pointer-events-none"></div>
+
+        <!-- Shield / Lock Icon -->
+        <div class="w-20 h-20 mx-auto rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-6 shadow-xs border border-rose-100 ring-8 ring-rose-50/50">
+            <i data-lucide="shield-alert" class="w-10 h-10"></i>
+        </div>
+
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 mb-3">
+            <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+            Security Alert: 403 Forbidden
+        </div>
+
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Access Denied &amp; Workspace Isolated</h1>
+        
+        <p class="text-sm text-slate-600 mt-3 leading-relaxed">
+            {% if message %}
+                {{ message }}
+            {% elif exception %}
+                {{ exception }}
+            {% else %}
+                You are not authorized to access this desk, panel, or workspace. Access is strictly isolated to your verified authenticated role and stage assignment.
+            {% endif %}
+        </p>
+
+        {% if user.is_authenticated %}
+        <div class="my-6 p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-left text-xs space-y-1.5">
+            <div class="flex justify-between items-center text-slate-500">
+                <span>Authenticated Account:</span>
+                <span class="font-bold text-slate-800">{{ user.email|default:user.username }}</span>
+            </div>
+            {% if current_role %}
+            <div class="flex justify-between items-center text-slate-500">
+                <span>Active Role:</span>
+                <span class="font-bold text-slate-800">{{ current_role }}</span>
+            </div>
+            {% endif %}
+            <div class="flex justify-between items-center text-slate-500">
+                <span>Audit Status:</span>
+                <span class="font-semibold text-rose-600">Logged to Security Audit Trail</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            {% if user.is_authenticated %}
+            <a href="{% url 'root' %}" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#0d5c58] hover:bg-[#09403d] text-white font-bold text-xs shadow-md transition-all">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                Return to My Authorized Desk
+            </a>
+            <a href="{% url 'logout' %}" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                Sign Out
+            </a>
+            {% else %}
+            <a href="{% url 'login' %}" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#0d5c58] hover:bg-[#09403d] text-white font-bold text-xs shadow-md transition-all">
+                <i data-lucide="log-in" class="w-4 h-4"></i>
+                Sign In to Your Desk
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

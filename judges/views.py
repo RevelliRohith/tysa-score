@@ -41,11 +41,17 @@ def get_judge_assignment_info(panel, user):
     elif panel.evaluator_id == user.id or panel.evaluator_2_id == user.id:
         seat = 'Evaluator'
         url_name = 'scoring_evaluator'
-    elif panel.artistry_judge_id == user.id or panel.artistry_judge_2_id == user.id:
-        seat = 'Artistry Judge'
+    elif panel.artistry_judge_id == user.id:
+        seat = 'Artistry Judge 1'
         url_name = 'scoring_artistry'
-    elif panel.time_judge_id == user.id or panel.time_judge_2_id == user.id:
-        seat = 'Time Judge'
+    elif panel.artistry_judge_2_id == user.id:
+        seat = 'Artistry Judge 2'
+        url_name = 'scoring_artistry'
+    elif panel.time_judge_id == user.id:
+        seat = 'Time Judge 1'
+        url_name = 'scoring_traditional_time' if ev_type == 'TRADITIONAL' else 'scoring_music_time'
+    elif panel.time_judge_2_id == user.id:
+        seat = 'Time Judge 2'
         url_name = 'scoring_traditional_time' if ev_type == 'TRADITIONAL' else 'scoring_music_time'
     elif panel.d1_judge_id == user.id:
         seat = 'D1 Judge'

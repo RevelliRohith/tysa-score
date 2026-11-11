@@ -1,4 +1,4 @@
-﻿import datetime
+import datetime
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -13,7 +13,7 @@ from competition.models import StageBatch, JudgePanel
 from registrations.models import EventEntry, AsanaSequenceItem
 from catalogue.models import Asana
 from accounts.models import RoleChoices, ScopedRole
-from accounts.permissions import role_required, get_active_championship, is_system_admin
+from accounts.permissions import role_required, get_active_championship, is_system_admin, get_user_assigned_seats
 from audit.models import AuditLog
 
 def get_traditional_compulsory_count(round_type: str) -> int:
@@ -129,36 +129,65 @@ def get_judge_panel_and_batch(request, seat_fields=None, round_type=None, event_
     current_panel = None
     seat_label = None
 
-    if panel_id:
-        current_panel = JudgePanel.objects.filter(id=panel_id, championship=championship, is_active=True).first()
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=championship, role=RoleChoices.CD
+    ).exists()
 
-    if not current_panel:
-        panels = JudgePanel.objects.filter(championship=championship, is_active=True, is_closed=False)
-        if event_type:
-            panels = panels.filter(event_config__event_type__icontains=event_type)
-        if round_type:
-            panels = panels.filter(round_type=round_type)
+    if not is_admin_or_cd:
+        # Non-admin / Non-CD MUST be assigned to an active panel
+        assigned_seats = get_user_assigned_seats(request.user, championship=championship, is_active_only=True)
+        if seat_fields:
+            # Filter seats matching the requested seat_fields
+            assigned_seats = [s for s in assigned_seats if any(f.startswith(s['role_group'].lower().replace('_judge', '')) or f == s['seat_code'].lower() for f in seat_fields)]
+        
+        if not assigned_seats:
+            AuditLog.log(
+                action='SECURITY_UNASSIGNED_PANEL_ACCESS',
+                resource_type='JudgePanel',
+                resource_id=panel_id or '',
+                details={'path': request.path, 'user_id': request.user.id, 'reason': 'User has no assigned seat on any panel for this view'},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return None, None, render(request, '403.html', {
+                'message': "Access Denied: You are not assigned to an active judge seat on this panel or desk.",
+                'current_role': 'Unassigned Seat',
+            }, status=403)
 
-        fields_to_check = seat_fields or JudgePanel.SEAT_FIELDS
-        for p in panels:
-            for f in fields_to_check:
-                if getattr(p, f"{f}_id", None) == request.user.id:
-                    current_panel = p
-                    seat_label = JudgePanel.SEAT_LABELS.get(f, 'Judge')
-                    break
-            if current_panel:
-                break
-
-    # Admin / CD preview fallback
-    if not current_panel and (request.user.is_superuser or ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists()):
-        panels = JudgePanel.objects.filter(championship=championship, is_active=True, is_closed=False)
-        if event_type:
-            panels = panels.filter(event_config__event_type__icontains=event_type)
-        if round_type:
-            panels = panels.filter(round_type=round_type)
-        current_panel = panels.first()
-        if current_panel:
-            seat_label = 'Preview (CD/Admin)'
+        if panel_id:
+            # Verify the user is actually assigned to this requested panel
+            matched_seat = next((s for s in assigned_seats if str(s['panel'].id) == str(panel_id)), None)
+            if not matched_seat:
+                AuditLog.log(
+                    action='SECURITY_TAMPERED_PANEL_ID',
+                    resource_type='JudgePanel',
+                    resource_id=panel_id,
+                    details={'path': request.path, 'attempted_panel_id': panel_id, 'user_id': request.user.id},
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                return None, None, render(request, '403.html', {
+                    'message': f"Access Denied: You are not assigned to Panel #{panel_id}. You may only access your dedicated assigned panel.",
+                    'current_role': 'Cross-Panel Access Blocked',
+                }, status=403)
+            current_panel = matched_seat['panel']
+            seat_label = matched_seat['seat_label']
+        else:
+            # Default to the user's first assigned panel
+            current_panel = assigned_seats[0]['panel']
+            seat_label = assigned_seats[0]['seat_label']
+    else:
+        # Admin / CD preview
+        if panel_id:
+            current_panel = JudgePanel.objects.filter(id=panel_id, championship=championship, is_active=True).first()
+        if not current_panel:
+            panels = JudgePanel.objects.filter(championship=championship, is_active=True, is_closed=False)
+            if event_type:
+                panels = panels.filter(event_config__event_type__icontains=event_type)
+            if round_type:
+                panels = panels.filter(round_type=round_type)
+            current_panel = panels.first()
+        seat_label = 'Preview (CD/Admin)'
 
     if not current_panel:
         return None, None, render(request, 'scoring/no_panel_assigned.html', {'championship': championship})
@@ -172,16 +201,18 @@ def get_judge_panel_and_batch(request, seat_fields=None, round_type=None, event_
             seat_label = 'Assigned Official'
 
     effective_role = judge_role
-    if not effective_role:
-        lbl_upper = seat_label.upper()
+    if not effective_role or effective_role in ['TIME_JUDGE', 'ARTISTRY_JUDGE']:
+        lbl_upper = (seat_label or '').upper()
         if 'D1' in lbl_upper: effective_role = 'D1_JUDGE'
         elif 'D2' in lbl_upper: effective_role = 'D2_JUDGE'
         elif 'D3' in lbl_upper: effective_role = 'D3_JUDGE'
         elif 'D4' in lbl_upper: effective_role = 'D4_JUDGE'
         elif 'D5' in lbl_upper: effective_role = 'D5_JUDGE'
-        elif 'TIME' in lbl_upper: effective_role = 'TIME_JUDGE'
+        elif 'TIME' in lbl_upper:
+            effective_role = 'TIME_JUDGE_2' if ('2' in lbl_upper or 'TWO' in lbl_upper) else 'TIME_JUDGE'
         elif 'EVAL' in lbl_upper: effective_role = 'EVALUATOR'
-        elif 'ARTISTRY' in lbl_upper: effective_role = 'ARTISTRY_JUDGE'
+        elif 'ARTISTRY' in lbl_upper:
+            effective_role = 'ARTISTRY_JUDGE_2' if ('2' in lbl_upper or 'TWO' in lbl_upper) else 'ARTISTRY_JUDGE'
         elif 'CHIEF' in lbl_upper: effective_role = 'CHIEF_JUDGE'
 
     batch = StageBatch.objects.filter(panel=current_panel, status='ACTIVE').first()
@@ -249,9 +280,21 @@ def scoring_traditional_d(request):
         current_asana_seq = total_items
 
     round_type = current_panel.round_type if current_panel else 'PRELIMINARY'
-    judge_role = seat_label.replace(' ', '_').upper()
-    if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
-        judge_role = 'D1_JUDGE'
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+    ).exists()
+
+    if not is_admin_or_cd and current_panel:
+        user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == current_panel.id and s['role_group'] == 'D_JUDGE'), None)
+        if user_seat:
+            judge_role = user_seat['seat_code']
+            seat_label = user_seat['seat_label']
+        else:
+            return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned D Judge seat on this panel."}, status=403)
+    else:
+        judge_role = seat_label.replace(' ', '_').upper()
+        if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
+            judge_role = 'D1_JUDGE'
 
     # Optimize DB queries: get or create Performance and JudgeSubmission once per entry
     entry_subs = {}
@@ -270,6 +313,16 @@ def scoring_traditional_d(request):
             version=1,
             defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00')}
         )
+        if not is_admin_or_cd and sub.judge != request.user:
+            AuditLog.log(
+                action='SECURITY_WORKSPACE_TAMPER',
+                resource_type='JudgeSubmission',
+                resource_id=sub.id,
+                details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
         entry_subs[e.id] = (perf, sub)
 
     # Bulk query locked items across all sequences for progress tabs
@@ -370,6 +423,19 @@ def scoring_traditional_d(request):
     # Handle POST
     if request.method == 'POST':
         action = request.POST.get('action') # 'save_draft', 'submit_item_next', 'submit_final_batch'
+
+        # Check if any performance in this batch is on HOLD or STOPPED
+        active_perfs = Performance.objects.filter(batch=active_batch) if active_batch else []
+        held_list = [p for p in active_perfs if p.status == PerformanceStatus.HELD]
+        stopped_list = [p for p in active_perfs if p.status == PerformanceStatus.STOPPED_PENDING_DECISION]
+
+        if held_list:
+            messages.warning(request, "Performance is currently ON HOLD by Stage Manager. Scoring actions are temporarily paused.")
+            return redirect(request.get_full_path())
+
+        if stopped_list:
+            messages.error(request, "Performance has been STOPPED by Stage Manager. Scoring desks are locked pending official decision.")
+            return redirect(request.get_full_path())
 
         for e in entries:
             sub_id = request.POST.get(f'submission_{e.id}')
@@ -819,6 +885,27 @@ def scoring_artistic_single_d(request):
         perf = get_object_or_404(Performance, id=perf_id)
         entry = perf.event_entry
         round_type = perf.round_type
+        batch = perf.batch
+        current_panel = batch.panel if batch else None
+        
+        # Verify user permission for this performance's panel
+        is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+            user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+        ).exists()
+        if not is_admin_or_cd:
+            user_seats = get_user_assigned_seats(request.user, championship=perf.event_entry.registration.championship if hasattr(perf.event_entry, 'registration') else None)
+            matched = next((s for s in user_seats if current_panel and s['panel'].id == current_panel.id and s['role_group'] == 'D_JUDGE'), None)
+            if not matched:
+                AuditLog.log(
+                    action='SECURITY_UNAUTHORIZED_PERF_ACCESS',
+                    resource_type='Performance',
+                    resource_id=perf_id,
+                    details={'path': request.path, 'user_id': request.user.id},
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                return render(request, '403.html', {'message': "Access Denied: You are not authorized to score this performance."}, status=403)
+            seat_label = matched['seat_label']
     else:
         current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
             request,
@@ -850,10 +937,22 @@ def scoring_artistic_single_d(request):
 
     round_type = perf.round_type
     
-    # Determine judge role
-    judge_role = seat_label.replace(' ', '_').upper() if seat_label else 'D1_JUDGE'
-    if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
-        judge_role = 'D1_JUDGE'
+    # Determine judge role strictly from authenticated user's assignment
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+    ).exists()
+    
+    if not is_admin_or_cd and current_panel:
+        user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == current_panel.id and s['role_group'] == 'D_JUDGE'), None)
+        if user_seat:
+            judge_role = user_seat['seat_code']
+            seat_label = user_seat['seat_label']
+        else:
+            return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned D Judge seat on this panel."}, status=403)
+    else:
+        judge_role = seat_label.replace(' ', '_').upper() if seat_label else 'D1_JUDGE'
+        if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
+            judge_role = 'D1_JUDGE'
 
     sub, _ = JudgeSubmission.objects.get_or_create(
         performance=perf,
@@ -861,9 +960,20 @@ def scoring_artistic_single_d(request):
         version=1,
         defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.000'), 'effective_total': Decimal('0.000')}
     )
-    if request.user.is_authenticated and sub.judge != request.user and not sub.is_locked:
-        sub.judge = request.user
-        sub.save(update_fields=['judge'])
+    if request.user.is_authenticated and (is_admin_or_cd or sub.judge == request.user):
+        if sub.judge != request.user and not sub.is_locked and not is_admin_or_cd:
+            sub.judge = request.user
+            sub.save(update_fields=['judge'])
+    elif not is_admin_or_cd and sub.judge != request.user:
+        AuditLog.log(
+            action='SECURITY_WORKSPACE_TAMPER',
+            resource_type='JudgeSubmission',
+            resource_id=sub.id,
+            details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
 
     total_items = 10
     current_seq = int(request.GET.get('seq', 1))
@@ -984,6 +1094,20 @@ def scoring_artistic_single_d(request):
     if request.method == 'POST' and not sub.is_locked:
         is_ajax = (request.headers.get('x-requested-with') == 'XMLHttpRequest') or (request.POST.get('is_ajax') == '1')
         action = request.POST.get('action') # 'save_draft', 'save_item', 'navigate_prev', 'navigate_next', 'navigate_to', 'submit_sheet'
+
+        if perf and perf.status == PerformanceStatus.HELD:
+            msg = "Performance is currently ON HOLD by Stage Manager. Scoring actions are temporarily paused."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            messages.warning(request, msg)
+            return redirect(request.get_full_path())
+
+        if perf and perf.status == PerformanceStatus.STOPPED_PENDING_DECISION:
+            msg = "Performance has been STOPPED by Stage Manager. Scoring desks are locked pending official decision."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            messages.error(request, msg)
+            return redirect(request.get_full_path())
         target_seq = request.POST.get('target_seq')
 
         # Check if saving a specific seq via AJAX (item_seq + execution_score)
@@ -1154,8 +1278,17 @@ def scoring_artistic_pair_d(request):
     two large execution fields and formation execution field. Ten-item navigation.
     """
     perf_id = request.GET.get('perf_id')
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
     current_seq = int(request.GET.get('seq', 1))
+
+    current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+        request,
+        seat_fields=['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'd5_judge', 'chief_judge'],
+        event_type='ARTISTIC_PAIR'
+    )
+    if isinstance(batch_or_resp, HttpResponse):
+        return batch_or_resp
+
+    batch = batch_or_resp
 
     if perf_id:
         perf = get_object_or_404(Performance, id=perf_id)
@@ -1164,19 +1297,45 @@ def scoring_artistic_pair_d(request):
         entry = batch.entries.filter(is_pair=True).first() if batch else EventEntry.objects.filter(is_pair=True).first()
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type='FINAL',
-            defaults={'status': PerformanceStatus.IN_PROGRESS}
+            round_type=current_panel.round_type if current_panel else 'FINAL',
+            defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
 
-    sub = JudgeSubmission.objects.filter(performance=perf, judge_role='D1_JUDGE').first() if perf else None
-    if not sub and perf:
-        sub = JudgeSubmission.objects.create(
-            performance=perf,
-            judge=request.user,
-            judge_role='D1_JUDGE',
-            version=1,
-            is_draft=True
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+    ).exists()
+
+    if not is_admin_or_cd and current_panel:
+        user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == current_panel.id and s['role_group'] == 'D_JUDGE'), None)
+        if user_seat:
+            judge_role = user_seat['seat_code']
+        else:
+            return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned D Judge seat on this panel."}, status=403)
+    else:
+        judge_role = seat_label.replace(' ', '_').upper() if seat_label else 'D1_JUDGE'
+        if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
+            judge_role = 'D1_JUDGE'
+
+    sub, _ = JudgeSubmission.objects.get_or_create(
+        performance=perf,
+        judge_role=judge_role,
+        version=1,
+        defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.000'), 'effective_total': Decimal('0.000')}
+    )
+    if request.user.is_authenticated and (is_admin_or_cd or sub.judge == request.user):
+        if sub.judge != request.user and not sub.is_locked and not is_admin_or_cd:
+            sub.judge = request.user
+            sub.save(update_fields=['judge'])
+    elif not is_admin_or_cd and sub.judge != request.user:
+        AuditLog.log(
+            action='SECURITY_WORKSPACE_TAMPER',
+            resource_type='JudgeSubmission',
+            resource_id=sub.id,
+            details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR')
         )
+        return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
 
     score_item = None
     pose_a = None
@@ -1249,8 +1408,17 @@ def scoring_rhythmic_pair_d(request):
     Ten-item rhythmic pair scoring with shared BV calculation and compact result.
     """
     perf_id = request.GET.get('perf_id')
-    batch = StageBatch.objects.filter(status='ACTIVE').first()
     current_seq = int(request.GET.get('seq', 1))
+
+    current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
+        request,
+        seat_fields=['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'd5_judge', 'chief_judge'],
+        event_type='RHYTHMIC_PAIR'
+    )
+    if isinstance(batch_or_resp, HttpResponse):
+        return batch_or_resp
+
+    batch = batch_or_resp
 
     if perf_id:
         perf = get_object_or_404(Performance, id=perf_id)
@@ -1259,19 +1427,45 @@ def scoring_rhythmic_pair_d(request):
         entry = batch.entries.filter(is_pair=True).first() if batch else EventEntry.objects.filter(is_pair=True).first()
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type='FINAL',
-            defaults={'status': PerformanceStatus.IN_PROGRESS}
+            round_type=current_panel.round_type if current_panel else 'FINAL',
+            defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
 
-    sub = JudgeSubmission.objects.filter(performance=perf, judge_role='D1_JUDGE').first() if perf else None
-    if not sub and perf:
-        sub = JudgeSubmission.objects.create(
-            performance=perf,
-            judge=request.user,
-            judge_role='D1_JUDGE',
-            version=1,
-            is_draft=True
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+    ).exists()
+
+    if not is_admin_or_cd and current_panel:
+        user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == current_panel.id and s['role_group'] == 'D_JUDGE'), None)
+        if user_seat:
+            judge_role = user_seat['seat_code']
+        else:
+            return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned D Judge seat on this panel."}, status=403)
+    else:
+        judge_role = seat_label.replace(' ', '_').upper() if seat_label else 'D1_JUDGE'
+        if judge_role not in ['D1_JUDGE', 'D2_JUDGE', 'D3_JUDGE', 'D4_JUDGE', 'D5_JUDGE']:
+            judge_role = 'D1_JUDGE'
+
+    sub, _ = JudgeSubmission.objects.get_or_create(
+        performance=perf,
+        judge_role=judge_role,
+        version=1,
+        defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.000'), 'effective_total': Decimal('0.000')}
+    )
+    if request.user.is_authenticated and (is_admin_or_cd or sub.judge == request.user):
+        if sub.judge != request.user and not sub.is_locked and not is_admin_or_cd:
+            sub.judge = request.user
+            sub.save(update_fields=['judge'])
+    elif not is_admin_or_cd and sub.judge != request.user:
+        AuditLog.log(
+            action='SECURITY_WORKSPACE_TAMPER',
+            resource_type='JudgeSubmission',
+            resource_id=sub.id,
+            details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR')
         )
+        return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
 
     score_item = None
     pose = None
@@ -1520,9 +1714,14 @@ def scoring_music_time(request):
     - AJAX auto-save and manual Save Draft / Submit Sheet actions.
     """
     perf_id = request.GET.get('perf_id')
+    panel_id_param = request.GET.get('panel_id')
+    role_param = request.GET.get('judge_role', '').strip().upper()
     current_panel = None
-    seat_label = 'Time Judge 1'
+    seat_label = None
     batch = None
+
+    if panel_id_param:
+        current_panel = JudgePanel.objects.filter(id=panel_id_param).first()
     
     # 1. Resolve panel & active batch if perf_id not explicitly given
     if perf_id:
@@ -1530,11 +1729,13 @@ def scoring_music_time(request):
         entry = perf.event_entry
         round_type = perf.round_type
         batch = perf.batch
+        if not current_panel and batch:
+            current_panel = batch.panel
     else:
         current_panel, seat_label, batch_or_resp = get_judge_panel_and_batch(
             request,
             seat_fields=['time_judge', 'time_judge_2'],
-            judge_role='TIME_JUDGE'
+            judge_role=role_param if role_param in ['TIME_JUDGE', 'TIME_JUDGE_2'] else None
         )
         if isinstance(batch_or_resp, HttpResponse):
             return batch_or_resp
@@ -1560,7 +1761,34 @@ def scoring_music_time(request):
         return render(request, 'scoring/music_time.html', {'error': 'No competitor found'})
 
     round_type = perf.round_type
-    judge_role = 'TIME_JUDGE_2' if ('2' in (seat_label or '') or 'TWO' in (seat_label or '').upper()) else 'TIME_JUDGE'
+
+    # Precise role resolution for Time Judge 1 vs Time Judge 2
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+    ).exists()
+
+    if not is_admin_or_cd and current_panel:
+        user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == current_panel.id and s['role_group'] == 'TIME_JUDGE'), None)
+        if user_seat:
+            judge_role = user_seat['seat_code']
+            seat_label = user_seat['seat_label']
+        else:
+            return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned Time Judge seat on this panel."}, status=403)
+    elif role_param in ['TIME_JUDGE', 'TIME_JUDGE_2']:
+        judge_role = role_param
+        seat_label = 'Time Judge 2' if judge_role == 'TIME_JUDGE_2' else 'Time Judge 1'
+    elif current_panel and current_panel.time_judge_2_id == request.user.id:
+        judge_role = 'TIME_JUDGE_2'
+        seat_label = 'Time Judge 2'
+    elif current_panel and current_panel.time_judge_id == request.user.id:
+        judge_role = 'TIME_JUDGE'
+        seat_label = 'Time Judge 1'
+    elif seat_label and ('2' in seat_label or 'TWO' in seat_label.upper()):
+        judge_role = 'TIME_JUDGE_2'
+        seat_label = 'Time Judge 2'
+    else:
+        judge_role = 'TIME_JUDGE'
+        seat_label = 'Time Judge 1'
 
     sub, _ = JudgeSubmission.objects.get_or_create(
         performance=perf,
@@ -1568,9 +1796,20 @@ def scoring_music_time(request):
         version=1,
         defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00'), 'effective_total': Decimal('0.000')}
     )
-    if request.user.is_authenticated and sub.judge != request.user and not sub.is_locked:
-        sub.judge = request.user
-        sub.save(update_fields=['judge'])
+    if request.user.is_authenticated and (is_admin_or_cd or sub.judge == request.user):
+        if sub.judge != request.user and not sub.is_locked and not is_admin_or_cd:
+            sub.judge = request.user
+            sub.save(update_fields=['judge'])
+    elif not is_admin_or_cd and sub.judge != request.user:
+        AuditLog.log(
+            action='SECURITY_WORKSPACE_TAMPER',
+            resource_type='JudgeSubmission',
+            resource_id=sub.id,
+            details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
 
     total_items = 10
 
@@ -1629,6 +1868,34 @@ def scoring_music_time(request):
     if request.method == 'POST' and sub:
         action = request.POST.get('action') # 'auto_save', 'save_draft', 'submit_sheet'
         is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or action == 'auto_save')
+
+        if perf and perf.status == PerformanceStatus.HELD:
+            msg = "Performance is currently ON HOLD by Stage Manager. Artistry scoring is temporarily paused."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            messages.warning(request, msg)
+            return redirect(request.get_full_path())
+
+        if perf and perf.status == PerformanceStatus.STOPPED_PENDING_DECISION:
+            msg = "Performance has been STOPPED by Stage Manager. Artistry desk is locked pending official decision."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            messages.error(request, msg)
+            return redirect(request.get_full_path())
+
+        if perf and perf.status == PerformanceStatus.HELD:
+            msg = "Performance is currently ON HOLD by Stage Manager. Timing actions are temporarily paused."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            messages.warning(request, msg)
+            return redirect(request.get_full_path())
+
+        if perf and perf.status == PerformanceStatus.STOPPED_PENDING_DECISION:
+            msg = "Performance has been STOPPED by Stage Manager. Timing desks are locked pending official decision."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            messages.error(request, msg)
+            return redirect(request.get_full_path())
 
         # 1. Update whole performance duration (TW) - Whole seconds only (no milliseconds/decimals)
         raw_dur = request.POST.get('routine_duration', '').strip()
@@ -1712,6 +1979,8 @@ def scoring_music_time(request):
                 params.append(f'perf_id={perf_id}')
             elif request.GET.get('panel_id'):
                 params.append(f"panel_id={request.GET.get('panel_id')}")
+            if judge_role:
+                params.append(f'judge_role={judge_role}')
             if params:
                 redirect_url += '?' + '&'.join(params)
             return redirect(redirect_url)
@@ -1741,6 +2010,8 @@ def scoring_music_time(request):
                 params.append(f'perf_id={perf_id}')
             elif request.GET.get('panel_id'):
                 params.append(f"panel_id={request.GET.get('panel_id')}")
+            if judge_role:
+                params.append(f'judge_role={judge_role}')
             if params:
                 redirect_url += '?' + '&'.join(params)
             return redirect(redirect_url)
@@ -1863,8 +2134,19 @@ def scoring_artistry(request):
 
     round_type = perf.round_type
     # Support Artistry Judge 1 vs Artistry Judge 2
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+    ).exists()
+
     role_param = request.GET.get('judge_role', '').strip().upper()
-    if role_param in ['ARTISTRY_JUDGE', 'ARTISTRY_JUDGE_2']:
+    if not is_admin_or_cd and current_panel:
+        user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == current_panel.id and s['role_group'] == 'ARTISTRY_JUDGE'), None)
+        if user_seat:
+            judge_role = user_seat['seat_code']
+            seat_label = user_seat['seat_label']
+        else:
+            return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned Artistry Judge seat on this panel."}, status=403)
+    elif role_param in ['ARTISTRY_JUDGE', 'ARTISTRY_JUDGE_2']:
         judge_role = role_param
     elif '2' in (seat_label or '') or 'TWO' in (seat_label or '').upper():
         judge_role = 'ARTISTRY_JUDGE_2'
@@ -1877,9 +2159,20 @@ def scoring_artistry(request):
         version=1,
         defaults={'judge': request.user, 'is_draft': True, 'raw_total': Decimal('0.00'), 'effective_total': Decimal('0.00')}
     )
-    if request.user.is_authenticated and sub.judge != request.user and not sub.is_locked:
-        sub.judge = request.user
-        sub.save(update_fields=['judge'])
+    if request.user.is_authenticated and (is_admin_or_cd or sub.judge == request.user):
+        if sub.judge != request.user and not sub.is_locked and not is_admin_or_cd:
+            sub.judge = request.user
+            sub.save(update_fields=['judge'])
+    elif not is_admin_or_cd and sub.judge != request.user:
+        AuditLog.log(
+            action='SECURITY_WORKSPACE_TAMPER',
+            resource_type='JudgeSubmission',
+            resource_id=sub.id,
+            details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
 
     art_score, _ = PerformanceArtistryScore.objects.get_or_create(
         submission=sub,
@@ -2025,10 +2318,9 @@ def scoring_artistry(request):
     # Get sister judge score if exists for composite preview
     other_role = 'ARTISTRY_JUDGE_2' if judge_role == 'ARTISTRY_JUDGE' else 'ARTISTRY_JUDGE'
     other_sub = JudgeSubmission.objects.filter(performance=perf, judge_role=other_role).first()
-    other_score = other_sub.effective_total if other_sub and other_sub.is_submitted else None
+    # Desk Isolation: Artistry judges work independently in their own workspace without viewing the other judge's score or panel average
+    other_score = None
     panel_average = None
-    if other_score is not None and sub.effective_total is not None:
-        panel_average = round((sub.effective_total + other_score) / Decimal('2.0'), 3)
 
     return render(request, 'scoring/artistry.html', {
         'batch': batch,
@@ -2319,6 +2611,9 @@ def scoring_evaluator(request, perf_id=None):
                     redirect_url += f"?panel_id={request.GET.get('panel_id')}"
                 return redirect(redirect_url)
 
+        all_sub_objs = [a['sub'] for a in athletes]
+        is_batch_submitted = bool(all_sub_objs and all(s.is_submitted for s in all_sub_objs))
+
         return render(request, 'scoring/evaluator.html', {
             'is_traditional': True,
             'batch': batch,
@@ -2327,41 +2622,106 @@ def scoring_evaluator(request, perf_id=None):
             'current_seq': current_seq,
             'total_items': total_items,
             'sequence_tabs': sequence_tabs,
+            'is_batch_submitted': is_batch_submitted,
         })
     else:
         # Non-traditional (Artistic / Rhythmic) routine view
+        entry_id_param = request.GET.get('entry_id')
         if perf_id:
             perf = get_object_or_404(Performance, id=perf_id)
             entry = perf.event_entry
+            round_type = perf.round_type
         else:
-            entry = batch.entries.first() if batch else EventEntry.objects.first()
+            if entry_id_param and batch and batch.entries.filter(id=entry_id_param).exists():
+                entry = batch.entries.filter(id=entry_id_param).first()
+            elif batch and batch.entries.exists():
+                entry = batch.entries.first()
+            else:
+                entry = EventEntry.objects.filter(event_config__event_type__icontains='ARTISTIC').first()
+
+            round_type = panel.round_type if panel else 'PRELIMINARY'
             perf, _ = Performance.objects.get_or_create(
                 event_entry=entry,
-                round_type='FINAL',
-                defaults={'status': PerformanceStatus.IN_PROGRESS}
+                round_type=round_type,
+                defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
             ) if entry else (None, False)
 
-        sub = JudgeSubmission.objects.filter(performance=perf, judge_role='EVALUATOR').first() if perf else None
-        if not sub and perf:
-            sub = JudgeSubmission.objects.create(
-                performance=perf,
-                judge=request.user,
-                judge_role='EVALUATOR',
-                version=1,
-                is_draft=True
+        is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+            user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
+        ).exists()
+
+        role_param = request.GET.get('judge_role', '').strip().upper()
+        if not is_admin_or_cd and panel:
+            user_seat = next((s for s in get_user_assigned_seats(request.user, is_active_only=True) if s['panel'].id == panel.id and s['role_group'] == 'EVALUATOR'), None)
+            if user_seat:
+                eval_role = user_seat['seat_code']
+                seat_label = user_seat['seat_label']
+            else:
+                return render(request, '403.html', {'message': "Access Denied: You do not hold an assigned Evaluator seat on this panel."}, status=403)
+        else:
+            eval_role = 'EVALUATOR_2' if (role_param == 'EVALUATOR_2' or (panel and panel.evaluator_2_id == request.user.id) or ('2' in (seat_label or ''))) else 'EVALUATOR'
+
+        sub, _ = JudgeSubmission.objects.get_or_create(
+            performance=perf,
+            judge_role=eval_role,
+            version=1,
+            defaults={'judge': request.user, 'is_draft': True}
+        ) if perf else (None, False)
+
+        if sub and request.user.is_authenticated and (is_admin_or_cd or sub.judge == request.user):
+            if sub.judge != request.user and not sub.is_locked and not is_admin_or_cd:
+                sub.judge = request.user
+                sub.save(update_fields=['judge'])
+        elif sub and not is_admin_or_cd and sub.judge != request.user:
+            AuditLog.log(
+                action='SECURITY_WORKSPACE_TAMPER',
+                resource_type='JudgeSubmission',
+                resource_id=sub.id,
+                details={'user_id': request.user.id, 'owner_id': sub.judge_id if sub.judge else None},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
             )
+            return render(request, '403.html', {'message': "Access Denied: Cannot access another evaluator's workspace."}, status=403)
 
         item_count = 10
         items = []
         if sub and entry:
             for seq in range(1, item_count + 1):
-                pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq).first()
+                pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq, round_type=round_type).first()
+                if not pose_seq:
+                    pose_seq = AsanaSequenceItem.objects.filter(event_entry=entry, sequence_order=seq).first()
                 score_item, _ = AsanaScoreItem.objects.get_or_create(
                     submission=sub,
                     sequence_order=seq,
                     defaults={'is_valid': True, 'invalid_reason': ''}
                 )
-                items.append({'score_item': score_item, 'pose': pose_seq, 'seq': seq})
+                # Resolve image_url
+                img_url = ''
+                if pose_seq:
+                    if hasattr(pose_seq, 'image_url') and pose_seq.image_url:
+                        img_url = pose_seq.image_url
+                    elif getattr(pose_seq, 'declared_asana', None) and pose_seq.declared_asana.image_url:
+                        img_url = pose_seq.declared_asana.image_url
+                
+                # Check sequence incident for this asana
+                seq_inc = EvaluatorIncident.objects.filter(
+                    performance=perf,
+                    incident_type=IncidentType.SEQUENCE_CHANGE,
+                    affected_item_numbers=str(seq)
+                ).first()
+                seq_pen = int(seq_inc.penalty_marks) if seq_inc else 0
+                is_dq = bool(seq_inc and seq_inc.evidence_notes == 'DQ')
+
+                items.append({
+                    'score_item': score_item,
+                    'pose': pose_seq,
+                    'seq': seq,
+                    'code': pose_seq.declared_code if pose_seq else f'A{seq}',
+                    'image_url': img_url,
+                    'bv': pose_seq.declared_bv if pose_seq else Decimal('0.80'),
+                    'seq_penalty': seq_pen,
+                    'is_dq': is_dq,
+                })
 
         if request.method == 'POST' and sub:
             action = request.POST.get('action')
@@ -2372,11 +2732,35 @@ def scoring_evaluator(request, perf_id=None):
                 if not is_valid_val:
                     invalid_count += 1
 
+                item_defaults = {
+                    'is_valid': is_valid_val,
+                    'invalid_reason': reason_val,
+                    'is_draft': (action != 'submit_sheet'),
+                    'is_submitted': (action == 'submit_sheet'),
+                    'is_locked': (action == 'submit_sheet'),
+                }
                 AsanaScoreItem.objects.update_or_create(
                     submission=sub,
                     sequence_order=seq,
-                    defaults={'is_valid': is_valid_val, 'invalid_reason': reason_val}
+                    defaults=item_defaults
                 )
+
+                # Synchronize to all D-Judges for this performance & sequence
+                d_items = AsanaScoreItem.objects.filter(
+                    submission__performance=perf,
+                    submission__judge_role__startswith='D',
+                    sequence_order=seq
+                )
+                for d_item in d_items:
+                    if not is_valid_val:
+                        d_item.is_valid = False
+                        d_item.invalid_reason = reason_val or "Evaluator Confirmed Invalid Asana"
+                        d_item.effective_item_score = Decimal('0.000')
+                    else:
+                        d_item.is_valid = True
+                        d_item.invalid_reason = ""
+                        d_item.effective_item_score = quantize_score(d_item.execution_score * d_item.base_value) if d_item.execution_score > 0 else d_item.raw_item_score
+                    d_item.save(update_fields=['is_valid', 'invalid_reason', 'effective_item_score'])
 
             sub.raw_total = Decimal(str(invalid_count))
             sub.effective_total = Decimal(str(invalid_count * 2))
@@ -2389,10 +2773,27 @@ def scoring_evaluator(request, perf_id=None):
                 if sub.performance:
                     calculate_performance_score(sub.performance)
                 messages.success(request, f"Evaluator sheet submitted and locked! Invalid items flagged: {invalid_count}")
-                return redirect(request.path)
+                redirect_url = request.path
+                params = []
+                if perf_id:
+                    params.append(f"perf_id={perf_id}")
+                elif request.GET.get('panel_id'):
+                    params.append(f"panel_id={request.GET.get('panel_id')}")
+                if params:
+                    redirect_url += '?' + '&'.join(params)
+                return redirect(redirect_url)
             else:
                 sub.save()
                 messages.success(request, f"Evaluator draft saved. Invalid items: {invalid_count}")
+                redirect_url = request.path
+                params = []
+                if perf_id:
+                    params.append(f"perf_id={perf_id}")
+                elif request.GET.get('panel_id'):
+                    params.append(f"panel_id={request.GET.get('panel_id')}")
+                if params:
+                    redirect_url += '?' + '&'.join(params)
+                return redirect(redirect_url)
 
         return render(request, 'scoring/evaluator.html', {
             'is_traditional': False,
@@ -2421,20 +2822,49 @@ def scoring_chief_judge(request):
         'time_judge', 'time_judge_2', 'evaluator', 'evaluator_2',
         'artistry_judge', 'artistry_judge_2', 'stage_manager'
     )
-    assigned_panel = None
-    if not (request.user.is_superuser or ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists()):
-        assigned_panel = panel_qs.filter(chief_judge=request.user, is_active=True).first()
-    
-    # If not found or if CD/Admin, allow panel_id selector or fall back to first panel
-    panel_id = request.GET.get('panel_id')
-    if panel_id:
-        p_candidate = panel_qs.filter(id=panel_id).first()
-        if p_candidate:
-            if assigned_panel is None or p_candidate.id == assigned_panel.id:
-                assigned_panel = p_candidate
+    is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
+        user=request.user, championship=championship, role=RoleChoices.CD
+    ).exists()
 
-    if not assigned_panel:
-        assigned_panel = panel_qs.filter(is_active=True).first()
+    panel_id = request.GET.get('panel_id')
+    assigned_panel = None
+
+    if not is_admin_or_cd:
+        # Non-admin/CD MUST be the assigned chief_judge for their panel
+        user_chief_panels = panel_qs.filter(chief_judge=request.user, is_active=True)
+        if not user_chief_panels.exists():
+            AuditLog.log(
+                action='SECURITY_UNASSIGNED_CHIEF_ACCESS',
+                resource_type='JudgePanel',
+                resource_id=panel_id or '',
+                details={'path': request.path, 'user_id': request.user.id},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return render(request, '403.html', {'message': "Access Denied: You are not assigned as Chief Judge to any active panel in this championship."}, status=403)
+        
+        if panel_id:
+            # Prevent accessing another panel's chief judge console
+            matched_panel = user_chief_panels.filter(id=panel_id).first()
+            if not matched_panel:
+                AuditLog.log(
+                    action='SECURITY_CROSS_PANEL_CHIEF_TAMPER',
+                    resource_type='JudgePanel',
+                    resource_id=panel_id,
+                    details={'path': request.path, 'user_id': request.user.id, 'attempted_panel_id': panel_id},
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                return render(request, '403.html', {'message': f"Access Denied: You are not authorized to view or manage Panel #{panel_id} Chief Judge Console."}, status=403)
+            assigned_panel = matched_panel
+        else:
+            assigned_panel = user_chief_panels.first()
+    else:
+        # Admin / CD can view requested panel or fallback to first
+        if panel_id:
+            assigned_panel = panel_qs.filter(id=panel_id).first()
+        if not assigned_panel:
+            assigned_panel = panel_qs.filter(is_active=True).first()
 
     if not assigned_panel:
         return render(request, 'scoring/no_panel_assigned.html', {'championship': championship})
@@ -2598,6 +3028,8 @@ def scoring_chief_judge(request):
         'score_calc': score_calc,
         'sequence_items': sequence_items,
         'incidents': incidents,
+        'perf': selected_perf,
+        'interruption_logs': selected_perf.interruption_logs.all() if selected_perf else [],
         'championship': championship,
         'event_configs': event_configs,
         'current_event': current_event,

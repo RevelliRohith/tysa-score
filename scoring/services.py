@@ -516,6 +516,16 @@ def reconcile_music_timing(
             'is_valid': is_valid_hold
         })
 
+    # Calculate T1 and T2 individual TW marks
+    t1_tw_marks = calculate_tw_marks(Decimal(str(t1_sec)))
+    t2_tw_marks = calculate_tw_marks(Decimal(str(t2_sec)))
+
+    # Calculate T1 and T2 individual TA marks
+    t1_valid_holds_count = sum(1 for it in reconciled_holds if it.get('t1_raw', 0) >= 5)
+    t2_valid_holds_count = sum(1 for it in reconciled_holds if it.get('t2_raw', 0) >= 5)
+    t1_ta_marks = min(Decimal('5.000'), Decimal(str(t1_valid_holds_count)) * Decimal('0.500'))
+    t2_ta_marks = min(Decimal('5.000'), Decimal(str(t2_valid_holds_count)) * Decimal('0.500'))
+
     # Each valid hold of at least 5s = 0.5 marks. 10 valid = max 5.0
     ta_marks = min(Decimal('5.000'), Decimal(str(ta_valid_count)) * Decimal('0.500'))
     timing_total = tw_marks + ta_marks
@@ -524,7 +534,13 @@ def reconcile_music_timing(
         't1_tw_seconds': t1_sec,
         't2_tw_seconds': t2_sec,
         'reconciled_tw_seconds': int(reconciled_tw),
+        't1_tw_marks': quantize_score(t1_tw_marks),
+        't2_tw_marks': quantize_score(t2_tw_marks),
         'tw_marks': quantize_score(tw_marks),
+        't1_valid_holds_count': t1_valid_holds_count,
+        't2_valid_holds_count': t2_valid_holds_count,
+        't1_ta_marks': quantize_score(t1_ta_marks),
+        't2_ta_marks': quantize_score(t2_ta_marks),
         'ta_valid_holds_count': ta_valid_count,
         'ta_marks': quantize_score(ta_marks),
         'reconciled_holds': reconciled_holds,
@@ -700,20 +716,27 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
     missing_seats = []
     for r in required_roles:
         sub = sub_by_role.get(r)
+        draft_sub = all_sub_by_role.get(r)
         if not sub:
             missing_seats.append(r)
             seat_status.append({
                 'role_code': r,
-                'status': 'MISSING',
+                'status': 'DRAFT' if (draft_sub and not draft_sub.is_submitted) else 'MISSING',
                 'is_submitted': False,
-                'score': None,
-                'display_text': 'Missing / Pending'
+                'is_draft': bool(draft_sub and not draft_sub.is_submitted),
+                'submitted_at': draft_sub.submitted_at if draft_sub else None,
+                'submission_id': draft_sub.id if draft_sub else None,
+                'score': quantize_score(draft_sub.effective_total) if (draft_sub and draft_sub.effective_total) else None,
+                'display_text': 'Active Draft' if (draft_sub and not draft_sub.is_submitted) else 'Missing / Pending'
             })
         else:
             seat_status.append({
                 'role_code': r,
                 'status': 'SUBMITTED',
                 'is_submitted': True,
+                'is_draft': False,
+                'submitted_at': sub.submitted_at,
+                'submission_id': sub.id,
                 'is_zero': sub.is_zero,
                 'score': quantize_score(sub.effective_total),
                 'display_text': f"{quantize_score(sub.effective_total):.3f}"
@@ -933,9 +956,10 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
 
         def _get_item_marks(itm):
             if not itm:
-                return Decimal('0.000'), Decimal('0.000')
+                return Decimal('0.000'), Decimal('0.000'), Decimal('0.00')
             # Given raw score (posture + stability + time) * bv
             raw = Decimal('0.000')
+            exec_mark = itm.execution_score if itm.execution_score > Decimal('0.00') else Decimal('0.00')
             if itm.raw_item_score > Decimal('0.000'):
                 raw = itm.raw_item_score
             elif itm.posture_score > Decimal('0.00') or itm.stability_score > Decimal('0.00'):
@@ -945,7 +969,7 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
             else:
                 raw = itm.effective_item_score
             eff = itm.effective_item_score
-            return quantize_score(raw), quantize_score(eff)
+            return quantize_score(raw), quantize_score(eff), exec_mark
 
         d1_itm = items_by_role_seq.get(('D1_JUDGE', seq))
         d2_itm = items_by_role_seq.get(('D2_JUDGE', seq))
@@ -953,18 +977,21 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
         d4_itm = items_by_role_seq.get(('D4_JUDGE', seq))
         d5_itm = items_by_role_seq.get(('D5_JUDGE', seq))
 
-        d1_raw, d1_val = _get_item_marks(d1_itm)
-        d2_raw, d2_val = _get_item_marks(d2_itm)
-        d3_raw, d3_val = _get_item_marks(d3_itm)
-        d4_raw, d4_val = _get_item_marks(d4_itm)
-        d5_raw, d5_val = _get_item_marks(d5_itm)
+        d1_raw, d1_val, d1_exec = _get_item_marks(d1_itm)
+        d2_raw, d2_val, d2_exec = _get_item_marks(d2_itm)
+        d3_raw, d3_val, d3_exec = _get_item_marks(d3_itm)
+        d4_raw, d4_val, d4_exec = _get_item_marks(d4_itm)
+        d5_raw, d5_val, d5_exec = _get_item_marks(d5_itm)
+        image_url = decl.image_url if decl and hasattr(decl, 'image_url') and decl.image_url else (decl.declared_asana.image_url if decl and getattr(decl, 'declared_asana', None) and hasattr(decl.declared_asana, 'image_url') else '')
 
         # Time judge & Evaluator details for this sequence (checked across draft and submitted sheets)
         time_itm = items_by_role_seq.get(('TIME_JUDGE', seq))
+        time_itm_2 = items_by_role_seq.get(('TIME_JUDGE_2', seq))
         eval_itm = items_by_role_seq.get(('EVALUATOR', seq)) or items_by_role_seq.get(('EVALUATOR_1', seq))
 
         time_hold = time_itm.hold_duration_seconds if time_itm else None
-        time_contrib = time_itm.timing_contribution if time_itm else None
+        time_hold_2 = time_itm_2.hold_duration_seconds if time_itm_2 else None
+        time_contrib = time_itm.timing_contribution if time_itm else (time_itm_2.timing_contribution if time_itm_2 else None)
         is_eval_valid = eval_itm.is_valid if eval_itm else True
         eval_reason = eval_itm.invalid_reason if (eval_itm and not eval_itm.is_valid) else ""
 
@@ -973,28 +1000,41 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
             all_d_at_seq.append(d5_val)
 
         item_mean = quantize_score(sum(all_d_at_seq) / Decimal(str(len(all_d_at_seq)))) if all_d_at_seq else Decimal('0.000')
-        is_seq_invalid = (seq in invalid_item_sequences) or (not is_eval_valid) or (time_contrib is not None and time_contrib <= Decimal('0.00'))
-
-        effective_reason = invalid_reasons.get(seq, '') or eval_reason
-        if not effective_reason and time_contrib is not None and time_contrib <= Decimal('0.00'):
-            effective_reason = "Hold < 75% (0.0s): Score is 0.000"
+        
+        # 75% hold timing rule applies ONLY to Traditional Yogasana events.
+        # In Artistic Single, Artistic Pair, and Rhythmic Pair events, timing hold duration does NOT zero the D-Judge asana score.
+        if is_traditional:
+            is_seq_invalid = (seq in invalid_item_sequences) or (not is_eval_valid) or (time_contrib is not None and time_contrib <= Decimal('0.00'))
+            effective_reason = invalid_reasons.get(seq, '') or eval_reason
+            if not effective_reason and time_contrib is not None and time_contrib <= Decimal('0.00'):
+                effective_reason = "Hold < 75% (0.0s): Score is 0.000"
+        else:
+            is_seq_invalid = (seq in invalid_item_sequences) or (not is_eval_valid)
+            effective_reason = invalid_reasons.get(seq, '') or eval_reason
 
         d_matrix.append({
             'seq': seq,
             'code': code,
             'name': name,
+            'image_url': image_url,
             'bv': bv,
             'd1': d1_val,
             'd1_raw': d1_raw,
+            'd1_exec': d1_exec,
             'd2': d2_val,
             'd2_raw': d2_raw,
+            'd2_exec': d2_exec,
             'd3': d3_val,
             'd3_raw': d3_raw,
+            'd3_exec': d3_exec,
             'd4': d4_val,
             'd4_raw': d4_raw,
+            'd4_exec': d4_exec,
             'd5': d5_val,
             'd5_raw': d5_raw,
+            'd5_exec': d5_exec,
             'time_hold': time_hold,
+            'time_hold_2': time_hold_2,
             'time_contrib': time_contrib,
             'is_eval_valid': is_eval_valid,
             'eval_reason': eval_reason,
@@ -1056,8 +1096,10 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
         if reconciled_timing_data:
             timing_score = reconciled_timing_data.get('timing_total', Decimal('0.000'))
             overtime_deduction = reconciled_timing_data.get('overtime_deduction', Decimal('0.000'))
-        elif time_judge_1:
+        elif time_judge_1 and time_judge_1.effective_total > Decimal('0.000'):
             timing_score = time_judge_1.effective_total
+        elif time_judge_2 and time_judge_2.effective_total > Decimal('0.000'):
+            timing_score = time_judge_2.effective_total
 
     # Step 9: Evaluator & T-Box Penalties (Applied Once, Separate from Invalidity)
     evaluator_penalties = Decimal('0.000')

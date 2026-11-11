@@ -5,6 +5,8 @@ from django.conf import settings
 class PerformanceStatus(models.TextChoices):
     PENDING = 'PENDING', 'Pending on Stage'
     IN_PROGRESS = 'IN_PROGRESS', 'Judging in Progress'
+    HELD = 'HELD', 'Performance on Hold'
+    STOPPED_PENDING_DECISION = 'STOPPED_PENDING_DECISION', 'Stopped Pending Decision'
     SUBMITTED = 'SUBMITTED', 'Judging Complete (Pending Chief Review)'
     CHIEF_REVIEWED = 'CHIEF_REVIEWED', 'Reviewed by Chief Judge'
     PROVISIONAL_RELEASED = 'PROVISIONAL_RELEASED', 'Provisional Score Released'
@@ -21,6 +23,17 @@ class Performance(models.Model):
     ])
     status = models.CharField(max_length=30, choices=PerformanceStatus.choices, default=PerformanceStatus.PENDING)
     disqualification_reason = models.TextField(blank=True)
+
+    # Interruption and Attempt Tracking (Stage Manager Controlled)
+    attempt_number = models.PositiveSmallIntegerField(default=1)
+    attempt_id = models.CharField(max_length=64, blank=True)
+    interruption_reason = models.CharField(max_length=100, blank=True)
+    interruption_remarks = models.TextField(blank=True)
+    interrupted_at = models.DateTimeField(null=True, blank=True)
+    resumed_at = models.DateTimeField(null=True, blank=True)
+    repush_authorized = models.BooleanField(default=False)
+    repush_authorized_at = models.DateTimeField(null=True, blank=True)
+    repush_authorized_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='authorized_repushes')
     
     provisional_score = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
     final_score = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
@@ -245,3 +258,39 @@ class EvaluatorIncident(models.Model):
     def __str__(self):
         return f"{self.get_incident_type_display()} on Chest {self.chest_number} ({self.chief_decision})"
 
+
+
+class InterruptionAction(models.TextChoices):
+    HOLD = 'HOLD', 'Hold Performance'
+    RESUME = 'RESUME', 'Resume Performance'
+    STOP = 'STOP', 'Stop Performance'
+    AUTHORIZE_REPUSH = 'AUTHORIZE_REPUSH', 'Authorize Repush / New Attempt'
+    REPUSH = 'REPUSH', 'Push New Attempt'
+
+
+class InterruptionReason(models.TextChoices):
+    INJURY = 'ATHLETE_INJURY', 'Athlete injury or medical issue'
+    DISCOMFORT = 'ATHLETE_DISCOMFORT', 'Athlete discomfort'
+    COSTUME = 'COSTUME_ISSUE', 'Costume issue'
+    EQUIPMENT = 'EQUIPMENT_ISSUE', 'Equipment / stage issue'
+    TECHNICAL = 'TECHNICAL_PROBLEM', 'Technical problem'
+    OTHER = 'OTHER_VALID_REASON', 'Other valid reason'
+
+
+class PerformanceInterruptionLog(models.Model):
+    performance = models.ForeignKey(Performance, on_delete=models.CASCADE, related_name='interruption_logs')
+    action = models.CharField(max_length=50, choices=InterruptionAction.choices)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='interruption_actions')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    reason = models.CharField(max_length=100, blank=True)
+    remarks = models.TextField(blank=True)
+    previous_status = models.CharField(max_length=50, blank=True)
+    new_status = models.CharField(max_length=50, blank=True)
+    attempt_number = models.PositiveSmallIntegerField(default=1)
+    attempt_id = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.action} on Chest {self.performance.chest_number} (Att #{self.attempt_number}) by {self.user}"

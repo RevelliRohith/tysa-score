@@ -115,13 +115,22 @@
                         </td>
                         <!-- Time Judge column -->
                         <td class="py-2.5 px-3 text-center bg-sky-50/40 border-l border-r border-sky-100 font-sans">
-                            {% if row.time_hold is not None %}
-                                <div class="font-mono font-bold {% if row.time_hold < 10 %}text-rose-600{% else %}text-sky-900{% endif %}">
+                            {% if row.time_hold is not None or row.time_hold_2 is not None %}
+                                {% if row.time_hold_2 is not None %}
+                                <div class="flex items-center justify-center space-x-1.5 font-mono text-[10px]">
+                                    <span class="px-1 py-0.5 rounded {% if row.time_hold and row.time_hold >= 5 %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}" title="Time Judge 1">T1: {{ row.time_hold|default:"0" }}s</span>
+                                    <span class="px-1 py-0.5 rounded {% if row.time_hold_2 and row.time_hold_2 >= 5 %}bg-teal-100 text-teal-800{% else %}bg-slate-100 text-slate-600{% endif %}" title="Time Judge 2">T2: {{ row.time_hold_2|default:"0" }}s</span>
+                                </div>
+                                {% else %}
+                                <div class="font-mono font-bold {% if row.time_hold < 5 %}text-rose-600{% else %}text-sky-900{% endif %}">
                                     {{ row.time_hold }}s
                                 </div>
-                                <div class="text-[10px] text-slate-500 font-mono">
+                                {% endif %}
+                                {% if score_calc.is_traditional %}
+                                <div class="text-[10px] text-slate-500 font-mono mt-0.5">
                                     Contrib: {{ row.time_contrib|default:"0.00" }}
                                 </div>
+                                {% endif %}
                             {% else %}
                                 <span class="text-slate-400">—</span>
                             {% endif %}

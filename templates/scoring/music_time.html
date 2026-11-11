@@ -4,6 +4,7 @@
 {% block title %}Time Judge ? Artistic Single ? TYSA Score{% endblock %}
 
 {% block content %}
+{% include 'scoring/interruption_banner.html' %}
 <div class="max-w-7xl mx-auto space-y-4 py-1 pb-44">
     <!-- TOP SECTION: Championship, Event, Chest Number, Round, Judge Information -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -57,8 +58,8 @@
                 </div>
                 <div>
                     <span class="text-slate-400 block font-medium text-[10px] uppercase">Status</span>
-                    {% if sub.is_locked %}
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 block text-center">Locked</span>
+                    {% if sub.is_locked or sub.is_submitted %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 block text-center" title="Submitted at {{ sub.submitted_at|date:'H:i:s' }}">Submitted & Locked</span>
                     {% else %}
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 block text-center">Active Draft</span>
                     {% endif %}
@@ -351,6 +352,7 @@ const asanas = [
 const perfId = "{{ perf.id|default:'' }}";
 const panelId = "{{ panel.id|default:'' }}";
 const entryId = "{{ entry.id|default:'' }}";
+const judgeRole = "{{ judge_role|default:'TIME_JUDGE' }}";
 const csrfToken = "{{ csrf_token }}";
 
 // -------------------------------------------------------------------------
@@ -630,6 +632,7 @@ function buildFormData(action) {
     const fd = new FormData();
     fd.append('csrfmiddlewaretoken', csrfToken);
     fd.append('action', action || 'auto_save');
+    fd.append('judge_role', judgeRole);
     const wholeTw = Math.round(parseFloat(document.getElementById('routine_duration')?.value) || twElapsedSeconds || 0);
     fd.append('routine_duration', String(wholeTw));
 
@@ -650,6 +653,7 @@ function performSave(action, isFinal) {
     if (perfId) params.push('perf_id=' + encodeURIComponent(perfId));
     if (panelId) params.push('panel_id=' + encodeURIComponent(panelId));
     if (entryId) params.push('entry_id=' + encodeURIComponent(entryId));
+    if (judgeRole) params.push('judge_role=' + encodeURIComponent(judgeRole));
     if (params.length > 0) postUrl += '?' + params.join('&');
 
     fetch(postUrl, {

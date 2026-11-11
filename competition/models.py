@@ -134,7 +134,7 @@ class JudgePanel(models.Model):
             seats.extend(['time_judge', 'evaluator'])
             return seats
         elif etype in ['ARTISTIC_SINGLE', 'ARTISTIC_PAIR', 'RHYTHMIC_PAIR']:
-            return ['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'artistry_judge', 'artistry_judge_2', 'time_judge', 'evaluator']
+            return ['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'artistry_judge', 'artistry_judge_2', 'time_judge', 'time_judge_2', 'evaluator']
         return ['d1_judge', 'd2_judge', 'd3_judge', 'd4_judge', 'time_judge', 'evaluator']
 
     def get_assigned_judge_ids(self):

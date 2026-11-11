@@ -167,7 +167,7 @@
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400">Chest <span class="font-mono-num font-black text-white">{{ item.chest_number }}</span></div>
-                            <div class="text-sm sm:text-base font-black text-white leading-tight truncate max-w-[150px]">{{ item.athlete.full_name }}</div>
+                            <div class="text-sm sm:text-base font-black text-white leading-tight truncate max-w-[150px]">{{ item.display_names|default:item.athlete.full_name }}</div>
                             <div class="text-xs text-sky-300 font-semibold truncate">{{ item.district }}</div>
                         </div>
                     </div>
@@ -236,7 +236,7 @@
                 rank: {{ item.rank }},
                 medal: "{{ item.medal|default:'' }}",
                 chest: "{{ item.chest_number }}",
-                name: "{{ item.athlete.full_name|escapejs }}",
+                name: "{{ item.display_names|default:item.athlete.full_name|escapejs }}",
                 district: "{{ item.district|escapejs }}",
                 score: "{{ item.score|floatformat:3 }}",
                 status: "{{ item.state_status }}"

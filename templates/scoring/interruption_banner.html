@@ -1,0 +1,31 @@
+{% if perf.status == 'HELD' %}
+<div class="mb-4 bg-amber-500 text-white p-3.5 rounded-xl border border-amber-600 shadow-sm flex items-center justify-between animate-pulse">
+    <div class="flex items-center space-x-3">
+        <span class="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center font-black text-lg">⏸</span>
+        <div>
+            <h3 class="font-black text-sm uppercase tracking-wider">Performance On Hold by Stage Manager</h3>
+            <p class="text-xs text-amber-100">
+                Reason: <strong>{{ perf.interruption_reason|default:"Competition pause" }}</strong>
+                {% if perf.interruption_remarks %} &mdash; {{ perf.interruption_remarks }}{% endif %}
+            </p>
+            <p class="text-[11px] text-amber-200 mt-0.5">Scoring actions are temporarily suspended. All your saved draft marks are securely preserved.</p>
+        </div>
+    </div>
+    <span class="px-2.5 py-1 bg-amber-700 text-amber-100 text-xs font-mono font-bold rounded-lg uppercase">Paused</span>
+</div>
+{% elif perf.status == 'STOPPED_PENDING_DECISION' %}
+<div class="mb-4 bg-rose-600 text-white p-3.5 rounded-xl border border-rose-700 shadow-sm flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+        <span class="w-8 h-8 rounded-lg bg-rose-700 flex items-center justify-center font-black text-lg">🛑</span>
+        <div>
+            <h3 class="font-black text-sm uppercase tracking-wider">Performance Stopped by Stage Manager</h3>
+            <p class="text-xs text-rose-100">
+                Reason: <strong>{{ perf.interruption_reason|default:"Interruption recorded" }}</strong>
+                {% if perf.interruption_remarks %} &mdash; {{ perf.interruption_remarks }}{% endif %}
+            </p>
+            <p class="text-[11px] text-rose-200 mt-0.5">Performance halted. Awaiting technical decision / re-attempt authorization. Scoring desks are currently locked.</p>
+        </div>
+    </div>
+    <span class="px-2.5 py-1 bg-rose-800 text-rose-100 text-xs font-mono font-bold rounded-lg uppercase">Stopped</span>
+</div>
+{% endif %}

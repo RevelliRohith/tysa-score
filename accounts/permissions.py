@@ -1,6 +1,6 @@
 import urllib.parse
 from functools import wraps
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -8,6 +8,7 @@ from django.urls import resolve, Resolver404
 from .models import RoleChoices, ScopedRole
 from championships.models import Championship
 from competition.models import JudgePanel, PanelSeatAssignment
+from audit.models import AuditLog
 
 def is_system_admin(user):
     """Returns True if the user is superuser or holds the global ADMIN ScopedRole."""
@@ -93,6 +94,56 @@ def get_active_championship(request, user=None):
     # Return published active championship
     return Championship.objects.filter(status='IN_PROGRESS').first() or Championship.objects.first()
 
+def get_user_assigned_seats(user, championship=None, is_active_only=True):
+    """
+    Returns list of seat assignment dictionaries for user:
+    [{'panel': JudgePanel, 'seat_code': str, 'seat_label': str, 'role_group': str}, ...]
+    Accurately supports judges serving on multiple panels or different seats across events.
+    """
+    if not user or not user.is_authenticated:
+        return []
+    
+    qs = JudgePanel.objects.all().select_related('event_config', 'age_category', 'championship')
+    if is_active_only:
+        qs = qs.filter(is_active=True)
+    if championship:
+        qs = qs.filter(championship=championship)
+
+    seats = []
+    uid = user.id
+    for p in qs:
+        if p.chief_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'CHIEF_JUDGE', 'seat_label': 'Chief Judge', 'role_group': 'CHIEF_JUDGE'})
+        if p.stage_manager_id == uid:
+            seats.append({'panel': p, 'seat_code': 'STAGE_MANAGER', 'seat_label': 'Stage Manager', 'role_group': 'STAGE_MANAGER'})
+        if p.d1_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'D1_JUDGE', 'seat_label': 'D1 Judge', 'role_group': 'D_JUDGE'})
+        if p.d2_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'D2_JUDGE', 'seat_label': 'D2 Judge', 'role_group': 'D_JUDGE'})
+        if p.d3_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'D3_JUDGE', 'seat_label': 'D3 Judge', 'role_group': 'D_JUDGE'})
+        if p.d4_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'D4_JUDGE', 'seat_label': 'D4 Judge', 'role_group': 'D_JUDGE'})
+        if p.d5_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'D5_JUDGE', 'seat_label': 'D5 Judge', 'role_group': 'D_JUDGE'})
+        if p.time_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'TIME_JUDGE', 'seat_label': 'Time Judge 1', 'role_group': 'TIME_JUDGE'})
+        if p.time_judge_2_id == uid:
+            seats.append({'panel': p, 'seat_code': 'TIME_JUDGE_2', 'seat_label': 'Time Judge 2', 'role_group': 'TIME_JUDGE'})
+        if p.artistry_judge_id == uid:
+            seats.append({'panel': p, 'seat_code': 'ARTISTRY_JUDGE', 'seat_label': 'Artistry Judge 1', 'role_group': 'ARTISTRY_JUDGE'})
+        if p.artistry_judge_2_id == uid:
+            seats.append({'panel': p, 'seat_code': 'ARTISTRY_JUDGE_2', 'seat_label': 'Artistry Judge 2', 'role_group': 'ARTISTRY_JUDGE'})
+        if p.evaluator_id == uid:
+            seats.append({'panel': p, 'seat_code': 'EVALUATOR', 'seat_label': 'Evaluator 1', 'role_group': 'EVALUATOR'})
+        if p.evaluator_2_id == uid:
+            seats.append({'panel': p, 'seat_code': 'EVALUATOR_2', 'seat_label': 'Evaluator 2', 'role_group': 'EVALUATOR'})
+        if p.jury_member_id == uid:
+            seats.append({'panel': p, 'seat_code': 'JURY', 'seat_label': 'Jury Member', 'role_group': 'JURY'})
+
+    return seats
+
+
 def get_user_roles_for_request(request, championship=None):
     """
     Returns the set of role strings for the logged-in user within the given championship context.
@@ -122,29 +173,17 @@ def get_user_roles_for_request(request, championship=None):
     ).values_list('role', flat=True)
     roles.update(scoped_roles)
 
-    # Active Panel assignments for this championship (must be is_active=True)
-    panel = JudgePanel.objects.filter(championship=champ, is_active=True).filter(
-        Q(chief_judge=user) | Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) |
-        Q(d4_judge=user) | Q(d5_judge=user) | Q(time_judge=user) | Q(time_judge_2=user) |
-        Q(evaluator=user) | Q(evaluator_2=user) | Q(artistry_judge=user) | Q(artistry_judge_2=user) |
-        Q(stage_manager=user) | Q(jury_member=user)
-    ).first()
-    if panel:
-        uid = user.id
-        if panel.chief_judge_id == uid:
-            roles.add(RoleChoices.CHIEF_JUDGE)
-        if uid in (panel.d1_judge_id, panel.d2_judge_id, panel.d3_judge_id, panel.d4_judge_id, panel.d5_judge_id):
-            roles.add(RoleChoices.D_JUDGE)
-        if uid in (panel.time_judge_id, panel.time_judge_2_id):
-            roles.add(RoleChoices.TIME_JUDGE)
-        if uid in (panel.evaluator_id, panel.evaluator_2_id):
-            roles.add(RoleChoices.EVALUATOR)
-        if uid in (panel.artistry_judge_id, panel.artistry_judge_2_id):
-            roles.add(RoleChoices.ARTISTRY_JUDGE)
-        if panel.stage_manager_id == uid:
-            roles.add(RoleChoices.STAGE_MANAGER)
-        if panel.jury_member_id == uid:
-            roles.add(RoleChoices.JURY)
+    # All active panel seat assignments for this user in this championship
+    assigned_seats = get_user_assigned_seats(user, championship=champ, is_active_only=True)
+    for seat in assigned_seats:
+        rg = seat['role_group']
+        if rg == 'CHIEF_JUDGE': roles.add(RoleChoices.CHIEF_JUDGE)
+        elif rg == 'STAGE_MANAGER': roles.add(RoleChoices.STAGE_MANAGER)
+        elif rg == 'D_JUDGE': roles.add(RoleChoices.D_JUDGE)
+        elif rg == 'TIME_JUDGE': roles.add(RoleChoices.TIME_JUDGE)
+        elif rg == 'ARTISTRY_JUDGE': roles.add(RoleChoices.ARTISTRY_JUDGE)
+        elif rg == 'EVALUATOR': roles.add(RoleChoices.EVALUATOR)
+        elif rg == 'JURY': roles.add(RoleChoices.JURY)
 
     # Active PanelSeatAssignment check (handles seat assignment only users)
     from competition.models import PanelSeatAssignment
@@ -166,9 +205,6 @@ def get_user_roles_for_request(request, championship=None):
             roles.add(RoleChoices.EVALUATOR)
         elif 'CHIEF' in s_code:
             roles.add(RoleChoices.CHIEF_JUDGE)
-        elif 'STAGE' in s_code:
-            roles.add(RoleChoices.STAGE_MANAGER)
-
         elif 'STAGE' in s_code:
             roles.add(RoleChoices.STAGE_MANAGER)
 
@@ -364,15 +400,29 @@ def is_user_authorized_for_url(user, url_path, championship):
     if view_name in ['jury_view', 'scoreboard_view']:
         return RoleChoices.JURY in roles or RoleChoices.CD in roles
 
-    # Judge views
-    judge_views = [
-        'judge_portal', 'judge_profile', 'scoring_traditional_d',
-        'scoring_traditional_d_final', 'scoring_artistic_single_d',
-        'scoring_artistic_pair_d', 'scoring_rhythmic_pair_d',
-        'scoring_traditional_time', 'scoring_music_time',
-        'scoring_artistry', 'scoring_evaluator', 'scoring_chief_judge'
-    ]
-    if view_name in judge_views:
+    # Strict Desk Isolation for Scoring Views
+    # D Judge desks
+    if view_name in ['scoring_traditional_d', 'scoring_traditional_d_final', 'scoring_artistic_single_d', 'scoring_artistic_pair_d', 'scoring_rhythmic_pair_d']:
+        return RoleChoices.D_JUDGE in roles or RoleChoices.CD in roles
+
+    # Time Judge desks
+    if view_name in ['scoring_traditional_time', 'scoring_music_time']:
+        return RoleChoices.TIME_JUDGE in roles or RoleChoices.CD in roles
+
+    # Artistry Judge desk
+    if view_name == 'scoring_artistry':
+        return RoleChoices.ARTISTRY_JUDGE in roles or RoleChoices.CD in roles
+
+    # Evaluator desk
+    if view_name == 'scoring_evaluator':
+        return RoleChoices.EVALUATOR in roles or RoleChoices.CD in roles
+
+    # Chief Judge desk
+    if view_name == 'scoring_chief_judge':
+        return RoleChoices.CHIEF_JUDGE in roles or RoleChoices.CD in roles
+
+    # Judge portal & general profile
+    if view_name in ['judge_portal', 'judge_profile', 'judge_my_scores']:
         return any(r in roles for r in [
             RoleChoices.D_JUDGE, RoleChoices.TIME_JUDGE, RoleChoices.ARTISTRY_JUDGE,
             RoleChoices.EVALUATOR, RoleChoices.CHIEF_JUDGE, 'APPROVED_JUDGE'
@@ -390,26 +440,16 @@ def get_user_roles_for_championship(user, championship):
         return set()
 
     roles = set(ScopedRole.objects.filter(user=user, championship=championship).values_list('role', flat=True))
-    panel = JudgePanel.objects.filter(championship=championship, is_active=True).filter(
-        Q(chief_judge=user) | Q(d1_judge=user) | Q(d2_judge=user) | Q(d3_judge=user) |
-        Q(d4_judge=user) | Q(d5_judge=user) | Q(time_judge=user) | Q(time_judge_2=user) |
-        Q(evaluator=user) | Q(evaluator_2=user) | Q(artistry_judge=user) | Q(artistry_judge_2=user) |
-        Q(stage_manager=user)
-    ).first()
-    if panel:
-        uid = user.id
-        if panel.chief_judge_id == uid:
-            roles.add(RoleChoices.CHIEF_JUDGE)
-        if uid in (panel.d1_judge_id, panel.d2_judge_id, panel.d3_judge_id, panel.d4_judge_id, panel.d5_judge_id):
-            roles.add(RoleChoices.D_JUDGE)
-        if uid in (panel.time_judge_id, panel.time_judge_2_id):
-            roles.add(RoleChoices.TIME_JUDGE)
-        if uid in (panel.evaluator_id, panel.evaluator_2_id):
-            roles.add(RoleChoices.EVALUATOR)
-        if uid in (panel.artistry_judge_id, panel.artistry_judge_2_id):
-            roles.add(RoleChoices.ARTISTRY_JUDGE)
-        if panel.stage_manager_id == uid:
-            roles.add(RoleChoices.STAGE_MANAGER)
+    assigned_seats = get_user_assigned_seats(user, championship=championship, is_active_only=True)
+    for seat in assigned_seats:
+        rg = seat['role_group']
+        if rg == 'CHIEF_JUDGE': roles.add(RoleChoices.CHIEF_JUDGE)
+        elif rg == 'STAGE_MANAGER': roles.add(RoleChoices.STAGE_MANAGER)
+        elif rg == 'D_JUDGE': roles.add(RoleChoices.D_JUDGE)
+        elif rg == 'TIME_JUDGE': roles.add(RoleChoices.TIME_JUDGE)
+        elif rg == 'ARTISTRY_JUDGE': roles.add(RoleChoices.ARTISTRY_JUDGE)
+        elif rg == 'EVALUATOR': roles.add(RoleChoices.EVALUATOR)
+        elif rg == 'JURY': roles.add(RoleChoices.JURY)
 
     # Active PanelSeatAssignment check
     from competition.models import PanelSeatAssignment
@@ -546,11 +586,15 @@ def role_required(*allowed_roles):
     Decorator that checks whether the user has at least one of the allowed roles
     within the active championship context.
     System Admin bypasses unless explicitly checked.
+    Logs unauthorized attempts and renders a clean 403 Forbidden page or JSON 403.
     """
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+                    from django.http import JsonResponse
+                    return JsonResponse({'error': 'Authentication required'}, status=401)
                 return redirect('login')
 
             user = request.user
@@ -568,13 +612,37 @@ def role_required(*allowed_roles):
             if matched:
                 return view_func(request, *args, **kwargs)
 
-            # Access denied: redirect to their own role portal with notification
-            landing = get_user_landing_url(request)
-            messages.warning(
-                request,
-                "Access restricted: Your current role does not have permission to access that module. Redirected to your authorized workspace."
-            )
-            return redirect(landing)
+            # Access Denied: Log to AuditLog for security tracking
+            try:
+                AuditLog.log(
+                    action='SECURITY_UNAUTHORIZED_ACCESS',
+                    resource_type='View',
+                    resource_id=request.path,
+                    details={
+                        'path': request.path,
+                        'required_roles': list(allowed_roles),
+                        'user_roles': list(user_roles),
+                        'user_id': user.id,
+                        'email': user.email,
+                    },
+                    user=user,
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+            except Exception:
+                pass
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'error': 'Access Denied: Your authenticated account does not have permission for this desk or action.',
+                    'required_roles': list(allowed_roles)
+                }, status=403)
+
+            return render(request, '403.html', {
+                'message': f"Access restricted: Your current role(s) ({', '.join(user_roles) or 'None'}) do not have permission to access {request.path}.",
+                'current_role': ', '.join(user_roles) if user_roles else 'No Role',
+                'active_championship': champ,
+            }, status=403)
         return _wrapped_view
     return decorator
 
@@ -583,13 +651,33 @@ def admin_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+                from django.http import JsonResponse
+                return JsonResponse({'error': 'Authentication required'}, status=401)
             return redirect('login')
         if is_system_admin(request.user):
             return view_func(request, *args, **kwargs)
 
-        landing = get_user_landing_url(request)
-        messages.warning(request, "Access restricted to System Admin. Redirected to your authorized workspace.")
-        return redirect(landing)
+        try:
+            AuditLog.log(
+                action='SECURITY_UNAUTHORIZED_ACCESS',
+                resource_type='View',
+                resource_id=request.path,
+                details={'path': request.path, 'required_roles': ['ADMIN'], 'user_id': request.user.id},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+        except Exception:
+            pass
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            from django.http import JsonResponse
+            return JsonResponse({'error': 'Access Denied: System Admin required.'}, status=403)
+
+        return render(request, '403.html', {
+            'message': "Access restricted to System Admin. Your account does not have administrator privileges.",
+            'current_role': 'Non-Admin',
+        }, status=403)
     return _wrapped_view
 
 def cd_required(view_func):
