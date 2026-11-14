@@ -215,13 +215,13 @@
                             <label for="executionMarksInput" class="font-black text-slate-900">
                                 Execution Marks (0.00 – 10.00)
                             </label>
-                            <span class="text-[11px] font-bold text-teal-700">Decimals (e.g. 7.50, 8.25)</span>
+                            <span class="text-[11px] font-bold text-teal-700">Multiples of 0.25 only (e.g. 7.25, 7.50, 7.75, 8.00)</span>
                         </div>
 
                         <!-- Editable execution marks input -->
                         <div class="relative">
                             <input type="number" 
-                                   step="any" 
+                                   step="0.25" 
                                    min="0" 
                                    max="10" 
                                    id="executionMarksInput"
@@ -630,7 +630,7 @@ executionInput.addEventListener('input', function() {
     triggerDebouncedSave();
 });
 
-// Format decimals on blur without resetting input
+// Format to multiple of 0.25 on blur without resetting input
 executionInput.addEventListener('blur', function() {
     let rawVal = this.value;
     if (rawVal.trim() !== '') {
@@ -638,7 +638,18 @@ executionInput.addEventListener('blur', function() {
         if (!isNaN(val)) {
             if (val < 0) val = 0;
             if (val > 10) val = 10;
+            // Snap to nearest 0.25 multiple
+            val = Math.round(val * 4) / 4;
             this.value = val.toFixed(2);
+            const asana = getAsana(currentSeq);
+            if (asana) {
+                asana.exec = val;
+                asana.is_completed = true;
+                asana.is_zero = (val === 0);
+                asana.raw = parseFloat((val * asana.bv).toFixed(3));
+                updateEffectiveScoreDisplay(asana);
+                renderPreviewCards();
+            }
         }
     }
     saveActiveAsana(false);

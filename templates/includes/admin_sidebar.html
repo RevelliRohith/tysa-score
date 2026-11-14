@@ -147,6 +147,17 @@
                 </a>
             </div>
 
+            <!-- Master Roll Management -->
+            <div>
+                <a href="{% url 'master_roll' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                    <div class="flex items-center space-x-2.5">
+                        <i data-lucide="clipboard-list" class="w-4 h-4 text-teal-600"></i>
+                        <span class="font-semibold">Master Roll Management</span>
+                    </div>
+                    <span class="text-[9px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded border border-teal-200">CD</span>
+                </a>
+            </div>
+
             <!-- District Draw & Master Roll -->
             <div>
                 <a href="{% url 'district_draw' %}" data-nav-item class="sidebar-nav-link flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-700 hover:bg-slate-50 hover:text-slate-900">
@@ -206,6 +217,7 @@
                     <a href="{% url 'scoring_music_time' %}" data-nav-item class="sidebar-sublink block py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50/50 transition">Music / Routine Time</a>
                     <a href="{% url 'scoring_artistry' %}" data-nav-item class="sidebar-sublink block py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50/50 transition">Artistry Desk</a>
                     <a href="{% url 'scoring_evaluator' %}" data-nav-item class="sidebar-sublink block py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50/50 transition">Evaluator Desk</a>
+                    <a href="{% url 'evaluator_reference_list' %}" data-nav-item class="sidebar-sublink block py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50/50 transition">Evaluator Asana Ref</a>
                 </div>
             </div>
 

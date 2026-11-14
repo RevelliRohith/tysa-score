@@ -21,6 +21,10 @@
                     <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-teal-600"></i>
                     <span>My Scores</span>
                 </a>
+                <a href="{% url 'evaluator_reference_list' %}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-900 font-bold text-xs transition">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-indigo-700"></i>
+                    <span>Master Roll Asana Ref</span>
+                </a>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-indigo-50 text-indigo-900 border border-indigo-200">
                     Evaluator Desk
                 </span>
@@ -279,6 +283,10 @@
         </div>
 
         <div class="flex items-center space-x-3">
+            <a href="{% url 'evaluator_reference_list' %}" class="px-3 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-900 font-bold text-xs transition inline-flex items-center gap-1.5">
+                <i data-lucide="book-open" class="w-3.5 h-3.5 text-indigo-700"></i>
+                <span>Master Roll Reference</span>
+            </a>
             <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-900 border border-indigo-200">
                 Evaluator Routine Verification (10 Asanas)
             </span>
@@ -395,7 +403,7 @@
                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
                     <span class="text-xs font-bold text-slate-800 block">Other Technical Penalties</span>
                     <div class="flex items-center space-x-2">
-                        <input type="number" step="0.5" min="0" max="20" name="other_penalty" value="{{ other_penalty|default:'0.00' }}" placeholder="Marks" class="w-24 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-bold font-mono bg-white">
+                        <input type="number" step="0.25" min="0" max="20" name="other_penalty" value="{{ other_penalty|default:'0.00' }}" placeholder="Marks" class="w-24 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-bold font-mono bg-white">
                         <input type="text" name="other_reason" value="{{ other_reason|default:'' }}" placeholder="Reason for penalty..." class="flex-1 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white">
                     </div>
                 </div>

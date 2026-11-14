@@ -11,8 +11,13 @@ class CDCorrectionGrant(models.Model):
     judge_submission = models.ForeignKey('scoring.JudgeSubmission', on_delete=models.CASCADE, related_name='correction_grants')
     granted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='granted_corrections')
     reason = models.TextField(help_text="Official reason for reopening judge sheet")
+    remarks = models.TextField(blank=True, default="", help_text="Additional administrative remarks")
     status = models.CharField(max_length=20, choices=GrantStatus.choices, default=GrantStatus.OPEN)
     
+    original_snapshot = models.JSONField(null=True, blank=True, help_text="Immutable snapshot of submission & items prior to correction")
+    corrected_snapshot = models.JSONField(null=True, blank=True, help_text="Snapshot of submission & items after resubmission")
+    resubmitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='resubmitted_corrections')
+
     granted_at = models.DateTimeField(auto_now_add=True)
     resubmitted_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)

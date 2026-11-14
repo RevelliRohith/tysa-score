@@ -429,6 +429,10 @@ def calculate_artistry_net(
 # ============================================================================
 # 6. TIME JUDGES & RECONCILIATION (MUSIC EVENTS)
 # ============================================================================
+# Configurable threshold: standard extension is up to 10s after 180s (190s).
+# At/beyond 190s, disqualification occurs according to Yogasana Bharat COP rules.
+OVERTIME_DISQUALIFICATION_THRESHOLD = 190
+
 def calculate_tw_marks(duration_seconds: Decimal) -> Decimal:
     """
     TW Marks:
@@ -447,6 +451,7 @@ def calculate_tw_marks(duration_seconds: Decimal) -> Decimal:
     else: # 171 <= d <= 180 (and above 180 base TW marks capped at 5)
         return Decimal('5.000')
 
+
 def reconcile_music_timing(
     t1_tw: Decimal,
     t2_tw: Decimal,
@@ -457,52 +462,117 @@ def reconcile_music_timing(
     Reconciles two independent Time Judges' readings for Music events.
     - TW whole seconds rounded with 0.5 rounded up.
     - 150-second margin rule: if one is below 150 and the other is >= 150 within 3 seconds, treated as 150s.
+      If difference is > 3 seconds between one < 150 and other >= 150, flag for Chief Judge review.
+    - Disqualification: If reconciled TW >= OVERTIME_DISQUALIFICATION_THRESHOLD (190s), mark is_disqualified = True.
     - Holds:
       - T1=4 and T2=5: accepted = 5 (valid).
       - T1=4 and T2=4: accepted = 4 (invalid).
-      - Accepted hold < 5s: TA is 0.0 for that item and marks item invalid for D judges!
-    - Overtime: 0.5 marks per extra second after 180s, applied once.
+      - Wide discrepancy (one < 4s and other >= 5s, or one 4s and other > 5s): accepted = 0s.
+      - Accepted hold < 5s: TA is 0.0 for that item.
+    - Overtime: 0.5 marks per extra second after 180s, deducted from composite.
     """
     # Round raw readings (0.5 rounded up)
     t1_sec = int(Decimal(str(t1_tw)).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
     t2_sec = int(Decimal(str(t2_tw)).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
+    tw_margin_applied = False
+    tw_review_required = False
+    tw_review_reason = ""
+
     # Reconcile TW
     # 150-second margin check: e.g. 148 and 150 -> 150
-    if (t1_sec < 150 and t2_sec >= 150 and (t2_sec - t1_sec) <= 3):
-        reconciled_tw = Decimal('150')
-    elif (t2_sec < 150 and t1_sec >= 150 and (t1_sec - t2_sec) <= 3):
-        reconciled_tw = Decimal('150')
+    if (t1_sec < 150 and t2_sec >= 150):
+        diff = abs(t2_sec - t1_sec)
+        if diff <= 3:
+            reconciled_tw = Decimal('150')
+            tw_margin_applied = True
+        else:
+            reconciled_tw = Decimal(str(int(round((t1_sec + t2_sec) / 2.0))))
+            tw_review_required = True
+            tw_review_reason = f"TW 150s margin discrepancy > 3s: T1={t1_sec}s, T2={t2_sec}s (diff {diff}s). Chief Judge review required."
+    elif (t2_sec < 150 and t1_sec >= 150):
+        diff = abs(t1_sec - t2_sec)
+        if diff <= 3:
+            reconciled_tw = Decimal('150')
+            tw_margin_applied = True
+        else:
+            reconciled_tw = Decimal(str(int(round((t1_sec + t2_sec) / 2.0))))
+            tw_review_required = True
+            tw_review_reason = f"TW 150s margin discrepancy > 3s: T1={t1_sec}s, T2={t2_sec}s (diff {diff}s). Chief Judge review required."
     else:
         reconciled_tw = Decimal(str(int(round((t1_sec + t2_sec) / 2.0))))
 
+    reconciled_tw_int = int(reconciled_tw)
+
+    # Check overtime & disqualification (190s threshold)
+    is_disqualified = False
+    disqualification_reason = ""
+    if reconciled_tw_int >= OVERTIME_DISQUALIFICATION_THRESHOLD:
+        is_disqualified = True
+        disqualification_reason = (
+            f"Overtime exceeded permitted 10-second extension: performance duration was {reconciled_tw_int}s "
+            f"(>= {OVERTIME_DISQUALIFICATION_THRESHOLD}s cutoff)."
+        )
+
     tw_marks = calculate_tw_marks(reconciled_tw)
 
-    # Overtime calculation: 0.5 marks per extra second after 180
-    overtime_seconds = max(0, int(reconciled_tw) - 180)
+    # Overtime calculation: 0.5 marks per extra second after 180s
+    overtime_seconds = max(0, reconciled_tw_int - 180)
     overtime_deduction = Decimal(str(overtime_seconds)) * Decimal('0.500')
+    net_tw_marks = max(Decimal('0.000'), tw_marks - overtime_deduction)
+
+    # If disqualified, TW marks are 0 and overtime deduction is 0
+    if is_disqualified:
+        tw_marks = Decimal('0.000')
+        net_tw_marks = Decimal('0.000')
 
     # Reconcile 10 asana holds
     hold_count = max(len(t1_holds), len(t2_holds), 10)
     reconciled_holds = []
     invalid_hold_indices = []
+    discrepancy_count = 0
     ta_valid_count = 0
 
     for i in range(hold_count):
         h1 = int(Decimal(str(t1_holds[i] if i < len(t1_holds) else 0)).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
         h2 = int(Decimal(str(t2_holds[i] if i < len(t2_holds) else 0)).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
-        # Explicit COP reconciliation:
-        # One judge 4, other 5: accepted = 5
+        # Check discrepancy
+        diff = abs(h1 - h2)
+        has_discrepancy = (diff > 0)
+        discrepancy_status = "AGREED"
+        if has_discrepancy:
+            discrepancy_count += 1
+            if (h1 == 4 and h2 == 5) or (h1 == 5 and h2 == 4):
+                discrepancy_status = "RECONCILED_MARGIN_4_5"
+            elif (h1 < 4 and h2 >= 5) or (h2 < 4 and h1 >= 5) or (h1 == 4 and h2 > 5) or (h2 == 4 and h1 > 5):
+                discrepancy_status = "DISCREPANCY_REJECTED_ZERO"
+            elif h1 >= 5 and h2 >= 5:
+                discrepancy_status = "DISCREPANCY_BOTH_VALID"
+            else:
+                discrepancy_status = "DISCREPANCY_BOTH_INVALID"
+
+        # COP Timing Reconciliation:
+        # - Any hold below 5 seconds awards 0 marks.
+        # - Limitation: If one Time Judge gives 4s and the other gives 5s -> accepted = 5s (valid).
+        # - However, if one Time Judge gives < 4s (e.g., 3s) and the other gives >= 5s (e.g., 6s, 7s),
+        #   or if there is a wide discrepancy where one is < 4s while the other is >= 5s,
+        #   the hold is NOT accepted -> accepted = 0s (invalid / zero).
         if (h1 == 4 and h2 == 5) or (h1 == 5 and h2 == 4):
             accepted_h = 5
+        elif (h1 < 4 and h2 >= 5) or (h2 < 4 and h1 >= 5):
+            accepted_h = 0
+        elif (h1 == 4 and h2 > 5) or (h2 == 4 and h1 > 5):
+            # One judge 4s, other > 5s (discrepancy > 1s from margin): rejected as 0
+            accepted_h = 0
         elif h1 < 5 and h2 < 5:
             accepted_h = min(h1, h2)
         else:
-            # Average or max
-            accepted_h = max(h1, h2) if (h1 >= 5 or h2 >= 5) else min(h1, h2)
+            # Both >= 5s
+            accepted_h = min(h1, h2) if (h1 >= 5 and h2 >= 5) else max(h1, h2)
 
         is_valid_hold = (accepted_h >= 5)
+        item_ta_marks = Decimal('0.500') if is_valid_hold else Decimal('0.000')
         if is_valid_hold:
             ta_valid_count += 1
         else:
@@ -513,7 +583,10 @@ def reconcile_music_timing(
             't1_raw': h1,
             't2_raw': h2,
             'accepted_hold': accepted_h,
-            'is_valid': is_valid_hold
+            'is_valid': is_valid_hold,
+            'ta_marks': quantize_score(item_ta_marks),
+            'has_discrepancy': has_discrepancy,
+            'discrepancy_status': discrepancy_status,
         })
 
     # Calculate T1 and T2 individual TW marks
@@ -528,26 +601,41 @@ def reconcile_music_timing(
 
     # Each valid hold of at least 5s = 0.5 marks. 10 valid = max 5.0
     ta_marks = min(Decimal('5.000'), Decimal(str(ta_valid_count)) * Decimal('0.500'))
+    ta_invalid_count = hold_count - ta_valid_count
+    if is_disqualified:
+        ta_marks = Decimal('0.000')
+
     timing_total = tw_marks + ta_marks
+    final_timing_contribution = max(Decimal('0.000'), net_tw_marks + ta_marks) if not is_disqualified else Decimal('0.000')
 
     return {
         't1_tw_seconds': t1_sec,
         't2_tw_seconds': t2_sec,
-        'reconciled_tw_seconds': int(reconciled_tw),
+        'reconciled_tw_seconds': reconciled_tw_int,
+        'tw_margin_applied': tw_margin_applied,
+        'tw_review_required': tw_review_required,
+        'tw_review_reason': tw_review_reason,
+        'is_disqualified': is_disqualified,
+        'disqualification_reason': disqualification_reason,
         't1_tw_marks': quantize_score(t1_tw_marks),
         't2_tw_marks': quantize_score(t2_tw_marks),
+        'gross_tw_marks': quantize_score(tw_marks),
         'tw_marks': quantize_score(tw_marks),
+        'net_tw_marks': quantize_score(net_tw_marks),
         't1_valid_holds_count': t1_valid_holds_count,
         't2_valid_holds_count': t2_valid_holds_count,
         't1_ta_marks': quantize_score(t1_ta_marks),
         't2_ta_marks': quantize_score(t2_ta_marks),
         'ta_valid_holds_count': ta_valid_count,
+        'ta_invalid_holds_count': ta_invalid_count,
         'ta_marks': quantize_score(ta_marks),
         'reconciled_holds': reconciled_holds,
         'invalid_hold_indices': invalid_hold_indices,
+        'discrepancy_count': discrepancy_count,
         'overtime_seconds': overtime_seconds,
         'overtime_deduction': quantize_score(overtime_deduction),
         'timing_total': quantize_score(timing_total),
+        'final_timing_contribution': quantize_score(final_timing_contribution),
     }
 
 
@@ -1165,11 +1253,16 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
     # Required fixture verification:
     # Retained D = 63.0, Artistry = 16.0, Timing = 8.5 -> Before penalties = 87.5
     # With penalty of 2.0 -> Final = 85.5.
+    is_timing_dq = bool(reconciled_timing_data and reconciled_timing_data.get('is_disqualified', False))
+
     if is_traditional:
         final_composite = max(Decimal('0.000'), retained_d_avg - evaluator_penalties)
     else:
-        before_penalties = retained_d_avg + artistry_avg + timing_score
-        final_composite = max(Decimal('0.000'), before_penalties - evaluator_penalties - overtime_deduction)
+        if is_timing_dq:
+            final_composite = Decimal('0.000')
+        else:
+            before_penalties = retained_d_avg + artistry_avg + timing_score
+            final_composite = max(Decimal('0.000'), before_penalties - evaluator_penalties - overtime_deduction)
 
     final_composite = quantize_score(final_composite)
 
@@ -1177,6 +1270,9 @@ def calculate_performance_score(performance, persist: bool = True) -> Dict[str, 
     block_reasons = []
     if missing_seats:
         block_reasons.append(f"Missing required judge submissions: {', '.join(missing_seats)}")
+
+    if reconciled_timing_data and reconciled_timing_data.get('tw_review_required', False):
+        block_reasons.append(reconciled_timing_data.get('tw_review_reason', 'Time Window discrepancy review required.'))
 
     can_release = (len(block_reasons) == 0 and not panel_result.get('is_incomplete', False))
 

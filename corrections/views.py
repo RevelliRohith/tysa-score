@@ -56,7 +56,11 @@ def cd_corrections(request):
     chest_query = request.GET.get('chest', '').strip()
     search_q = request.GET.get('q', '').strip() or chest_query
     selected_event_id = request.GET.get('event_id')
+    selected_gender = request.GET.get('gender')
+    selected_category_id = request.GET.get('category_id')
     selected_round = request.GET.get('round_type')
+    selected_panel_id = request.GET.get('panel_id')
+    selected_status = request.GET.get('status')
     perf_id_param = request.GET.get('perf_id')
 
     selected_perf = None
@@ -69,27 +73,43 @@ def cd_corrections(request):
         'event_entry__registration__athlete',
         'event_entry__partner_athlete',
         'event_entry__event_config',
-        'event_entry__age_category'
+        'event_entry__age_category',
+        'batch__panel'
     )
 
     if selected_event_id:
         perf_base_qs = perf_base_qs.filter(event_entry__event_config_id=selected_event_id)
+    if selected_gender:
+        perf_base_qs = perf_base_qs.filter(event_entry__gender=selected_gender)
+    if selected_category_id:
+        perf_base_qs = perf_base_qs.filter(event_entry__age_category_id=selected_category_id)
     if selected_round:
         perf_base_qs = perf_base_qs.filter(round_type=selected_round)
+    if selected_panel_id:
+        perf_base_qs = perf_base_qs.filter(batch__panel_id=selected_panel_id)
+    if selected_status:
+        perf_base_qs = perf_base_qs.filter(status=selected_status)
 
     if perf_id_param:
         selected_perf = perf_base_qs.filter(id=perf_id_param).first()
     elif search_q:
-        matches = perf_base_qs.filter(
-            Q(event_entry__chest_number__iexact=search_q) |
-            Q(event_entry__registration__athlete__first_name__icontains=search_q) |
-            Q(event_entry__registration__athlete__last_name__icontains=search_q) |
-            Q(event_entry__registration__athlete__public_athlete_id__iexact=search_q) |
-            Q(event_entry__partner_athlete__first_name__icontains=search_q) |
-            Q(event_entry__partner_athlete__last_name__icontains=search_q) |
-            Q(event_entry__partner_athlete__public_athlete_id__iexact=search_q) |
-            Q(event_entry__registration__athlete__district__icontains=search_q)
-        ).order_by('-id')
+        clean_q = search_q.strip()
+        digits_q = ''.join(c for c in clean_q if c.isdigit())
+        q_filter = (
+            Q(event_entry__chest_number__iexact=clean_q) |
+            Q(event_entry__chest_number__icontains=clean_q) |
+            Q(event_entry__registration__athlete__first_name__icontains=clean_q) |
+            Q(event_entry__registration__athlete__last_name__icontains=clean_q) |
+            Q(event_entry__registration__athlete__public_athlete_id__iexact=clean_q) |
+            Q(event_entry__partner_athlete__first_name__icontains=clean_q) |
+            Q(event_entry__partner_athlete__last_name__icontains=clean_q) |
+            Q(event_entry__partner_athlete__public_athlete_id__iexact=clean_q) |
+            Q(event_entry__registration__athlete__district__icontains=clean_q)
+        )
+        if digits_q:
+            q_filter |= Q(event_entry__chest_number__icontains=digits_q)
+
+        matches = perf_base_qs.filter(q_filter).order_by('-id')
 
         match_count = matches.count()
         if match_count == 1:
@@ -114,6 +134,7 @@ def cd_corrections(request):
             perf_id = request.POST.get('performance_id')
             sub_id = request.POST.get('submission_id')
             reason = request.POST.get('reason', '').strip()
+            remarks = request.POST.get('remarks', '').strip()
 
             try:
                 grant = grant_correction_access(
@@ -121,7 +142,8 @@ def cd_corrections(request):
                     performance_id=perf_id,
                     submission_id=sub_id,
                     reason=reason,
-                    championship=championship
+                    championship=championship,
+                    remarks=remarks
                 )
                 messages.success(
                     request,
@@ -192,6 +214,9 @@ def cd_corrections(request):
     sequence_items = []
     athlete = None
     score_calc = None
+    assigned_panel = None
+    correction_history = []
+    
     if selected_perf:
         athlete = selected_perf.event_entry.registration.athlete
         score_calc = calculate_performance_score(selected_perf)
@@ -205,6 +230,40 @@ def cd_corrections(request):
             round_type=selected_perf.round_type
         ).order_by('sequence_order')
 
+        # Locate assigned panel for this performance
+        from competition.models import JudgePanel
+        if selected_perf.batch and selected_perf.batch.panel:
+            assigned_panel = selected_perf.batch.panel
+        else:
+            assigned_panel = JudgePanel.objects.filter(
+                championship=championship,
+                event_config=selected_perf.event_entry.event_config,
+                age_category=selected_perf.event_entry.age_category,
+                gender=selected_perf.event_entry.gender,
+                round_type=selected_perf.round_type,
+                is_active=True
+            ).first()
+
+        # Complete correction audit history for this performance
+        correction_history = list(CDCorrectionGrant.objects.filter(
+            performance=selected_perf
+        ).select_related('judge_submission', 'granted_by', 'revoked_by', 'resubmitted_by').order_by('-granted_at'))
+
+    # Filter dropdown choices
+    from championships.models import AgeCategory
+    from competition.models import JudgePanel, MasterRoll
+    all_events = EventConfiguration.objects.filter(championship=championship).order_by('id')
+    all_categories = AgeCategory.objects.filter(event_configs__championship=championship).distinct().order_by('name')
+    if not all_categories.exists():
+        all_categories = AgeCategory.objects.all().order_by('name')
+    all_panels = JudgePanel.objects.filter(championship=championship, is_active=True).order_by('stage_name')
+    all_statuses = PerformanceStatus.choices
+    round_type_choices = getattr(MasterRoll, 'ROUND_CHOICES', [
+        ('PRELIMINARY', 'Preliminary'),
+        ('SEMI_FINAL', 'Semi-Final'),
+        ('FINAL', 'Final')
+    ])
+
     return render(request, 'corrections/cd_corrections.html', {
         'championship': championship,
         'chest_query': search_q or chest_query,
@@ -216,8 +275,22 @@ def cd_corrections(request):
         'sequence_items': sequence_items,
         'submissions': submissions,
         'score_calc': score_calc,
+        'assigned_panel': assigned_panel,
+        'correction_history': correction_history,
         'active_grants': grants,
         'can_unlock': can_unlock,
+        # Filter options
+        'all_events': all_events,
+        'all_categories': all_categories,
+        'all_panels': all_panels,
+        'all_statuses': all_statuses,
+        'round_types': round_type_choices,
+        'selected_event_id': selected_event_id,
+        'selected_gender': selected_gender,
+        'selected_category_id': selected_category_id,
+        'selected_round': selected_round,
+        'selected_panel_id': selected_panel_id,
+        'selected_status': selected_status,
     })
 
 @role_required(RoleChoices.ADMIN, RoleChoices.JURY, RoleChoices.CD)

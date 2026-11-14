@@ -112,19 +112,47 @@
             </div>
             {% endif %}
 
-            <!-- Current Review Status -->
-            <div class="text-right shrink-0">
-                <span class="text-[10px] text-slate-400 uppercase font-bold block">Overall Status</span>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold 
-                    {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}bg-emerald-100 text-emerald-800 border border-emerald-300
-                    {% elif selected_perf.status == 'CD_FINALIZED' %}bg-purple-100 text-purple-800 border border-purple-300
-                    {% else %}bg-amber-100 text-amber-800 border border-amber-300{% endif %}">
-                    {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}
-                    <i data-lucide="check-check" class="w-3.5 h-3.5 mr-1 text-emerald-700"></i> Provisional Released
-                    {% else %}
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1.5"></span> Under Live Judgment
-                    {% endif %}
-                </span>
+            <!-- Current Review Status & Chief Judge Interruption Controls -->
+            <div class="flex items-center gap-3 shrink-0">
+                {% if selected_perf.status == 'HELD' %}
+                <form method="POST" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
+                    <button type="submit" name="action" value="resume_performance"
+                            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm cursor-pointer">
+                        <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                        <span>Resume Performance</span>
+                    </button>
+                </form>
+                {% elif selected_perf.status == 'IN_PROGRESS' or selected_perf.status == 'READY' %}
+                <form method="POST" class="inline" onsubmit="return confirm('Pause/Hold performance for Chest {{ selected_perf.chest_number }}?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="performance_id" value="{{ selected_perf.id }}">
+                    <button type="submit" name="action" value="hold_performance"
+                            class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-sm cursor-pointer">
+                        <i data-lucide="pause" class="w-3.5 h-3.5"></i>
+                        <span>Hold Performance</span>
+                    </button>
+                </form>
+                {% endif %}
+
+                <div class="text-right">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Overall Status</span>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold 
+                        {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}bg-emerald-100 text-emerald-800 border border-emerald-300
+                        {% elif selected_perf.status == 'CD_FINALIZED' %}bg-purple-100 text-purple-800 border border-purple-300
+                        {% elif selected_perf.status == 'HELD' %}bg-amber-100 text-amber-900 border border-amber-400
+                        {% elif selected_perf.status == 'STOPPED_PENDING_DECISION' %}bg-rose-100 text-rose-800 border border-rose-300
+                        {% else %}bg-amber-100 text-amber-800 border border-amber-300{% endif %}">
+                        {% if selected_perf.status == 'PROVISIONAL_RELEASED' %}
+                        <i data-lucide="check-check" class="w-3.5 h-3.5 mr-1 text-emerald-700"></i> Provisional Released
+                        {% elif selected_perf.status == 'HELD' %}
+                        <i data-lucide="pause-circle" class="w-3.5 h-3.5 mr-1 text-amber-700"></i> Performance On Hold
+                        {% else %}
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1.5"></span> Under Live Judgment
+                        {% endif %}
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -292,7 +320,24 @@
 
         <!-- Whole Performance Duration (TW) Summary Cards -->
         {% if score_calc.reconciled_timing %}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+        {% if score_calc.reconciled_timing.is_disqualified %}
+        <div class="bg-rose-600 text-white p-3 rounded-xl flex items-center space-x-3 text-xs">
+            <span class="w-6 h-6 rounded-full bg-rose-800 flex items-center justify-center font-black">!</span>
+            <div>
+                <strong class="uppercase tracking-wider font-mono">Disqualification &mdash; Overtime Limit Exceeded</strong>
+                <p class="text-[11px] text-rose-100">{{ score_calc.reconciled_timing.disqualification_reason }}</p>
+            </div>
+        </div>
+        {% elif score_calc.reconciled_timing.tw_review_required %}
+        <div class="bg-amber-500 text-white p-3 rounded-xl flex items-center space-x-3 text-xs">
+            <span class="w-6 h-6 rounded-full bg-amber-700 flex items-center justify-center font-black">!</span>
+            <div>
+                <strong class="uppercase tracking-wider font-mono">Chief Judge Review Required &mdash; TW Margin Discrepancy</strong>
+                <p class="text-[11px] text-amber-100">{{ score_calc.reconciled_timing.tw_review_reason }}</p>
+            </div>
+        </div>
+        {% endif %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
             <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                 <span class="text-[10px] text-slate-400 uppercase font-bold block">T1 Duration</span>
                 <span class="text-lg font-black font-mono text-slate-900">{{ score_calc.reconciled_timing.t1_tw_seconds }}s</span>
@@ -306,16 +351,28 @@
             <div class="bg-sky-50 p-2.5 rounded-xl border border-sky-200">
                 <span class="text-[10px] text-sky-800 uppercase font-bold block">Accepted TW</span>
                 <span class="text-lg font-black font-mono text-sky-900">{{ score_calc.reconciled_timing.reconciled_tw_seconds }}s</span>
-                <span class="text-[10px] text-sky-700 font-mono font-bold block">TW Marks: {{ score_calc.reconciled_timing.tw_marks }}</span>
+                <span class="text-[10px] text-sky-700 font-mono font-bold block">Gross TW: {{ score_calc.reconciled_timing.gross_tw_marks|default:score_calc.reconciled_timing.tw_marks }}</span>
+            </div>
+            <div class="{% if score_calc.reconciled_timing.overtime_seconds > 0 %}bg-rose-50 border-rose-200 text-rose-900{% else %}bg-slate-50 border-slate-200 text-slate-800{% endif %} p-2.5 rounded-xl border">
+                <span class="text-[10px] uppercase font-bold block opacity-75">Overtime (&gt;180s)</span>
+                <span class="text-lg font-black font-mono">{{ score_calc.reconciled_timing.overtime_seconds }}s</span>
+                <span class="text-[10px] font-mono font-bold block {% if score_calc.reconciled_timing.overtime_seconds > 0 %}text-rose-700{% else %}text-slate-500{% endif %}">
+                    Ded: -{{ score_calc.reconciled_timing.overtime_deduction }}m
+                </span>
+            </div>
+            <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200">
+                <span class="text-[10px] text-indigo-800 uppercase font-bold block">Net TW Contribution</span>
+                <span class="text-lg font-black font-mono text-indigo-900">{{ score_calc.reconciled_timing.net_tw_marks|default:score_calc.reconciled_timing.tw_marks }}</span>
+                <span class="text-[10px] text-indigo-700 font-mono block">Gross - Overtime</span>
             </div>
             <div class="bg-teal-50 p-2.5 rounded-xl border border-teal-200">
                 <span class="text-[10px] text-teal-800 uppercase font-bold block">Accepted TA (10 Holds)</span>
                 <span class="text-lg font-black font-mono text-teal-900">{{ score_calc.reconciled_timing.ta_marks }}</span>
-                <span class="text-[10px] text-teal-700 font-mono block">{{ score_calc.reconciled_timing.ta_valid_holds_count }}/10 Valid Holds</span>
+                <span class="text-[10px] text-teal-700 font-mono block">{{ score_calc.reconciled_timing.ta_valid_holds_count }} Valid / {{ score_calc.reconciled_timing.ta_invalid_holds_count }} Invalid</span>
             </div>
         </div>
 
-        <!-- Individual Asana Holds (TA) Table: Asana, Code, Image, T1, T2, Accepted Hold, TA Marks, Validity -->
+        <!-- Individual Asana Holds (TA) Table: Asana, Code, Image, T1, T2, Accepted Hold, Discrepancy Status, TA Marks, Validity -->
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
             <table class="w-full text-left text-xs font-medium">
                 <thead>
@@ -326,6 +383,7 @@
                         <th class="py-2.5 px-3 w-20 text-right bg-sky-50/50">T1 Hold</th>
                         <th class="py-2.5 px-3 w-20 text-right bg-sky-50/50">T2 Hold</th>
                         <th class="py-2.5 px-3 w-24 text-center bg-teal-50/50">Accepted Hold</th>
+                        <th class="py-2.5 px-3 w-28 text-center">Discrepancy Status</th>
                         <th class="py-2.5 px-3 w-20 text-right">TA Marks</th>
                         <th class="py-2.5 px-3 w-24 text-center">Validity Status</th>
                     </tr>
@@ -359,8 +417,27 @@
                         <td class="py-2 px-3 text-right bg-sky-50/20 font-bold text-slate-900">{{ h.t1_raw }}s</td>
                         <td class="py-2 px-3 text-right bg-sky-50/20 font-bold text-slate-900">{{ h.t2_raw }}s</td>
                         <td class="py-2 px-3 text-center bg-teal-50/20 font-black text-teal-900">{{ h.accepted_hold }}s</td>
+                        <td class="py-2 px-3 text-center font-sans">
+                            {% if h.discrepancy_status == 'RECONCILED_MARGIN_4_5' %}
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title="4s vs 5s Margin Rule Accepted as 5s">
+                                4s/5s Margin (Accepted 5s)
+                            </span>
+                            {% elif h.discrepancy_status == 'DISCREPANCY_REJECTED_ZERO' %}
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300" title="Discrepancy too wide: rejected as 0s">
+                                Discrepancy &rarr; Zero
+                            </span>
+                            {% elif h.has_discrepancy %}
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                Discrepancy ({{ h.t1_raw }}s vs {{ h.t2_raw }}s)
+                            </span>
+                            {% else %}
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                                Agreed
+                            </span>
+                            {% endif %}
+                        </td>
                         <td class="py-2 px-3 text-right font-bold {% if h.is_valid %}text-teal-800{% else %}text-rose-600{% endif %}">
-                            {% if h.is_valid %}0.50{% else %}0.00{% endif %}
+                            {{ h.ta_marks|default:"0.00" }}
                         </td>
                         <td class="py-2 px-3 text-center font-sans">
                             {% if h.is_valid %}

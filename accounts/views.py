@@ -602,4 +602,7 @@ def attendance_and_duties(request):
 @login_required
 def no_role_assigned(request):
     """Clear fallback landing screen for users with no active role in the selected championship."""
+    landing = get_user_landing_url(request)
+    if landing and landing != 'no_role_assigned':
+        return redirect(landing)
     return render(request, 'accounts/no_role.html')

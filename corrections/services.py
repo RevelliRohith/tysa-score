@@ -7,8 +7,37 @@ from .models import CDCorrectionGrant, GrantStatus
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission
 from accounts.models import RoleChoices
 from accounts.permissions import user_can_grant_correction
+from audit.models import AuditLog
 
-def grant_correction_access(user, performance_id, submission_id, reason, championship):
+def build_submission_snapshot(sub):
+    """Generates an immutable JSON-serializable snapshot of a submission and its items."""
+    return {
+        'submission_id': sub.id,
+        'judge_role': sub.judge_role,
+        'judge_id': sub.judge_id,
+        'judge_name': (sub.judge.full_name or sub.judge.username) if sub.judge else 'Unassigned',
+        'raw_total': str(sub.raw_total),
+        'effective_total': str(sub.effective_total),
+        'version': sub.version,
+        'submitted_at': sub.submitted_at.isoformat() if sub.submitted_at else None,
+        'items': [
+            {
+                'sequence_order': itm.sequence_order,
+                'hold_duration_seconds': str(itm.hold_duration_seconds),
+                'timing_contribution': str(itm.timing_contribution),
+                'raw_item_score': str(itm.raw_item_score),
+                'effective_item_score': str(itm.effective_item_score),
+                'execution_score': str(itm.execution_score),
+                'posture_score': str(itm.posture_score),
+                'stability_score': str(itm.stability_score),
+                'is_valid': itm.is_valid,
+                'invalid_reason': itm.invalid_reason or '',
+            }
+            for itm in sub.items.all().order_by('sequence_order')
+        ]
+    }
+
+def grant_correction_access(user, performance_id, submission_id, reason, championship, remarks=""):
     """
     Transactional service to grant correction access:
     - Scopes performance and submission strictly to authorized championship.
@@ -16,7 +45,9 @@ def grant_correction_access(user, performance_id, submission_id, reason, champio
     - Rejects if performance is CD_FINALIZED.
     - Rejects duplicate/stale grants (if OPEN grant already exists).
     - Requires non-empty documented reason.
+    - Captures immutable pre-correction snapshot of the judge submission.
     - Atomically creates CDCorrectionGrant and unlocks submission.
+    - Emits immutable AuditLog entry.
     """
     if not user_can_grant_correction(user, championship):
         raise PermissionDenied("Only an officially assigned Competition Director (CD) on this championship can grant correction access.")
@@ -24,6 +55,8 @@ def grant_correction_access(user, performance_id, submission_id, reason, champio
     reason = (reason or '').strip()
     if not reason:
         raise ValidationError("A documented justification reason is required to grant correction access.")
+
+    remarks = (remarks or '').strip()
 
     with transaction.atomic():
         perf = Performance.objects.select_for_update().filter(
@@ -51,17 +84,41 @@ def grant_correction_access(user, performance_id, submission_id, reason, champio
         if existing_open:
             raise ValidationError(f"An open correction grant already exists for {sub.get_judge_role_display()}.")
 
+        snapshot = build_submission_snapshot(sub)
+
         grant = CDCorrectionGrant.objects.create(
             performance=perf,
             judge_submission=sub,
             granted_by=user,
             reason=reason,
-            status=GrantStatus.OPEN
+            remarks=remarks,
+            status=GrantStatus.OPEN,
+            original_snapshot=snapshot
         )
 
         sub.is_locked = False
         sub.is_draft = True
         sub.save(update_fields=['is_locked', 'is_draft'])
+
+        AuditLog.log(
+            action='CORRECTION_GRANT_OPENED',
+            resource_type='CDCorrectionGrant',
+            resource_id=str(grant.id),
+            details={
+                'championship': championship.name,
+                'event': perf.event_entry.event_config.get_event_type_display(),
+                'chest_number': perf.chest_number,
+                'performance_id': perf.id,
+                'attempt_id': perf.attempt_id or f"ATT-{perf.id}-{perf.attempt_number or 1}",
+                'judge_role': sub.judge_role,
+                'judge_id': sub.judge_id,
+                'reason': reason,
+                'remarks': remarks,
+                'granted_by': user.username,
+                'original_snapshot': snapshot,
+            },
+            user=user
+        )
 
         return grant
 
@@ -72,6 +129,7 @@ def revoke_correction_access(user, grant_id, championship):
     - Requires active CD role on championship.
     - Rejects stale/non-open grants.
     - Atomically updates grant status to REVOKED and relocks submission.
+    - Emits immutable AuditLog entry.
     """
     if not user_can_grant_correction(user, championship):
         raise PermissionDenied("Only an officially assigned Competition Director (CD) on this championship can revoke correction access.")
@@ -98,6 +156,20 @@ def revoke_correction_access(user, grant_id, championship):
         sub.is_locked = True
         sub.save(update_fields=['is_locked'])
 
+        AuditLog.log(
+            action='CORRECTION_GRANT_REVOKED',
+            resource_type='CDCorrectionGrant',
+            resource_id=str(grant.id),
+            details={
+                'grant_id': grant.id,
+                'performance_id': grant.performance_id,
+                'chest_number': grant.performance.chest_number,
+                'judge_role': sub.judge_role,
+                'revoked_by': user.username,
+            },
+            user=user
+        )
+
         return grant
 
 def resubmit_judge_correction(user, grant_id, championship):
@@ -108,7 +180,10 @@ def resubmit_judge_correction(user, grant_id, championship):
     - Scopes grant and submission strictly to authorized championship.
     - Rejects if grant is not OPEN.
     - Preserves immutable revision (increments version).
+    - Captures post-correction snapshot in grant.
     - Automatically relocks the submission and marks grant RESUBMITTED.
+    - Recalculates performance composite score and timing results.
+    - Emits immutable AuditLog entry.
     """
     with transaction.atomic():
         grant = CDCorrectionGrant.objects.select_for_update().filter(
@@ -149,14 +224,41 @@ def resubmit_judge_correction(user, grant_id, championship):
 
         sub.save()
 
+        # Build corrected snapshot
+        corrected_snap = build_submission_snapshot(sub)
+
         # Mark grant as resubmitted
         grant.status = GrantStatus.RESUBMITTED
         grant.resubmitted_at = now
-        grant.save(update_fields=['status', 'resubmitted_at'])
+        grant.resubmitted_by = user
+        grant.corrected_snapshot = corrected_snap
+        grant.save(update_fields=['status', 'resubmitted_at', 'resubmitted_by', 'corrected_snapshot'])
 
         # Recalculate performance with authoritative calculation engine
         from scoring.services import recalculate_performance_after_correction
-        recalculate_performance_after_correction(grant.performance)
+        recalc_result = recalculate_performance_after_correction(grant.performance)
+
+        AuditLog.log(
+            action='CORRECTION_RESUBMITTED_AND_LOCKED',
+            resource_type='CDCorrectionGrant',
+            resource_id=str(grant.id),
+            details={
+                'grant_id': grant.id,
+                'performance_id': grant.performance.id,
+                'attempt_id': grant.performance.attempt_id or f"ATT-{grant.performance.id}-{grant.performance.attempt_number or 1}",
+                'chest_number': grant.performance.chest_number,
+                'judge_role': sub.judge_role,
+                'judge_id': user.id,
+                'new_version': sub.version,
+                'original_snapshot': grant.original_snapshot,
+                'corrected_snapshot': corrected_snap,
+                'recalculation_result': {
+                    'timing_score': str(recalc_result.get('timing_score', '0.00')),
+                    'final_score': str(recalc_result.get('final_total', '0.00')),
+                }
+            },
+            user=user
+        )
 
         return grant, sub
 

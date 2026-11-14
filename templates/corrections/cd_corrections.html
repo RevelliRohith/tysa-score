@@ -27,21 +27,108 @@
         </div>
     </div>
 
-    <!-- Athlete Search & Filter Card -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
-        <form method="GET" class="flex flex-col sm:flex-row items-end gap-3">
-            <div class="flex-1 space-y-1">
-                <label class="block text-xs font-bold text-slate-700">Search Athlete by Chest Number, Name, Partner, or District</label>
-                <div class="relative">
-                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-                    <input type="text" name="chest" value="{{ chest_query }}" placeholder="Enter chest no (e.g. 101), athlete name, partner name, or district..."
-                           class="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900 focus:border-teal-600 focus:bg-white transition">
+    <!-- Athlete Search & Multi-Filter Desk Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+        <form method="GET" class="space-y-3">
+            <!-- Global Search Input Row -->
+            <div class="flex flex-col sm:flex-row items-end gap-3">
+                <div class="flex-1 space-y-1 w-full">
+                    <label class="block text-xs font-bold text-slate-700">Global Search: Chest Number, Athlete Name, Partner, or District</label>
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                        <input type="text" name="chest" value="{{ chest_query }}" placeholder="Enter chest no (e.g. 114, CH-114), athlete name, or district..."
+                               class="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900 focus:border-teal-600 focus:bg-white transition">
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 shrink-0">
+                    <button type="submit" class="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        <span>Search Dossier</span>
+                    </button>
+                    <a href="{% url 'cd_corrections' %}" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-xs font-bold rounded-xl transition flex items-center space-x-1">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span>Reset Filters</span>
+                    </a>
                 </div>
             </div>
-            <button type="submit" class="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0">
-                <i data-lucide="search" class="w-4 h-4"></i>
-                <span>Search Performance Dossier</span>
-            </button>
+
+            <!-- Event-Wise and Panel Filters Row -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+                <!-- Event Filter -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Event</label>
+                    <select name="event_id" onchange="this.form.submit()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:border-teal-600 text-xs">
+                        <option value="">All Events</option>
+                        {% for ev in all_events %}
+                        <option value="{{ ev.id }}" {% if selected_event_id == ev.id|stringformat:"s" %}selected{% endif %}>
+                            {{ ev.get_event_type_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Gender Filter -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Gender</label>
+                    <select name="gender" onchange="this.form.submit()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:border-teal-600 text-xs">
+                        <option value="">All Genders</option>
+                        <option value="M" {% if selected_gender == 'M' %}selected{% endif %}>Male / Boys</option>
+                        <option value="F" {% if selected_gender == 'F' %}selected{% endif %}>Female / Girls</option>
+                    </select>
+                </div>
+
+                <!-- Age Category Filter -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Age Category</label>
+                    <select name="category_id" onchange="this.form.submit()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:border-teal-600 text-xs">
+                        <option value="">All Categories</option>
+                        {% for cat in all_categories %}
+                        <option value="{{ cat.id }}" {% if selected_category_id == cat.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Round Filter -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Round</label>
+                    <select name="round_type" onchange="this.form.submit()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:border-teal-600 text-xs">
+                        <option value="">All Rounds</option>
+                        {% for r_code, r_name in round_types %}
+                        <option value="{{ r_code }}" {% if selected_round == r_code %}selected{% endif %}>
+                            {{ r_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Panel Filter -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Panel / Arena</label>
+                    <select name="panel_id" onchange="this.form.submit()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:border-teal-600 text-xs">
+                        <option value="">All Panels</option>
+                        {% for pan in all_panels %}
+                        <option value="{{ pan.id }}" {% if selected_panel_id == pan.id|stringformat:"s" %}selected{% endif %}>
+                            {{ pan.stage_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Performance Status Filter -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Status</label>
+                    <select name="status" onchange="this.form.submit()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:border-teal-600 text-xs">
+                        <option value="">All Statuses</option>
+                        {% for s_code, s_name in all_statuses %}
+                        <option value="{{ s_code }}" {% if selected_status == s_code %}selected{% endif %}>
+                            {{ s_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
         </form>
     </div>
 
@@ -137,6 +224,10 @@
                         <span>Category: <strong class="text-teal-900 font-bold">{{ selected_perf.event_entry.age_category.name }}</strong></span>
                         <span class="mx-2">•</span>
                         <span>Round: <strong class="text-teal-900 font-bold">{{ selected_perf.round_type }}</strong></span>
+                        <span class="mx-2">•</span>
+                        <span>Panel: <strong class="text-teal-900 font-bold">{{ assigned_panel.stage_name|default:"Assigned Arena" }}</strong></span>
+                        <span class="mx-2">•</span>
+                        <span>Attempt: <strong class="text-teal-900 font-bold">#{{ selected_perf.attempt_number|default:1 }} ({{ selected_perf.attempt_id|default:"ATT-1" }})</strong></span>
                     </div>
                 </div>
             </div>
@@ -299,13 +390,20 @@
 
                     <div class="space-y-1">
                         <label class="block text-xs font-bold text-slate-700">Reason for Unlock <span class="text-rose-500">*</span></label>
-                        <textarea name="reason" rows="3" required placeholder="Specify why correction access is granted (e.g. Asana 3 deduction recalculation, Chief Judge review request)..."
+                        <textarea name="reason" rows="2" required placeholder="Specify why correction access is granted (e.g. Asana 3 deduction recalculation, Chief Judge review request)..."
                                   class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 outline-none focus:bg-white focus:border-teal-600"></textarea>
                     </div>
 
-                    <button type="submit" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-xs transition">
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-700">Administrative Remarks (Optional)</label>
+                        <input type="text" name="remarks" placeholder="Optional notes for audit trail..."
+                               class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 outline-none focus:bg-white focus:border-teal-600">
+                    </div>
+
+                    <button type="submit" onclick="return confirm('Authorize correction and unlock this judge submission? Only the assigned judge will be allowed to edit and resubmit.');"
+                            class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-xs transition cursor-pointer">
                         <i data-lucide="unlock" class="w-4 h-4"></i>
-                        <span>Authorize & Unlock for Judge Revision</span>
+                        <span>AUTHORIZE CORRECTION (Unlock Record)</span>
                     </button>
                 </form>
                 {% else %}
@@ -325,6 +423,7 @@
                         <div>
                             <span class="font-bold text-amber-900 block">Chest {{ g.performance.chest_number }} — {{ g.judge_submission.get_judge_role_display }}</span>
                             <span class="text-[11px] text-slate-600 block italic">"{{ g.reason }}"</span>
+                            {% if g.remarks %}<span class="text-[10px] text-slate-500 block">Remarks: {{ g.remarks }}</span>{% endif %}
                             <span class="text-[10px] text-slate-400">Granted by {{ g.granted_by.full_name|default:g.granted_by.email }} at {{ g.granted_at|date:"H:i" }}</span>
                         </div>
                         <form method="POST">
@@ -332,11 +431,50 @@
                             <input type="hidden" name="action" value="revoke_grant">
                             <input type="hidden" name="grant_id" value="{{ g.id }}">
                             <button type="submit" onclick="return confirm('Revoke this unlock grant and lock submission back?')" 
-                                    class="px-2.5 py-1 text-[11px] font-bold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition flex items-center space-x-1">
+                                    class="px-2.5 py-1 text-[11px] font-bold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition flex items-center space-x-1 cursor-pointer">
                                 <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
                                 <span>Revoke / Undo</span>
                             </button>
                         </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Immutable Correction Audit History for this Performer -->
+            {% if correction_history %}
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h3 class="text-xs font-extrabold uppercase text-slate-900 tracking-wider flex items-center space-x-1.5">
+                        <i data-lucide="history" class="w-4 h-4 text-teal-700"></i>
+                        <span>Correction Audit Trail & History</span>
+                    </h3>
+                    <span class="text-[11px] font-bold text-slate-500">{{ correction_history|length }} record(s)</span>
+                </div>
+                <div class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                    {% for h in correction_history %}
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 font-mono">{{ h.judge_submission.get_judge_role_display }}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono
+                                {% if h.status == 'RESUBMITTED' %}bg-emerald-100 text-emerald-800
+                                {% elif h.status == 'OPEN' %}bg-amber-100 text-amber-800
+                                {% else %}bg-slate-200 text-slate-700{% endif %}">
+                                {{ h.get_status_display }}
+                            </span>
+                        </div>
+                        <p class="text-slate-600 italic text-[11px]">"{{ h.reason }}"</p>
+                        {% if h.remarks %}<p class="text-slate-500 text-[10px]">Remarks: {{ h.remarks }}</p>{% endif %}
+                        <div class="text-[10px] text-slate-400 font-mono flex flex-col space-y-0.5 pt-1 border-t border-slate-200/60">
+                            <span>Authorized by: <strong>{{ h.granted_by.full_name|default:h.granted_by.username }}</strong> on {{ h.granted_at|date:"d M Y H:i:s" }}</span>
+                            {% if h.resubmitted_at %}
+                            <span class="text-emerald-700">Resubmitted by: <strong>{{ h.resubmitted_by.full_name|default:h.resubmitted_by.username }}</strong> on {{ h.resubmitted_at|date:"d M Y H:i:s" }}</span>
+                            {% endif %}
+                            {% if h.revoked_at %}
+                            <span class="text-rose-700">Revoked by: <strong>{{ h.revoked_by.full_name|default:h.revoked_by.username }}</strong> on {{ h.revoked_at|date:"d M Y H:i:s" }}</span>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endfor %}
                 </div>

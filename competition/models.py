@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
@@ -12,6 +13,11 @@ class DistrictDraw(models.Model):
     def __str__(self):
         return f"Draw: {self.championship.code} - {self.event_config.get_event_type_display()}"
 
+class MasterRollStatus(models.TextChoices):
+    DRAFT = 'DRAFT', 'Draft'
+    PUBLISHED = 'PUBLISHED', 'Published'
+    LOCKED = 'LOCKED', 'Locked'
+
 class MasterRoll(models.Model):
     championship = models.ForeignKey('championships.Championship', on_delete=models.CASCADE, related_name='master_rolls')
     event_config = models.ForeignKey('championships.EventConfiguration', on_delete=models.CASCADE, related_name='master_rolls')
@@ -22,17 +28,94 @@ class MasterRoll(models.Model):
         ('SEMI_FINAL', 'Semi-Final'),
         ('FINAL', 'Final')
     ])
+    panel = models.ForeignKey('JudgePanel', on_delete=models.SET_NULL, null=True, blank=True, related_name='master_rolls')
+    roll_number = models.CharField(max_length=50, blank=True, help_text="e.g. MR-2026-TRAD-M-U14-01")
+    status = models.CharField(max_length=20, choices=MasterRollStatus.choices, default=MasterRollStatus.DRAFT, db_index=True)
     version = models.PositiveIntegerField(default=1)
     is_locked = models.BooleanField(default=False, help_text="Finalized roll locks entry and routine declarations")
     locked_at = models.DateTimeField(null=True, blank=True)
-    locked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    locked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='locked_master_rolls')
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='published_master_rolls')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_master_rolls')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('championship', 'event_config', 'age_category', 'gender', 'round_type', 'version')
 
+    def save(self, *args, **kwargs):
+        if not self.roll_number:
+            code = self.championship.code if self.championship else "CHAMP"
+            ev = self.event_config.event_type[:4] if self.event_config else "EVT"
+            cat = self.age_category.name.replace(' ', '')[:6] if self.age_category else "CAT"
+            self.roll_number = f"MR-{code}-{ev}-{self.gender}-{cat}-V{self.version}".upper()
+        if self.is_locked and self.status != MasterRollStatus.LOCKED:
+            self.status = MasterRollStatus.LOCKED
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Master Roll: {self.event_config.get_event_type_display()} - {self.age_category.name} ({self.gender}) [{self.round_type}]"
+        return f"{self.roll_number or 'Master Roll'}: {self.event_config.get_event_type_display()} - {self.age_category.name} ({self.gender}) [{self.round_type}] (v{self.version})"
+
+class MasterRollVersionHistory(models.Model):
+    master_roll = models.ForeignKey(MasterRoll, on_delete=models.CASCADE, related_name='version_history')
+    version = models.PositiveIntegerField()
+    action = models.CharField(max_length=50) # CREATED, PUBLISHED, LOCKED, CORRECTION_APPLIED
+    changes_summary = models.TextField(blank=True)
+    snapshot_data = models.JSONField(default=dict, blank=True)
+    performed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    performed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-version', '-performed_at']
+
+    def __str__(self):
+        return f"{self.master_roll.roll_number} - v{self.version} ({self.action})"
+
+class EvaluatorVerificationStatus(models.TextChoices):
+    NOT_REVIEWED = 'NOT_REVIEWED', 'Not Reviewed'
+    IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+    VERIFIED = 'VERIFIED', 'Verified'
+    DISCREPANCY_FOUND = 'DISCREPANCY_FOUND', 'Discrepancy Found'
+
+class EvaluatorAsanaVerification(models.Model):
+    master_roll = models.ForeignKey(MasterRoll, on_delete=models.CASCADE, related_name='evaluator_verifications')
+    event_entry = models.ForeignKey('registrations.EventEntry', on_delete=models.CASCADE, related_name='evaluator_verifications')
+    sequence_order = models.PositiveIntegerField()
+    declared_code = models.CharField(max_length=50, blank=True)
+    declared_bv = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('0.80'))
+    is_compulsory = models.BooleanField(default=False)
+    
+    # Evaluator verification fields
+    status = models.CharField(max_length=30, choices=EvaluatorVerificationStatus.choices, default=EvaluatorVerificationStatus.NOT_REVIEWED)
+    is_verified = models.BooleanField(default=False)
+    
+    # Discrepancy details
+    has_discrepancy = models.BooleanField(default=False)
+    discrepancy_type = models.CharField(max_length=50, blank=True, choices=[
+        ('NONE', 'None'),
+        ('MISSING_ASANA', 'Missing Asana'),
+        ('EXTRA_ASANA', 'Extra Asana'),
+        ('INCORRECT_ORDER', 'Incorrect Order'),
+        ('BV_DISCREPANCY', 'BV Discrepancy'),
+        ('INCORRECT_CODE', 'Incorrect Code/Pose'),
+        ('OTHER', 'Other Discrepancy'),
+    ])
+    discrepancy_remarks = models.TextField(blank=True)
+    observed_code = models.CharField(max_length=50, blank=True)
+    observed_bv = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    
+    evaluator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['event_entry', 'sequence_order']
+        unique_together = ('master_roll', 'event_entry', 'sequence_order')
+
+    def __str__(self):
+        return f"{self.event_entry.chest_number} Seq #{self.sequence_order}: {self.declared_code} ({self.get_status_display()})"
 
 class MasterRollEntry(models.Model):
     master_roll = models.ForeignKey(MasterRoll, on_delete=models.CASCADE, related_name='roll_entries')

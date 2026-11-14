@@ -1,5 +1,7 @@
 import random
 import datetime
+from decimal import Decimal
+from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
@@ -8,9 +10,13 @@ import csv
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .models import DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, StageBatch, PanelSeatAssignment
+from .models import (
+    DistrictDraw, MasterRoll, MasterRollEntry, JudgePanel, StageBatch, PanelSeatAssignment,
+    MasterRollStatus, MasterRollVersionHistory, EvaluatorAsanaVerification, EvaluatorVerificationStatus
+)
 from championships.models import Championship, EventConfiguration, AgeCategory, EventType
-from registrations.models import EventEntry, RegistrationStatus
+from registrations.models import EventEntry, RegistrationStatus, AsanaSequenceItem
+from catalogue.models import Asana
 from judges.models import UniversalJudge, ApprovalStatus
 from scoring.models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem, PerformanceInterruptionLog, InterruptionAction, InterruptionReason
 from accounts.models import RoleChoices, ScopedRole
@@ -310,6 +316,49 @@ def district_draw(request):
         'fed_logo': fed_logo,
     })
 
+def ensure_evaluator_verifications(master_roll):
+    """
+    Auto-populates EvaluatorAsanaVerification rows from athlete declarations (AsanaSequenceItem)
+    when a Master Roll is published. Keeps existing verification statuses intact.
+    """
+    if not master_roll:
+        return
+    
+    entries = master_roll.roll_entries.select_related('event_entry').all()
+    round_type = master_roll.round_type
+    ev_type = master_roll.event_config.event_type.upper() if master_roll.event_config else ''
+    is_traditional = 'TRADITIONAL' in ev_type
+
+    from scoring.views import get_traditional_compulsory_count
+
+    comp_count = get_traditional_compulsory_count(round_type) if is_traditional else 0
+
+    for r_entry in entries:
+        ee = r_entry.event_entry
+        seq_items = AsanaSequenceItem.objects.filter(
+            event_entry=ee,
+            round_type=round_type
+        ).order_by('sequence_order')
+        if not seq_items.exists():
+            seq_items = AsanaSequenceItem.objects.filter(event_entry=ee).order_by('sequence_order')
+
+        for item in seq_items:
+            is_comp = item.is_compulsory if (item.is_compulsory is not None) else (item.sequence_order <= comp_count if is_traditional else False)
+            bv = Decimal('1.00') if (is_traditional and is_comp) else (item.declared_bv or Decimal('0.80'))
+            
+            EvaluatorAsanaVerification.objects.get_or_create(
+                master_roll=master_roll,
+                event_entry=ee,
+                sequence_order=item.sequence_order,
+                defaults={
+                    'declared_code': item.declared_code or f"A{item.sequence_order}",
+                    'declared_bv': bv,
+                    'is_compulsory': is_comp,
+                    'status': EvaluatorVerificationStatus.NOT_REVIEWED,
+                    'is_verified': False
+                }
+            )
+
 @role_required(RoleChoices.ADMIN, RoleChoices.CD)
 def master_roll(request):
     """
@@ -423,12 +472,117 @@ def master_roll(request):
             messages.success(request, f"Master Roll generated with {perf_order - 1} athletes ordered by championship lottery draw!")
             return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
 
+        elif action == 'add_athlete':
+            # Add specific athlete entry to this Master Roll
+            entry_id = request.POST.get('event_entry_id')
+            if not master_roll:
+                master_roll = MasterRoll.objects.create(
+                    championship=championship,
+                    event_config=current_event,
+                    age_category=current_cat,
+                    gender=gender,
+                    round_type=round_type,
+                    version=1,
+                    status=MasterRollStatus.DRAFT,
+                    created_by=request.user
+                )
+            if master_roll.is_locked:
+                messages.error(request, "Cannot add athletes: This Master Roll is LOCKED.")
+                return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
+            entry = EventEntry.objects.filter(id=entry_id, registration__championship=championship).first()
+            if entry:
+                if not entry.chest_number:
+                    from .services import ensure_all_entries_have_chest_numbers
+                    ensure_all_entries_have_chest_numbers(championship=championship, event_config=current_event, age_category=current_cat, gender=gender)
+                    entry.refresh_from_db()
+
+                # Check if already in roll
+                if not MasterRollEntry.objects.filter(master_roll=master_roll, event_entry=entry).exists():
+                    max_order = master_roll.roll_entries.aggregate(models.Max('performance_order'))['performance_order__max'] or 0
+                    MasterRollEntry.objects.create(
+                        master_roll=master_roll,
+                        event_entry=entry,
+                        cycle_number=1,
+                        performance_order=max_order + 1
+                    )
+                    messages.success(request, f"Added Chest #{entry.chest_number} ({entry.display_names}) to Master Roll order #{max_order + 1}.")
+                else:
+                    messages.warning(request, f"Athlete {entry.display_names} is already in this Master Roll.")
+            return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
+        elif action == 'remove_athlete':
+            roll_entry_id = request.POST.get('roll_entry_id')
+            if master_roll and not master_roll.is_locked:
+                MasterRollEntry.objects.filter(id=roll_entry_id, master_roll=master_roll).delete()
+                # Re-sequence performance orders
+                remaining = list(master_roll.roll_entries.order_by('performance_order'))
+                for idx, r_item in enumerate(remaining, 1):
+                    if r_item.performance_order != idx:
+                        r_item.performance_order = idx
+                        r_item.save(update_fields=['performance_order'])
+                messages.success(request, "Athlete removed and performance order re-sequenced.")
+            elif master_roll and master_roll.is_locked:
+                messages.error(request, "Cannot remove athlete: Master Roll is LOCKED.")
+            return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
+        elif action == 'create_version':
+            # Create a new version for this Master Roll (for corrections after publishing/locking)
+            if master_roll:
+                new_version = master_roll.version + 1
+                master_roll.version = new_version
+                master_roll.is_locked = False
+                master_roll.status = MasterRollStatus.DRAFT
+                master_roll.locked_at = None
+                master_roll.locked_by = None
+                code = championship.code if championship else "CHAMP"
+                ev = current_event.event_type[:4] if current_event else "EVT"
+                cat = current_cat.name.replace(' ', '')[:6] if current_cat else "CAT"
+                master_roll.roll_number = f"MR-{code}-{ev}-{gender}-{cat}-V{new_version}".upper()
+                master_roll.save()
+
+                MasterRollVersionHistory.objects.create(
+                    master_roll=master_roll,
+                    version=new_version,
+                    action='NEW_VERSION_CREATED',
+                    changes_summary=f"New version {new_version} initiated by Competition Director {request.user.get_full_name() or request.user.username}.",
+                    performed_by=request.user
+                )
+                messages.success(request, f"New Master Roll version v{new_version} created as Draft. You can now edit athletes and declarations.")
+            return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
+        elif action == 'publish_roll':
+            if master_roll:
+                master_roll.status = MasterRollStatus.PUBLISHED
+                master_roll.published_by = request.user
+                master_roll.published_at = timezone.now()
+                master_roll.save(update_fields=['status', 'published_by', 'published_at', 'updated_at'])
+                ensure_evaluator_verifications(master_roll)
+                MasterRollVersionHistory.objects.create(
+                    master_roll=master_roll,
+                    version=master_roll.version,
+                    action='PUBLISHED',
+                    changes_summary=f"Published by Competition Director {request.user.get_full_name() or request.user.username}. Generated Evaluator Asana Reference list.",
+                    performed_by=request.user
+                )
+                messages.success(request, f"Master Roll #{master_roll.roll_number} published successfully! Evaluator Asana Reference List generated.")
+            return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
+
         elif action == 'lock_roll':
             if master_roll:
                 master_roll.is_locked = True
+                master_roll.status = MasterRollStatus.LOCKED
                 master_roll.locked_by = request.user
-                master_roll.locked_at = datetime.datetime.now()
-                master_roll.save()
+                master_roll.locked_at = timezone.now()
+                master_roll.save(update_fields=['is_locked', 'status', 'locked_by', 'locked_at', 'updated_at'])
+                ensure_evaluator_verifications(master_roll)
+                MasterRollVersionHistory.objects.create(
+                    master_roll=master_roll,
+                    version=master_roll.version,
+                    action='LOCKED',
+                    changes_summary=f"Locked by Competition Director {request.user.get_full_name() or request.user.username}. Declarations frozen.",
+                    performed_by=request.user
+                )
                 messages.success(request, "Master Roll officially locked. Ordinary declarations are now frozen.")
             return redirect(f"/competition/master-roll/?event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}&view_mode={view_mode}")
 
@@ -575,6 +729,125 @@ def master_roll(request):
     district_logo = championship.branding_logos.filter(logo_type='DISTRICT').first() if championship else None
     fed_logo = championship.branding_logos.filter(logo_type='FEDERATION').first() if championship else None
 
+    # Check if user requested declaration list export or evaluator reference export
+    export_mode = request.GET.get('export')
+    if export_mode == 'evaluator_ref_pdf' and master_roll:
+        import io
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
+        elements = []
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('RefTitle', parent=styles['Heading1'], fontSize=12, leading=15, textColor=colors.HexColor('#0F766E'), alignment=1)
+        sub_style = ParagraphStyle('RefSub', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#475569'), alignment=1)
+        cell_style = ParagraphStyle('RefCell', parent=styles['Normal'], fontSize=7.5, leading=9)
+
+        elements.append(Paragraph("<b>TELANGANA YOGASANA SPORTS ASSOCIATION</b>", title_style))
+        elements.append(Paragraph(f"<b>OFFICIAL EVALUATOR ASANA REFERENCE LIST</b> — Master Roll: {master_roll.roll_number} (v{master_roll.version})", sub_style))
+        ev_label = current_event.get_event_type_display() if current_event else "Traditional"
+        cat_label = current_cat.name if current_cat else "All Categories"
+        gen_label = "Boys / Men" if gender == 'M' else "Girls / Women"
+        elements.append(Paragraph(f"<b>Event:</b> {ev_label} | <b>Category:</b> {cat_label} | <b>Division:</b> {gen_label} | <b>Round:</b> {round_type} | <b>Status:</b> {master_roll.get_status_display()}", sub_style))
+        elements.append(Spacer(1, 8))
+
+        ref_rows = [[
+            'Chest No', 'Athlete Name(s)', 'District', 'Seq', 'Asana Code', 'Type', 'Declared BV', 'Evaluator Status', 'Discrepancy / Remarks'
+        ]]
+        col_w = [55, 140, 90, 30, 70, 75, 55, 90, 160]
+
+        verifs = EvaluatorAsanaVerification.objects.filter(master_roll=master_roll).select_related('event_entry__registration__athlete').order_by('event_entry__chest_number', 'sequence_order')
+        if verifs.exists():
+            for v in verifs:
+                ee = v.event_entry
+                ref_rows.append([
+                    str(ee.chest_number or '—'),
+                    Paragraph(ee.display_names, cell_style),
+                    ee.district,
+                    str(v.sequence_order),
+                    v.declared_code,
+                    'Compulsory' if v.is_compulsory else 'Optional',
+                    str(v.declared_bv),
+                    v.get_status_display(),
+                    Paragraph(v.discrepancy_remarks or ('—' if not v.has_discrepancy else v.get_discrepancy_type_display()), cell_style)
+                ])
+        else:
+            # Fallback to declared sequence items directly if verifications haven't been seeded yet
+            for r in roll_entries:
+                ee = r.event_entry
+                items = AsanaSequenceItem.objects.filter(event_entry=ee, round_type=round_type).order_by('sequence_order')
+                if not items.exists():
+                    items = AsanaSequenceItem.objects.filter(event_entry=ee).order_by('sequence_order')
+                for itm in items:
+                    ref_rows.append([
+                        str(ee.chest_number or '—'),
+                        Paragraph(ee.display_names, cell_style),
+                        ee.district,
+                        str(itm.sequence_order),
+                        itm.declared_code,
+                        'Compulsory' if itm.is_compulsory else 'Optional',
+                        str(itm.declared_bv),
+                        'Not Reviewed',
+                        '—'
+                    ])
+
+        t_ref = Table(ref_rows, colWidths=col_w, repeatRows=1)
+        t_ref.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F766E')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 7.5),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#94A3B8')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ]))
+        elements.append(t_ref)
+        doc.build(elements)
+        buffer.seek(0)
+        resp = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="Evaluator_Asana_Reference_{master_roll.roll_number}.pdf"'
+        return resp
+
+    # Fetch athlete declared asanas for reference display if requested or on view
+    athlete_declarations_map = {}
+    if master_roll:
+        from scoring.views import get_traditional_compulsory_count
+        comp_count = get_traditional_compulsory_count(round_type) if ('TRADITIONAL' in (current_event.event_type.upper() if current_event else '')) else 0
+        for r in roll_entries:
+            ee = r.event_entry
+            seq_items = list(AsanaSequenceItem.objects.filter(event_entry=ee, round_type=round_type).order_by('sequence_order'))
+            if not seq_items:
+                seq_items = list(AsanaSequenceItem.objects.filter(event_entry=ee).order_by('sequence_order'))
+            athlete_declarations_map[ee.id] = {
+                'entry': ee,
+                'items': seq_items,
+                'comp_count': comp_count,
+            }
+
+    # Also list all Master Rolls in this championship for easy navigation/management
+    all_master_rolls = MasterRoll.objects.filter(championship=championship).select_related(
+        'event_config', 'age_category', 'panel', 'locked_by', 'published_by'
+    ).order_by('-updated_at')
+
+    # Available registered entries not yet in this roll (for manual addition)
+    existing_entry_ids = [r.event_entry_id for r in roll_entries]
+    available_entries = EventEntry.objects.filter(
+        registration__championship=championship,
+        event_config=current_event,
+        age_category=current_cat,
+        gender=gender
+    ).exclude(id__in=existing_entry_ids).select_related('registration__athlete', 'partner_athlete')
+
+    # Version history of current master roll
+    version_history = master_roll.version_history.all() if master_roll else []
+
     return render(request, 'competition/master_roll.html', {
         'championship': championship,
         'event_configs': event_configs,
@@ -586,12 +859,25 @@ def master_roll(request):
         'view_mode': view_mode,
         'master_roll': master_roll,
         'roll_entries': roll_entries,
+        'athlete_declarations_map': athlete_declarations_map,
+        'all_master_rolls': all_master_rolls,
+        'available_entries': available_entries,
+        'version_history': version_history,
         'draw': draw,
         'assigned_panel': assigned_panel,
         'state_logo': state_logo,
         'district_logo': district_logo,
         'fed_logo': fed_logo,
     })
+
+@role_required(RoleChoices.ADMIN, RoleChoices.CD)
+def master_roll_detail(request, roll_id):
+    """
+    Direct link to a specific Master Roll by ID for viewing, publishing, locking, or editing.
+    """
+    championship = get_active_championship(request)
+    roll = get_object_or_404(MasterRoll, id=roll_id, championship=championship)
+    return redirect(f"/competition/master-roll/?event_id={roll.event_config_id}&cat_id={roll.age_category_id}&gender={roll.gender}&round_type={roll.round_type}")
 
 def get_busy_judge_map(championship, current_panel_id=None):
     """
@@ -1040,13 +1326,30 @@ def stage_manager(request):
     )
 
     requested_panel_id = request.GET.get('panel_id') or request.POST.get('panel_id')
+    event_filter = request.GET.get('event_id')
+    gender_filter = request.GET.get('gender')
+    category_filter = request.GET.get('category_id')
+    round_filter = request.GET.get('round_type')
 
     if is_cd_or_admin:
-        # Admins and CDs can inspect/manage any panel
+        # Admins and CDs can inspect all Stage Manager views across all events and panels
+        filtered_panels = panels
+        if event_filter:
+            filtered_panels = filtered_panels.filter(event_config_id=event_filter)
+        if gender_filter:
+            filtered_panels = filtered_panels.filter(gender=gender_filter)
+        if category_filter:
+            filtered_panels = filtered_panels.filter(age_category_id=category_filter)
+        if round_filter:
+            filtered_panels = filtered_panels.filter(round_type=round_filter)
+
         if requested_panel_id:
             current_panel = panels.filter(id=requested_panel_id).first()
+        elif filtered_panels.exists():
+            current_panel = filtered_panels.first()
         else:
             current_panel = panels.first()
+
         if not current_panel:
             messages.info(request, "No active panels configured for this championship yet.")
             return redirect('panel_assignments')
@@ -1690,10 +1993,22 @@ def stage_manager(request):
 
     interruption_logs = PerformanceInterruptionLog.objects.filter(performance=active_perf).order_by('-timestamp') if active_perf else []
 
+    all_events = EventConfiguration.objects.filter(championship=championship).order_by('id')
+    all_categories = AgeCategory.objects.filter(event_configs__championship=championship).distinct().order_by('name')
+    round_type_choices = getattr(MasterRoll, 'ROUND_CHOICES', [('PRELIMINARY', 'Preliminary'), ('SEMI_FINAL', 'Semi-Final'), ('FINAL', 'Final')])
+
     return render(request, 'competition/stage_manager.html', {
         'championship': championship,
         'panels': panels,
         'current_panel': current_panel,
+        'is_cd_or_admin': is_cd_or_admin,
+        'all_events': all_events,
+        'all_categories': all_categories,
+        'round_types': round_type_choices,
+        'selected_event_id': event_filter,
+        'selected_gender': gender_filter,
+        'selected_category_id': category_filter,
+        'selected_round': round_filter,
         'active_batch': active_batch,
         'active_perf': active_perf,
         'active_perfs': active_perfs,

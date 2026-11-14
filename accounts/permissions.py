@@ -379,10 +379,15 @@ def is_user_authorized_for_url(user, url_path, championship):
     # CD views
     cd_views = [
         'cd_dashboard', 'district_draw', 'panel_assignments',
-        'cd_corrections', 'report_trophies', 'registers_view'
+        'cd_corrections', 'report_trophies', 'registers_view',
+        'master_roll', 'master_roll_management', 'master_roll_detail'
     ]
     if view_name in cd_views:
         return RoleChoices.CD in roles
+
+    # Evaluator reference view (Evaluator and CD/Admin)
+    if view_name == 'evaluator_reference_list':
+        return RoleChoices.EVALUATOR in roles or RoleChoices.CD in roles
 
     # District views
     if view_name == 'district_approvals':
@@ -545,6 +550,7 @@ def get_role_navigation_items(user, championship, current_url_name=''):
     if RoleChoices.CD in roles:
         return [
             {'label': 'CD Dashboard', 'url': '/cd/dashboard/', 'url_name': 'cd_dashboard', 'icon': 'home'},
+            {'label': 'Master Roll Management', 'url': '/competition/master-roll/', 'url_name': 'master_roll', 'icon': 'clipboard-list'},
             {'label': 'Draw & Master Roll', 'url': '/competition/draw/', 'url_name': 'district_draw', 'icon': 'shuffle'},
             {'label': 'Panel Assignments', 'url': '/competition/panels/', 'url_name': 'panel_assignments', 'icon': 'users-round'},
             {'label': 'Judge Credentials Desk', 'url': '/judges/credentials/', 'url_name': 'judge_credentials_admin', 'icon': 'key'},

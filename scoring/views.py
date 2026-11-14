@@ -8,8 +8,11 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
 from .models import Performance, PerformanceStatus, JudgeSubmission, AsanaScoreItem, PerformanceArtistryScore, EvaluatorIncident, IncidentType
-from .services import calculate_performance_score, calculate_traditional_timing_contribution, calculate_tw_marks
-from competition.models import StageBatch, JudgePanel
+from .services import calculate_performance_score, calculate_traditional_timing_contribution, calculate_tw_marks, quantize_score
+from competition.models import (
+    StageBatch, JudgePanel, MasterRoll, MasterRollEntry, MasterRollStatus,
+    EvaluatorAsanaVerification, EvaluatorVerificationStatus
+)
 from registrations.models import EventEntry, AsanaSequenceItem
 from catalogue.models import Asana
 from accounts.models import RoleChoices, ScopedRole
@@ -253,6 +256,13 @@ def get_judge_panel_and_batch(request, seat_fields=None, round_type=None, event_
     return current_panel, seat_label, batch
 
 @role_required(RoleChoices.ADMIN, RoleChoices.D_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
+
+def snap_to_quarter_point(val: Decimal) -> Decimal:
+    """
+    Enforces scoring input strictly in multiples of 0.25 (e.g. 2.00, 2.25, 2.50, 2.75, 3.00).
+    """
+    return (val * 4).quantize(Decimal('1'), rounding=ROUND_HALF_UP) / Decimal('4.00')
+
 def scoring_traditional_d(request):
     """
     Implements 17_Traditional_D_Judge.png:
@@ -459,11 +469,11 @@ def scoring_traditional_d(request):
             raw_p = request.POST.get(f'posture_{e.id}', '0.0')
             raw_s = request.POST.get(f'stability_{e.id}', '0.0')
             try:
-                p_val = min(Decimal('6.00'), max(Decimal('0.00'), Decimal(raw_p)))
+                p_val = min(Decimal('6.00'), max(Decimal('0.00'), snap_to_quarter_point(Decimal(raw_p))))
             except:
                 p_val = Decimal('0.00')
             try:
-                s_val = min(Decimal('2.00'), max(Decimal('0.00'), Decimal(raw_s)))
+                s_val = min(Decimal('2.00'), max(Decimal('0.00'), snap_to_quarter_point(Decimal(raw_s))))
             except:
                 s_val = Decimal('0.00')
 
@@ -1124,7 +1134,7 @@ def scoring_artistic_single_d(request):
         client_timestamp = request.POST.get('client_timestamp')
         if current_raw_exec is not None:
             try:
-                e_val = min(Decimal('10.00'), max(Decimal('0.00'), Decimal(current_raw_exec)))
+                e_val = min(Decimal('10.00'), max(Decimal('0.00'), snap_to_quarter_point(Decimal(current_raw_exec))))
             except Exception:
                 target_score_item = all_score_items.get(seq_idx)
                 e_val = target_score_item.execution_score if target_score_item else Decimal('0.00')
@@ -1147,7 +1157,7 @@ def scoring_artistic_single_d(request):
             seq_val = request.POST.get(f'exec_{seq}')
             if seq_val is not None and seq_val.strip() != '':
                 try:
-                    e_val = min(Decimal('10.00'), max(Decimal('0.00'), Decimal(seq_val)))
+                    e_val = min(Decimal('10.00'), max(Decimal('0.00'), snap_to_quarter_point(Decimal(seq_val))))
                 except Exception:
                     continue
                 s_item = all_score_items.get(seq)
@@ -1294,12 +1304,20 @@ def scoring_artistic_pair_d(request):
         perf = get_object_or_404(Performance, id=perf_id)
         entry = perf.event_entry
     else:
-        entry = batch.entries.filter(is_pair=True).first() if batch else EventEntry.objects.filter(is_pair=True).first()
+        entry = batch.entries.first() if batch and batch.entries.exists() else None
+        if not entry and current_panel:
+            entry = EventEntry.objects.filter(event_config=current_panel.event_config, age_category=current_panel.age_category, gender=current_panel.gender).first()
+        if not entry:
+            entry = EventEntry.objects.filter(event_config__event_type='ARTISTIC_PAIR').first()
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type=current_panel.round_type if current_panel else 'FINAL',
+            round_type=current_panel.round_type if current_panel else 'PRELIMINARY',
             defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
+
+    if not perf or not entry:
+        messages.error(request, 'No Artistic Pair competitor found for this scoring session.')
+        return render(request, 'scoring/artistic_pair_d.html', {'error': 'No competitor found'})
 
     is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
         user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
@@ -1424,12 +1442,20 @@ def scoring_rhythmic_pair_d(request):
         perf = get_object_or_404(Performance, id=perf_id)
         entry = perf.event_entry
     else:
-        entry = batch.entries.filter(is_pair=True).first() if batch else EventEntry.objects.filter(is_pair=True).first()
+        entry = batch.entries.first() if batch and batch.entries.exists() else None
+        if not entry and current_panel:
+            entry = EventEntry.objects.filter(event_config=current_panel.event_config, age_category=current_panel.age_category, gender=current_panel.gender).first()
+        if not entry:
+            entry = EventEntry.objects.filter(event_config__event_type='RHYTHMIC_PAIR').first()
         perf, _ = Performance.objects.get_or_create(
             event_entry=entry,
-            round_type=current_panel.round_type if current_panel else 'FINAL',
+            round_type=current_panel.round_type if current_panel else 'PRELIMINARY',
             defaults={'batch': batch, 'status': PerformanceStatus.IN_PROGRESS}
         ) if entry else (None, False)
+
+    if not perf or not entry:
+        messages.error(request, 'No Rhythmic Pair competitor found for this scoring session.')
+        return render(request, 'scoring/rhythmic_pair_d.html', {'error': 'No competitor found'})
 
     is_admin_or_cd = is_system_admin(request.user) or ScopedRole.objects.filter(
         user=request.user, championship=get_active_championship(request), role=RoleChoices.CD
@@ -1811,6 +1837,13 @@ def scoring_music_time(request):
         )
         return render(request, '403.html', {'message': "Access Denied: Cannot access another judge's workspace."}, status=403)
 
+    # Check for active CD Correction Grant on this submission
+    from corrections.models import CDCorrectionGrant, GrantStatus
+    active_correction_grant = CDCorrectionGrant.objects.filter(
+        judge_submission=sub,
+        status=GrantStatus.OPEN
+    ).select_related('granted_by').first()
+
     total_items = 10
 
     # Fetch sequence items (all 10 asanas) for this event entry
@@ -1957,7 +1990,34 @@ def scoring_music_time(request):
             sub.is_submitted = True
             sub.is_locked = True
             sub.submitted_at = timezone.now()
-            sub.save(update_fields=['raw_total', 'effective_total', 'is_draft', 'is_submitted', 'is_locked', 'submitted_at'])
+
+            # Handle CD correction grant closure if resubmitted under grant
+            if active_correction_grant and active_correction_grant.status == GrantStatus.OPEN:
+                from corrections.services import build_submission_snapshot
+                sub.version += 1
+                corrected_snap = build_submission_snapshot(sub)
+                active_correction_grant.status = GrantStatus.RESUBMITTED
+                active_correction_grant.resubmitted_at = timezone.now()
+                active_correction_grant.resubmitted_by = request.user
+                active_correction_grant.corrected_snapshot = corrected_snap
+                active_correction_grant.save(update_fields=['status', 'resubmitted_at', 'resubmitted_by', 'corrected_snapshot'])
+
+                AuditLog.log(
+                    action='CORRECTION_RESUBMITTED_AND_LOCKED',
+                    resource_type='CDCorrectionGrant',
+                    resource_id=str(active_correction_grant.id),
+                    details={
+                        'grant_id': active_correction_grant.id,
+                        'performance_id': sub.performance_id,
+                        'chest_number': sub.performance.chest_number,
+                        'judge_role': sub.judge_role,
+                        'judge_user': request.user.username,
+                        'version': sub.version,
+                    },
+                    user=request.user
+                )
+
+            sub.save(update_fields=['raw_total', 'effective_total', 'is_draft', 'is_submitted', 'is_locked', 'submitted_at', 'version'])
             if sub.performance:
                 calculate_performance_score(sub.performance)
 
@@ -2072,6 +2132,7 @@ def scoring_music_time(request):
         'ot_deduction': ot_ded_preview,
         'total_timing_score': total_preview,
         'is_locked': sub.is_locked,
+        'active_correction_grant': active_correction_grant,
         'can_view_reconciliation': can_view_reconciliation,
         'reconciliation_info': reconciliation_info,
         'time_judge_1': time_judge_1 if can_view_reconciliation else (sub if judge_role == 'TIME_JUDGE' else None),
@@ -2201,14 +2262,14 @@ def scoring_artistry(request):
             # 1. Parse Component Execution Values
             def parse_dec(val_str, max_limit):
                 try:
-                    d = Decimal(str(float(val_str)))
+                    d = snap_to_quarter_point(Decimal(str(float(val_str))))
                     return max(Decimal('0.00'), min(Decimal(str(max_limit)), d))
                 except Exception:
                     return Decimal('0.00')
 
             def parse_pen(val_str):
                 try:
-                    d = Decimal(str(float(val_str)))
+                    d = snap_to_quarter_point(Decimal(str(float(val_str))))
                     return max(Decimal('0.00'), d)
                 except Exception:
                     return Decimal('0.00')
@@ -2805,6 +2866,206 @@ def scoring_evaluator(request, perf_id=None):
             'item_count': item_count,
         })
 
+@role_required(RoleChoices.ADMIN, RoleChoices.EVALUATOR, RoleChoices.CD, 'APPROVED_JUDGE')
+def evaluator_reference_list(request):
+    """
+    Dedicated Evaluator Asana Reference Desk:
+    - Lists published Master Rolls and their athletes' declared asanas.
+    - Allows the Evaluator to manually compare, copy, and verify declared asanas against official Master Roll.
+    - Provides:
+      * Verification status (Not Reviewed, In Progress, Verified, Discrepancy Found)
+      * Discrepancy reporting (Missing, Extra, Incorrect Order, BV Discrepancy, Code/Pose mismatch)
+      * One-click 'Copy to Evaluator Desk' or discrepancy synchronization.
+    - Evaluator CANNOT modify original Master Roll.
+    """
+    championship = get_active_championship(request)
+    if not championship:
+        messages.error(request, "No active championship selected.")
+        return redirect('admin_dashboard')
+
+    # Available published or locked master rolls in this championship
+    master_rolls = MasterRoll.objects.filter(
+        championship=championship,
+        status__in=[MasterRollStatus.PUBLISHED, MasterRollStatus.LOCKED]
+    ).select_related('event_config', 'age_category', 'panel').order_by('-published_at', '-created_at')
+
+    # If CD or admin, also show draft rolls
+    is_cd_or_admin = (is_system_admin(request.user) or (hasattr(request.user, 'role') and request.user.role == RoleChoices.CD) or
+                      ScopedRole.objects.filter(user=request.user, championship=championship, role=RoleChoices.CD).exists())
+
+    if is_cd_or_admin:
+        master_rolls = MasterRoll.objects.filter(
+            championship=championship
+        ).select_related('event_config', 'age_category', 'panel').order_by('-published_at', '-created_at')
+
+    selected_roll_id = request.GET.get('roll_id')
+    selected_roll = None
+    if selected_roll_id:
+        selected_roll = master_rolls.filter(id=selected_roll_id).first()
+    if not selected_roll and master_rolls.exists():
+        selected_roll = master_rolls.first()
+
+    # Search filter
+    search_q = request.GET.get('q', '').strip()
+
+    # Handle Evaluator Verification POST actions
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'update_verification':
+            verif_id = request.POST.get('verif_id')
+            v = get_object_or_404(EvaluatorAsanaVerification, id=verif_id)
+            
+            # Evaluator can update verification status and discrepancies, but cannot alter Master Roll itself
+            status_val = request.POST.get('status', EvaluatorVerificationStatus.NOT_REVIEWED)
+            is_verified = (status_val == EvaluatorVerificationStatus.VERIFIED or request.POST.get('is_verified') == 'true')
+            has_disc = (status_val == EvaluatorVerificationStatus.DISCREPANCY_FOUND or request.POST.get('has_discrepancy') == 'true')
+            disc_type = request.POST.get('discrepancy_type', 'NONE') if has_disc else 'NONE'
+            disc_remarks = request.POST.get('discrepancy_remarks', '').strip()
+            obs_code = request.POST.get('observed_code', '').strip()
+            obs_bv_str = request.POST.get('observed_bv', '').strip()
+            obs_bv = Decimal(obs_bv_str) if obs_bv_str else None
+
+            v.status = status_val
+            v.is_verified = is_verified
+            v.has_discrepancy = has_disc
+            v.discrepancy_type = disc_type
+            v.discrepancy_remarks = disc_remarks
+            v.observed_code = obs_code
+            v.observed_bv = obs_bv
+            v.evaluator = request.user
+            v.reviewed_at = timezone.now()
+            v.save()
+
+            messages.success(request, f"Updated verification for Chest #{v.event_entry.chest_number} Seq #{v.sequence_order} ({v.declared_code}).")
+            redirect_url = f"{request.path}?roll_id={selected_roll.id if selected_roll else ''}"
+            if request.GET.get('chest_number'):
+                redirect_url += f"&chest_number={request.GET.get('chest_number')}"
+            return redirect(redirect_url)
+
+        elif action == 'verify_all_athlete':
+            entry_id = request.POST.get('event_entry_id')
+            if selected_roll and entry_id:
+                verifs = EvaluatorAsanaVerification.objects.filter(master_roll=selected_roll, event_entry_id=entry_id)
+                verifs.update(
+                    status=EvaluatorVerificationStatus.VERIFIED,
+                    is_verified=True,
+                    has_discrepancy=False,
+                    discrepancy_type='NONE',
+                    evaluator=request.user,
+                    reviewed_at=timezone.now()
+                )
+                messages.success(request, f"Marked all asanas as Verified for athlete entry.")
+            return redirect(f"{request.path}?roll_id={selected_roll.id if selected_roll else ''}&chest_number={request.POST.get('chest_number', '')}")
+
+    # Ensure verifications exist for the selected roll
+    if selected_roll:
+        from competition.views import ensure_evaluator_verifications
+        ensure_evaluator_verifications(selected_roll)
+
+    # Get athletes & their verifications in this roll
+    athletes_data = []
+    if selected_roll:
+        roll_entries = selected_roll.roll_entries.select_related(
+            'event_entry__registration__athlete',
+            'event_entry__partner_athlete'
+        ).order_by('performance_order')
+
+        all_verifs = list(EvaluatorAsanaVerification.objects.filter(
+            master_roll=selected_roll
+        ).select_related('event_entry').order_by('event_entry_id', 'sequence_order'))
+
+        verifs_by_entry = {}
+        for v in all_verifs:
+            verifs_by_entry.setdefault(v.event_entry_id, []).append(v)
+
+        # Filter by search if provided
+        for r in roll_entries:
+            ee = r.event_entry
+            ath = ee.registration.athlete
+            name_match = (search_q.lower() in ath.full_name.lower()) if search_q else True
+            chest_match = (search_q.lower() in str(ee.chest_number or '').lower()) if search_q else True
+            if search_q and not (name_match or chest_match):
+                continue
+
+            v_list = verifs_by_entry.get(ee.id, [])
+            # Also get asana images & details from AsanaSequenceItem
+            seq_items = {
+                asi.sequence_order: asi
+                for asi in AsanaSequenceItem.objects.filter(event_entry=ee, round_type=selected_roll.round_type)
+            }
+            if not seq_items:
+                seq_items = {
+                    asi.sequence_order: asi
+                    for asi in AsanaSequenceItem.objects.filter(event_entry=ee)
+                }
+
+            items_enriched = []
+            for v in v_list:
+                asi = seq_items.get(v.sequence_order)
+                img = (asi.image_url if asi and hasattr(asi, 'image_url') and asi.image_url else
+                       (asi.declared_asana.image_url if asi and getattr(asi, 'declared_asana', None) and hasattr(asi.declared_asana, 'image_url') else None))
+                name = asi.declared_name if asi else ''
+                items_enriched.append({
+                    'verif': v,
+                    'seq': v.sequence_order,
+                    'code': v.declared_code,
+                    'name': name,
+                    'bv': v.declared_bv,
+                    'is_compulsory': v.is_compulsory,
+                    'status': v.status,
+                    'is_verified': v.is_verified,
+                    'has_discrepancy': v.has_discrepancy,
+                    'discrepancy_type': v.discrepancy_type,
+                    'discrepancy_remarks': v.discrepancy_remarks,
+                    'observed_code': v.observed_code,
+                    'observed_bv': v.observed_bv,
+                    'image_url': img,
+                })
+
+            total_count = len(items_enriched)
+            verified_count = sum(1 for x in items_enriched if x['is_verified'])
+            disc_count = sum(1 for x in items_enriched if x['has_discrepancy'])
+
+            if total_count > 0 and verified_count == total_count:
+                overall_status = 'VERIFIED'
+            elif disc_count > 0:
+                overall_status = 'DISCREPANCY_FOUND'
+            elif verified_count > 0:
+                overall_status = 'IN_PROGRESS'
+            else:
+                overall_status = 'NOT_REVIEWED'
+
+            athletes_data.append({
+                'roll_entry': r,
+                'entry': ee,
+                'athlete': ath,
+                'partner': ee.partner_athlete,
+                'chest_number': ee.chest_number or f"{r.performance_order:03d}",
+                'items': items_enriched,
+                'total_count': total_count,
+                'verified_count': verified_count,
+                'disc_count': disc_count,
+                'overall_status': overall_status,
+            })
+
+    # Filter by specific selected athlete if chest_number is clicked
+    selected_chest = request.GET.get('chest_number')
+    selected_athlete_data = None
+    if selected_chest:
+        selected_athlete_data = next((a for a in athletes_data if str(a['chest_number']) == str(selected_chest)), None)
+
+    return render(request, 'scoring/evaluator_reference.html', {
+        'championship': championship,
+        'master_rolls': master_rolls,
+        'selected_roll': selected_roll,
+        'athletes_data': athletes_data,
+        'selected_athlete_data': selected_athlete_data,
+        'selected_chest': selected_chest,
+        'search_q': search_q,
+        'is_cd_or_admin': is_cd_or_admin,
+    })
+
 @role_required(RoleChoices.ADMIN, RoleChoices.CHIEF_JUDGE, RoleChoices.CD, 'APPROVED_JUDGE')
 def scoring_chief_judge(request):
     """
@@ -2991,6 +3252,43 @@ def scoring_chief_judge(request):
             inc.save(update_fields=['chief_decision', 'chief_decided_at'])
             messages.info(request, f"Incident #{inc.id} penalty dismissed/rejected by Chief Judge.")
             return redirect(f"/scoring/chief-judge/?perf_id={perf.id}&event_id={current_event.id if current_event else ''}&cat_id={current_cat.id if current_cat else ''}&gender={gender}&round_type={round_type}")
+
+        elif action == 'hold_performance':
+            reason = request.POST.get('reason', 'Competition pause requested by Chief Judge').strip()
+            remarks = request.POST.get('remarks', '').strip()
+            perf.status = PerformanceStatus.HELD
+            perf.interruption_reason = reason
+            perf.interruption_remarks = remarks
+            perf.interrupted_at = timezone.now()
+            perf.interrupted_by = request.user
+            perf.save(update_fields=['status', 'interruption_reason', 'interruption_remarks', 'interrupted_at', 'interrupted_by'])
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action='HOLD',
+                attempt_number=perf.attempt_number or 1,
+                reason=reason,
+                remarks=remarks,
+                user=request.user
+            )
+            messages.warning(request, f"Performance for Chest {perf.chest_number} placed on HOLD by Chief Judge.")
+            return redirect(f"/scoring/chief-judge/?perf_id={perf.id}&panel_id={assigned_panel.id}")
+
+        elif action == 'resume_performance':
+            remarks = request.POST.get('remarks', 'Resumed by Chief Judge').strip()
+            perf.status = PerformanceStatus.IN_PROGRESS
+            perf.save(update_fields=['status'])
+
+            PerformanceInterruptionLog.objects.create(
+                performance=perf,
+                action='RESUME',
+                attempt_number=perf.attempt_number or 1,
+                reason="Performance resumed",
+                remarks=remarks,
+                user=request.user
+            )
+            messages.success(request, f"Performance for Chest {perf.chest_number} resumed.")
+            return redirect(f"/scoring/chief-judge/?perf_id={perf.id}&panel_id={assigned_panel.id}")
 
         elif action == 'request_correction':
             return redirect(f"/corrections/cd-undo/?perf_id={perf.id}")

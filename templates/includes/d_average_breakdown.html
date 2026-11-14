@@ -41,11 +41,11 @@
                         <th class="py-2.5 px-3 w-12 text-center">#</th>
                         <th class="py-2.5 px-3 min-w-[140px]">Asana Code & Name</th>
                         <th class="py-2.5 px-3 w-14 text-center">BV</th>
-                        <th class="py-2.5 px-3 w-16 text-right">D1</th>
-                        <th class="py-2.5 px-3 w-16 text-right">D2</th>
-                        <th class="py-2.5 px-3 w-16 text-right">D3</th>
-                        <th class="py-2.5 px-3 w-16 text-right">D4</th>
-                        <th class="py-2.5 px-3 w-16 text-right">D5</th>
+                        <th class="py-2.5 px-3 min-w-[75px] text-right"><span class="block text-slate-800">D1</span><span class="text-[9px] font-normal text-slate-400 block tracking-normal lowercase">marks / &times;bv</span></th>
+                        <th class="py-2.5 px-3 min-w-[75px] text-right"><span class="block text-slate-800">D2</span><span class="text-[9px] font-normal text-slate-400 block tracking-normal lowercase">marks / &times;bv</span></th>
+                        <th class="py-2.5 px-3 min-w-[75px] text-right"><span class="block text-slate-800">D3</span><span class="text-[9px] font-normal text-slate-400 block tracking-normal lowercase">marks / &times;bv</span></th>
+                        <th class="py-2.5 px-3 min-w-[75px] text-right"><span class="block text-slate-800">D4</span><span class="text-[9px] font-normal text-slate-400 block tracking-normal lowercase">marks / &times;bv</span></th>
+                        <th class="py-2.5 px-3 min-w-[75px] text-right"><span class="block text-slate-800">D5</span><span class="text-[9px] font-normal text-slate-400 block tracking-normal lowercase">marks / &times;bv</span></th>
                         <th class="py-2.5 px-3 w-28 text-center bg-sky-50/60 border-l border-r border-sky-100">Time Judge</th>
                         <th class="py-2.5 px-3 w-28 text-center bg-amber-50/60">Evaluator</th>
                     </tr>
@@ -73,45 +73,45 @@
                         <td class="py-2.5 px-3 text-center text-slate-600 font-bold">
                             {{ row.bv }}
                         </td>
-                        <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d1_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
-                                {{ row.d1|stringformat:".2f" }}
+                        <td class="py-2.5 px-3 text-right font-mono">
+                            <span class="text-xs font-black block {% if row.d1_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}" title="Actual Marks Entered">
+                                {{ row.d1_exec|default:row.d1_raw|stringformat:".2f" }}
                             </span>
-                            {% if row.is_invalid and row.d1_raw > 0 %}
-                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d1_raw|stringformat:".2f" }})</span>
-                            {% endif %}
+                            <span class="block text-[10px] font-bold text-teal-700" title="Effective Score (&times;BV)">
+                                {% if row.is_invalid %}0.000{% else %}{{ row.d1|stringformat:".3f" }}{% endif %}
+                            </span>
                         </td>
-                        <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d2_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
-                                {{ row.d2|stringformat:".2f" }}
+                        <td class="py-2.5 px-3 text-right font-mono">
+                            <span class="text-xs font-black block {% if row.d2_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}" title="Actual Marks Entered">
+                                {{ row.d2_exec|default:row.d2_raw|stringformat:".2f" }}
                             </span>
-                            {% if row.is_invalid and row.d2_raw > 0 %}
-                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d2_raw|stringformat:".2f" }})</span>
-                            {% endif %}
+                            <span class="block text-[10px] font-bold text-teal-700" title="Effective Score (&times;BV)">
+                                {% if row.is_invalid %}0.000{% else %}{{ row.d2|stringformat:".3f" }}{% endif %}
+                            </span>
                         </td>
-                        <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d3_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
-                                {{ row.d3|stringformat:".2f" }}
+                        <td class="py-2.5 px-3 text-right font-mono">
+                            <span class="text-xs font-black block {% if row.d3_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}" title="Actual Marks Entered">
+                                {{ row.d3_exec|default:row.d3_raw|stringformat:".2f" }}
                             </span>
-                            {% if row.is_invalid and row.d3_raw > 0 %}
-                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d3_raw|stringformat:".2f" }})</span>
-                            {% endif %}
+                            <span class="block text-[10px] font-bold text-teal-700" title="Effective Score (&times;BV)">
+                                {% if row.is_invalid %}0.000{% else %}{{ row.d3|stringformat:".3f" }}{% endif %}
+                            </span>
                         </td>
-                        <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d4_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
-                                {{ row.d4|stringformat:".2f" }}
+                        <td class="py-2.5 px-3 text-right font-mono">
+                            <span class="text-xs font-black block {% if row.d4_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}" title="Actual Marks Entered">
+                                {{ row.d4_exec|default:row.d4_raw|stringformat:".2f" }}
                             </span>
-                            {% if row.is_invalid and row.d4_raw > 0 %}
-                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d4_raw|stringformat:".2f" }})</span>
-                            {% endif %}
+                            <span class="block text-[10px] font-bold text-teal-700" title="Effective Score (&times;BV)">
+                                {% if row.is_invalid %}0.000{% else %}{{ row.d4|stringformat:".3f" }}{% endif %}
+                            </span>
                         </td>
-                        <td class="py-2.5 px-3 text-right">
-                            <span class="{% if row.d5_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600 font-bold{% else %}text-slate-900 font-bold{% endif %}">
-                                {{ row.d5|stringformat:".2f" }}
+                        <td class="py-2.5 px-3 text-right font-mono">
+                            <span class="text-xs font-black block {% if row.d5_dropped %}line-through text-slate-400{% elif row.is_invalid %}text-rose-600{% else %}text-slate-900{% endif %}" title="Actual Marks Entered">
+                                {{ row.d5_exec|default:row.d5_raw|stringformat:".2f" }}
                             </span>
-                            {% if row.is_invalid and row.d5_raw > 0 %}
-                            <span class="block text-[9px] text-slate-400 font-normal">({{ row.d5_raw|stringformat:".2f" }})</span>
-                            {% endif %}
+                            <span class="block text-[10px] font-bold text-teal-700" title="Effective Score (&times;BV)">
+                                {% if row.is_invalid %}0.000{% else %}{{ row.d5|stringformat:".3f" }}{% endif %}
+                            </span>
                         </td>
                         <!-- Time Judge column -->
                         <td class="py-2.5 px-3 text-center bg-sky-50/40 border-l border-r border-sky-100 font-sans">

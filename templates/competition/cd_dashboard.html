@@ -91,10 +91,16 @@
                     <div>Cleared Athletes: <strong class="text-slate-900">{{ cleared_athletes }}</strong></div>
                 </div>
             </div>
-            <a href="{% url 'district_draw' %}" class="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 inline-flex items-center justify-center gap-1 transition">
-                <span>Manage District Draw</span>
-                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-            </a>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+                <a href="{% url 'master_roll' %}" class="py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition shadow-xs">
+                    <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i>
+                    <span>Master Rolls</span>
+                </a>
+                <a href="{% url 'district_draw' %}" class="py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 inline-flex items-center justify-center gap-1 transition">
+                    <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
+                    <span>Lottery Draw</span>
+                </a>
+            </div>
         </div>
 
         <!-- 2. Panel Assignments -->

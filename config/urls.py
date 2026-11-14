@@ -87,6 +87,7 @@ urlpatterns = [
     path('competition/draw/', comp_views.district_draw, name='district_draw'),
     path('competition/chest-numbers/', comp_views.chest_number_manager, name='chest_number_manager'),
     path('competition/master-roll/', comp_views.master_roll, name='master_roll'),
+    path('competition/master-roll/detail/<int:roll_id>/', comp_views.master_roll_detail, name='master_roll_detail'),
     path('competition/panels/', comp_views.panel_assignments, name='panel_assignments'),
     path('competition/stage/', comp_views.stage_manager, name='stage_manager'),
     path('competition/stage-manager/', comp_views.stage_manager, name='stage_manager_alt'),
@@ -102,6 +103,7 @@ urlpatterns = [
     path('scoring/music-time/', scoring_views.scoring_music_time, name='scoring_music_time'),
     path('scoring/artistry/', scoring_views.scoring_artistry, name='scoring_artistry'),
     path('scoring/evaluator/', scoring_views.scoring_evaluator, name='scoring_evaluator'),
+    path('scoring/evaluator/reference/', scoring_views.evaluator_reference_list, name='evaluator_reference_list'),
     path('scoring/chief-judge/', scoring_views.scoring_chief_judge, name='scoring_chief_judge'),
     path('scoring/my-scores/', scoring_views.judge_my_scores, name='judge_my_scores'),
 
