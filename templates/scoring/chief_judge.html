@@ -76,6 +76,28 @@
                     <span class="text-3xl font-black font-mono tracking-tight">{{ selected_perf.chest_number }}</span>
                 </div>
                 <div>
+                    {% if selected_perf.event_entry.is_pair or selected_perf.event_entry.partner_athlete %}
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-100 text-teal-800 font-black text-[10px]">P1</span>
+                            <span class="text-base font-black text-slate-900">{{ selected_perf.event_entry.registration.athlete.full_name }}</span>
+                            <span class="text-xs text-slate-400 font-mono">({{ selected_perf.event_entry.registration.athlete.public_athlete_id }})</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-800 font-black text-[10px]">P2</span>
+                            <span class="text-base font-black text-slate-900">{{ selected_perf.event_entry.partner_athlete.full_name }}</span>
+                            <span class="text-xs text-slate-400 font-mono">({{ selected_perf.event_entry.partner_athlete.public_athlete_id }})</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 mt-1.5">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            District: {{ selected_perf.event_entry.registration.athlete.district }}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Attempt #{{ selected_perf.attempt_number|default:1 }}
+                        </span>
+                    </div>
+                    {% else %}
                     <div class="flex items-center space-x-2">
                         <h2 class="text-lg font-black text-slate-900">
                             {{ selected_perf.event_entry.registration.athlete.full_name }}
@@ -85,11 +107,12 @@
                         </span>
                     </div>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        DOB: {{ selected_perf.event_entry.registration.athlete.date_of_birth|date:"d M Y"|default:"--" }}
-                        &bull; Registration: <code class="text-slate-600 font-mono">{{ selected_perf.event_entry.registration.athlete.athlete_id|default:selected_perf.event_entry.id }}</code>
+                        DOB: {{ selected_perf.event_entry.registration.athlete.dob|date:"d M Y"|default:"--" }}
+                        &bull; Registration: <code class="text-slate-600 font-mono">{{ selected_perf.event_entry.registration.athlete.public_athlete_id|default:selected_perf.event_entry.id }}</code>
                         &bull; Performance ID: <code class="text-teal-700 font-bold font-mono">#{{ selected_perf.id }}</code>
                         &bull; <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Attempt #{{ selected_perf.attempt_number|default:1 }}</span>
                     </p>
+                    {% endif %}
                 </div>
             </div>
 

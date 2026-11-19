@@ -125,6 +125,7 @@ urlpatterns = [
     path('certificates/templates/<int:template_id>/edit/', cert_views.certificate_template_edit, name='certificate_template_edit'),
     path('certificates/generate/', cert_views.certificate_generate, name='certificate_generate'),
     path('certificates/verify/<uuid:uuid>/', cert_views.certificate_verify_qr, name='certificate_verify_qr'),
+    path('certificates/verify/num/<str:cert_number>/', cert_views.certificate_verify_qr, name='certificate_verify_num'),
 
     # Reports
     path('reports/statistics/', report_views.report_statistics, name='report_statistics'),

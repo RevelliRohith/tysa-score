@@ -168,7 +168,7 @@
                                     <th class="py-3 px-3 w-10 text-center">Select</th>
                                     <th class="py-3 px-3 w-12 text-center">Order</th>
                                     <th class="py-3 px-3">Chest #</th>
-                                    <th class="py-3 px-4">Athlete / Pair</th>
+                                    <th class="py-3 px-4">{% if current_panel.event_config.event_type == 'ARTISTIC_PAIR' or current_panel.event_config.event_type == 'RHYTHMIC_PAIR' %}Pair Team Members (P1 & P2){% else %}Athlete Name{% endif %}</th>
                                     <th class="py-3 px-3">District</th>
                                     <th class="py-3 px-3 text-center">Call Status</th>
                                     <th class="py-3 px-3 text-right">Operational Actions</th>
@@ -191,16 +191,43 @@
                                         {{ entry.event_entry.chest_number|default:"—" }}
                                     </td>
                                     <td class="py-3 px-4">
-                                        <div class="font-bold text-slate-900">
-                                            {{ entry.event_entry.registration.athlete.full_name }}
-                                            {% if entry.event_entry.partner_athlete %}
-                                            <span class="text-slate-500 font-normal">& {{ entry.event_entry.partner_athlete.full_name }}</span>
-                                            {% endif %}
+                                        {% if entry.event_entry.is_pair or entry.event_entry.partner_athlete %}
+                                        <div class="space-y-1.5 py-1">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-100 text-teal-800 font-black text-[10px] shrink-0">P1</span>
+                                                <div>
+                                                    <span class="font-bold text-slate-900 text-xs">{{ entry.event_entry.registration.athlete.full_name }}</span>
+                                                    <span class="text-[10px] text-slate-400 font-mono ml-1.5">({{ entry.event_entry.registration.athlete.public_athlete_id }})</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-800 font-black text-[10px] shrink-0">P2</span>
+                                                <div>
+                                                    <span class="font-bold text-slate-900 text-xs">{{ entry.event_entry.partner_athlete.full_name }}</span>
+                                                    <span class="text-[10px] text-slate-400 font-mono ml-1.5">({{ entry.event_entry.partner_athlete.public_athlete_id }})</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span class="text-[10px] text-slate-400 font-mono">{{ entry.event_entry.registration.athlete.permanent_id }}</span>
+                                        {% else %}
+                                        <div class="font-bold text-slate-900 text-xs">
+                                            {{ entry.event_entry.registration.athlete.full_name }}
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 font-mono">{{ entry.event_entry.registration.athlete.public_athlete_id }}</span>
+                                        {% endif %}
                                     </td>
                                     <td class="py-3 px-3 text-slate-600 font-medium">
-                                        {{ entry.event_entry.registration.athlete.district }}
+                                        {% if entry.event_entry.is_pair and entry.event_entry.partner_athlete %}
+                                            {% if entry.event_entry.registration.athlete.district == entry.event_entry.partner_athlete.district %}
+                                                <span class="font-semibold text-slate-800">{{ entry.event_entry.registration.athlete.district }}</span>
+                                            {% else %}
+                                                <div class="space-y-0.5 text-[11px]">
+                                                    <div><span class="text-slate-400 text-[10px]">P1:</span> {{ entry.event_entry.registration.athlete.district }}</div>
+                                                    <div><span class="text-slate-400 text-[10px]">P2:</span> {{ entry.event_entry.partner_athlete.district }}</div>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            {{ entry.event_entry.registration.athlete.district }}
+                                        {% endif %}
                                     </td>
                                     <td class="py-3 px-3 text-center">
                                         {% if entry.attendance_status == 'PRESENT' %}
@@ -344,14 +371,28 @@
                     </div>
                     <div class="grid grid-cols-1 gap-2">
                         {% for p in active_perfs %}
-                        <div class="p-3 rounded-xl border {% if p.status == 'HELD' %}border-amber-400 bg-amber-50/60{% elif p.status == 'STOPPED_PENDING_DECISION' %}border-rose-400 bg-rose-50/60{% else %}border-teal-200 bg-teal-50/40{% endif %} flex items-center justify-between">
+                        <div class="p-3.5 rounded-xl border {% if p.status == 'HELD' %}border-amber-400 bg-amber-50/60{% elif p.status == 'STOPPED_PENDING_DECISION' %}border-rose-400 bg-rose-50/60{% else %}border-teal-200 bg-teal-50/40{% endif %} flex items-center justify-between">
                             <div class="flex items-center space-x-3 truncate">
-                                <span class="font-mono font-black text-sm text-teal-900 bg-teal-100 px-2.5 py-1 rounded-lg shrink-0">
+                                <span class="font-mono font-black text-sm text-teal-900 bg-teal-100 px-2.5 py-1.5 rounded-lg shrink-0">
                                     #{{ p.chest_number }}
                                 </span>
                                 <div class="truncate">
+                                    {% if p.event_entry.is_pair or p.event_entry.partner_athlete %}
+                                    <div class="space-y-1">
+                                        <div class="flex items-center space-x-1.5">
+                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-teal-200 text-teal-900 font-bold text-[9px]">P1</span>
+                                            <span class="font-bold text-xs text-slate-900 truncate">{{ p.event_entry.registration.athlete.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center space-x-1.5">
+                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-200 text-purple-900 font-bold text-[9px]">P2</span>
+                                            <span class="font-bold text-xs text-slate-900 truncate">{{ p.event_entry.partner_athlete.full_name }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 block mt-1">{{ p.event_entry.registration.athlete.district }} &bull; Performance #{{ p.id }}</span>
+                                    {% else %}
                                     <span class="font-bold text-xs text-slate-900 block truncate">{{ p.event_entry.registration.athlete.full_name }}</span>
                                     <span class="text-[10px] text-slate-500">{{ p.event_entry.registration.athlete.district }} &bull; Performance #{{ p.id }}</span>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="shrink-0 text-right">

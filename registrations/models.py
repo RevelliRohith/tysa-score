@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 class RegistrationStatus(models.TextChoices):
     DRAFT = 'DRAFT', 'Draft'
@@ -59,8 +60,24 @@ class EventEntry(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('registration', 'event_config')
+    def clean(self):
+        super().clean()
+        if self.is_pair:
+            if not self.partner_athlete:
+                raise ValidationError({'partner_athlete': "Pair entries require a valid partner athlete."})
+            if self.registration and self.registration.athlete:
+                p1 = self.registration.athlete
+                p2 = self.partner_athlete
+                if p1.id == p2.id:
+                    raise ValidationError({'partner_athlete': "Partner athlete cannot be the same person as Player 1."})
+                if p1.gender != p2.gender:
+                    raise ValidationError({'partner_athlete': "Pair partners must be of the same gender. Mixed pair is prohibited."})
+                if p1.district != p2.district:
+                    raise ValidationError({'partner_athlete': f"Both athletes in a pair must be from the same district. Player 1 is {p1.district}, Player 2 is {p2.district}."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         pair_info = f" & {self.partner_athlete.full_name}" if self.partner_athlete else ""

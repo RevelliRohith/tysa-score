@@ -1,0 +1,146 @@
+=== SEARCH RESULTS FOR C:\Users\My Files\Desktop\calculation Requirements.pdf ===
+
+--- PAGE 1 (Matched: formation, evaluator, hold, execution) ---
+Yogasana system requirements | Draft 1.5 | Page 14
+Traditional judging and calculation
+Round Compulsory / Optional Required hold
+Quarter Final 5 / 2 Compulsory 60 seconds; optional 15 seconds.
+Semi Final 5 / 2 Compulsory 45 seconds; optional 15 seconds.
+Final 4 / 3 Compulsory 30 seconds; optional 15 seconds.
+Module or rule Required behaviour
+D input Posture Perfection /6 and Stability/Grace /2. Optional detailed microfields: accuracy /4, mounting/dismounting /2, stability /1, grace/presentation /1. Time comes from the Time Judge.
+Item score (D execution out of 8 + approved time out of 2) × base value. Compulsory BV = 1. Sum seven items for each D-JUDGE.
+Panel calculation
+Traditional: 5 D-JUDGES → remove one highest and one lowest full total, average remaining 3. 
+Four → remove one highest and one lowest, average remaining 2. Three → average all 3, with 
+no removal. Use the CD-confirmed performance panel count; wait for all assigned submissions. 
+Subtract approved final-score penalties once. Reduced panels are the requested championship 
+setting.
+Time attempts Use COP Chapter 4 Annexure A/B timing tables. Under-75% hold and second-attempt rules affect item validity and deductions; do not implement only a simple linear formula.
+Traditional T penalty box
+No transition timer, transition countdown or automatic buzzer. Keep asana-hold timing. Add 
+manual penalty amount, reason, item/attempt and deduction scope; Chief reviews. Apply once 
+at the approved COP calculation step.
+Tie-break Compare compulsory-asana marks using the same 5/4/3-judge averaging method as the performance panel. If still tied, support joint medal rather than an optional-asana tie-break.
+Traditional examples before penalties: 5 judges with totals 50, 52, 54, 56, 58 → remove 50 and 58 → average = 54. Four 
+judges with 50, 52, 54, 58 → remove 50 and 58 → average = 53. Three judges with 50, 52, 54 → keep all three → average 
+= 52. Subtract an approved final-score penalty once: a penalty of 2 gives 52, 51 and 50 respectively.
+Asana catalogue and validation
+Import Annexures 1–3 as versioned data: code, name, image, category, level, BV and judging rules. Registration must 
+allow the full catalogue, repeated asanas and any category combination without blocking save or submission. Show rule 
+guidance for athlete information only. The Evaluator checks applicable age/round, compulsory/optional, category and 
+repetition rules during the event. FBS and FBF share the Forward Bend major category.
+Keep failed attainment, second attempts, support-related component reductions, short holds and manually recorded 
+penalties as separate facts. The technical rule table determines their combination; unresolved placements are listed in 
+the decision register.
+
+--- PAGE 2 (Matched: artistic pair, rhythmic pair, pair, formation, difficulty, evaluator, hold, execution) ---
+Yogasana system requirements | Draft 1.5 | Page 15
+Difficulty judging for music events
+D-JUDGE workflow: open the assigned roll → receive pushed entry → mark every item → save/submit → correct and 
+resubmit only after CD undo. Each music event has four D-JUDGES. Execution is out of 10 using the applicable COP micro-
+marking criteria. Store original inputs, invalidity decisions, component reductions and the effective calculated item 
+separately.
+Event Required fields Each item calculation
+Artistic Single Execution /10 and declared BV. Execution × BV.
+Artistic Pair P1 execution /10, P1 BV; P2 execution /10, P2 BV; Formation /10. SP1 = EP1 × BV1; SP2 = EP2 × BV2; SP = (SP1 + SP2) / 2; pair item = (SP + Formation) / 2.
+Rhythmic Pair P1 execution /10, P2 execution /10 and shared BV. ((EP1 + EP2) / 2) × shared BV. No separate Artistic Pair formation mark.
+Module or rule Required behaviour
+Full panel score Sum ten items for each D-JUDGE. Drop one highest and one lowest full total; average the remaining two.
+Final formula Retained D average + average Artistry + average Timing − approved evaluator/other penalties. Deduct any overtime only once.
+Invalid item
+Accepted hold below 5 seconds, or a confirmed Evaluator Invalid Asana decision, makes that 
+complete item zero for all four D-JUDGES. For pairs, zero the complete pair item. Preserve 
+original marks; recalculate judge totals before discarding extremes.
+Attempt/support rules
+COP micro-marking includes second-attainment deductions and support-related component 
+reductions. Provide applicable fields; do not automatically zero all components unless the rule 
+requires it.
+Technical recheck Chief can request review, but only CD can undo/unlock a submitted record. Original assigned judge then corrects and resubmits. Preserve history; Admin has no undo permission.
+Artistic Pair example: P1 = 8 × 0.9 = 7.2; P2 = 7 × 0.8 = 5.6; Formation = 8. Item = ((7.2 + 5.6) / 2 + 8) / 2 = 7.2. If the 
+accepted shared hold is below 5 seconds, the complete item becomes zero.
+Rhythmic example: P1 = 8, P2 = 6, shared BV = 0.9. Item = ((8 + 6) / 2) × 0.9 = 6.3. Both players must perform the same 
+asana, side/leg/hand and direction. Artistic Pair instead requires different asanas at the same time.
+
+--- PAGE 3 (Matched: pair, evaluator, hold) ---
+Yogasana system requirements | Draft 1.5 | Page 16
+Artistry and timing for music events
+Artistry criterion Maximum
+Costume 1
+Theme and Music 1
+Character and Expression 3
+Rhythm and Artistic Steps; include Synchronisation where COP specifies 10
+Use of Floor 5
+Total per Artistry Judge 20
+Artistry workflow: watch routine → enter components/deductions → save/submit → correct only after CD undo. Two 
+Artistry Judges enter component marks and their applicable deductions/penalties separately. Average their net scores. 
+Appeals distinguish Artistry penalties from subjective Artistry marks. Do not deduct an Artistry penalty a second time in 
+the evaluator total.
+Timing component Calculation
+TW Whole Performance Below 150 seconds = 0; 150–160 = 3; 161–170 = 4; 171–180 = 5.
+TA Holds Each valid hold of at least 5 accepted seconds = 0.5; ten items give maximum 5. Below 5 accepted seconds = 0 TA for that item and zero complete item for every D-JUDGE.
+T1 and T2 Two Time Judges, each with two independent timers: TW and item hold. Average the two totals after applicable reconciliation.
+Pair hold Measure the shared steady position as one unit, not the average of separate player hold durations.
+Rounding Store raw readings; record whole seconds with 0.5 rounded up.
+4 / 5 disagreement One judge records 4 and the other 5: accepted hold is 5. Both record 4: hold is invalid.
+150-second margin COP allows a 3-second margin where one TW reading is below 150 and the other is 150 or more. Example 148 / 150 is treated as 150.
+Overtime After 180 seconds, 0.5 marks per extra second. COP says disqualification after 10 seconds. Exact 190-second trigger and TW award above 180 need confirmation.
+Time Judge workflow: receive entry → record TW and holds → submit → review flagged readings; correction requires CD 
+undo. Example: both judges record 165 seconds and nine valid holds. TW 4 + TA 4.5 = Timing 8.5. After zeroing the invalid 
+item, D totals 60/62/64/66 yield 63. Artistry 16 gives 87.5 before other penalties. Finishing below 150 removes only TW, 
+not the entire final score.
+
+--- PAGE 4 (Matched: artistic pair, rhythmic pair, pair, formation, evaluator) ---
+Yogasana system requirements | Draft 1.5 | Page 17
+Evaluator decisions and sequence records
+Event Evaluator duties
+Traditional 1 Evaluator Declared compulsory/optional order, performed items, category and sequence issues under the relevant round rules.
+Artistic Single 1 Evaluator Declared ten-item order and BV; coverage of all ten subcategories; extra and undeclared asanas.
+Artistic Pair 2 Evaluators E1 checks Player 1; E2 checks Player 2. Check five major categories, pair order and formation validity. Shared incidents are not charged twice.
+Rhythmic Pair 1 Evaluator Checks both players; same asana/side/direction, declared order, category coverage and extra items.
+Module or rule Required behaviour
+Incident fields Performance/chest number; declared position/code/BV; observed position/code; P1/P2/both; incident type; affected item numbers; evidence note/time; reporting evaluator; Chief decision.
+Sequence scale COP states first change 2 marks, second 4, third 6, more than three DQ. Confirm cumulative versus replacement totals and how moves/swaps count before automating multiple changes.
+Music extra items First extra asana = 5 marks; second extra = DQ.
+Single/Rhythmic categories Missing one/two/three subcategories = 5/10/15; more than three = DQ under COP-standard profile.
+Artistic Pair categories Two items from each major category; less/more than two = 5 marks each occurrence under COP wording; missing more than three major categories = DQ.
+Invalidity versus penalty
+Confirmed Invalid Asana makes the affected complete D item zero for every D-JUDGE. Record 
+item/player, reason and review. Numeric Penalty Marks are a separate action; a penalty alone 
+must not automatically zero the item. Preserve original marks.
+Formation checks Artistic Pair same-asana formation, syllabus/BAC/pyramid rules and final-position support must follow COP. Refer component reductions to D-JUDGES rather than replacing their inputs.
+Sequence example: declared A–B–C–D, observed A–C–B–D. Record rows 2 and 3 as a linked swap with actual codes. 
+Technical policy determines the incident count. If approved as one incident, 87.5 − 2 = 85.5. Do not infer one penalty per 
+mismatched database row.
+Evaluator workflow: compare the unrestricted declaration with the performance → check applicable COP rules, repeats, 
+categories and sequence → record incident and affected item/player → submit for review → apply confirmed action. 
+Registration acceptance does not waive a COP penalty or make an asana valid.
+
+--- PAGE 5 (Matched: pair, evaluator) ---
+Yogasana system requirements | Draft 1.5 | Page 18
+Chief review Jury appeals and final results
+1. Each required judge submits a complete record. Empty fields remain Missing, not zero; intentional zero is a recorded 
+value.
+2. Chief checks missing seats, invalid items, time disagreements and evaluator incidents. Chief may request review; only 
+CD can undo the submitted record before the original judge corrects it.
+3. Chief approves provisional score; store first public display timestamp and produce the signed/approved score sheet.
+4. Track appeal intake and disposition. Jury views completed scores by chest number. Authorised staff record the written 
+decision and evidence without giving Jury score-edit permission.
+5. Director approves the final result after appeal requirements are satisfied; publish the final signed/approved result and 
+close the division.
+Module or rule Required behaviour
+Jury search
+Chest alone returns all matching entries/events/rounds in the selected championship. Optional 
+event narrows results. Either partner’s chest/linked ID retrieves the pair. Ask for selection if 
+matches are ambiguous.
+Jury detail D item records/totals; Artistry components; T1/T2 raw readings and marks; evaluator incidents; penalties; ranks; correction history. View only.
+Appeal intake COP: prescribed written form, one performance/chest number per form, within 10 minutes of score display. Stage intake timestamp is recorded; attach form and receipt.
+Appeal scope Timing, evaluator decisions and the penalty part of Artistry. D marks and Artistry marks themselves are not ordinary appeal targets. Chief-requested review is tracked separately.
+Fee Uploaded COP specifies Rs. 1,000 or US $10 and says the fee can change. Publish the approved state championship fee in settings; do not hardcode it as a timeless price.
+Director closure No unresolved required record or appeal may be silently bypassed. Block or require an explicit recorded technical decision. Closed results require a controlled correction/reissue process.
+Jury view-only is your software access rule; it does not remove Jury’s COP decision authority. Store the signed decision 
+through an authorised review-record user, then implement an approved correction through the responsible scoring role.
+Progression: QF → SF is top 20 or 20%, whichever is fewer; SF → Final is top 10 or 50%, whichever is fewer. Confirm 
+rounding, small fields and cutoff ties. Tie-break: Traditional compulsory score; music events average Artistry; if still equal, 
+joint medal is supported.
+

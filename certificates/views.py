@@ -521,12 +521,16 @@ def certificate_generate(request):
     })
 
 
-def certificate_verify_qr(request, cert_number):
+def certificate_verify_qr(request, uuid=None, cert_number=None):
     """
     Public verification QR endpoint:
     Displays verified certificate attributes without disclosing any private keys or credentials.
+    Supports lookup by verification_uuid or certificate_number.
     """
-    cert = get_object_or_404(IssuedCertificate, certificate_number=cert_number)
+    if uuid is not None:
+        cert = get_object_or_404(IssuedCertificate, verification_uuid=uuid)
+    else:
+        cert = get_object_or_404(IssuedCertificate, certificate_number=cert_number)
     return render(request, 'certificates/verify.html', {
         'cert': cert,
         'hide_navbar': True,
